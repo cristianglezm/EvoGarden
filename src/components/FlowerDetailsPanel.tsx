@@ -80,7 +80,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
             <header className="bg-background text-primary-light font-bold text-lg text-center p-1 rounded-t-[5px]">
                 <h2>Flower Details</h2>
             </header>
-            <div className="p-4 flex-grow flex flex-col space-y-3 overflow-y-auto">
+            <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto">
                 <div className="space-y-3">
                     <StatBar value={flower.health} max={flower.maxHealth} label="Health" colorClass="bg-accent-red" />
                     <StatBar value={flower.stamina} max={flower.maxStamina} label="Stamina" colorClass="bg-accent-blue" />
@@ -111,7 +111,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                     </div>
                 </div>
                 
-                <div className="flex-grow">
+                <div className="grow">
                     <label htmlFor="genome" className="block mb-1 text-sm font-medium text-primary-light">Genome</label>
                     <div className="relative">
                         <textarea

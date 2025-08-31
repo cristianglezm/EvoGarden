@@ -56,7 +56,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose }) => {
                             </button>
                         </nav>
                     </div>
-                    <div className="flex-grow overflow-y-auto">
+                    <div className="grow overflow-y-auto">
                         {activeTab === 'challenges' ? <ChallengesPanel /> : <ChartsPanel />}
                     </div>
                 </div>

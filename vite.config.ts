@@ -1,8 +1,9 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import { spawn } from 'child_process'
-import type { Plugin } from 'vite'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite'
+import { spawn } from 'child_process';
+import type { Plugin } from 'vite';
 
 /**
  * Custom Vite plugin to automatically start react-devtools and inject its script.
@@ -83,7 +84,11 @@ const renderChunks = (id: string) => {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), autoReactDevtools()],
+  plugins: [
+    react(), 
+    autoReactDevtools(),
+    tailwindcss()
+  ],
   base: process.env.BASE_URL || '/',
   test: {
     globals: true,

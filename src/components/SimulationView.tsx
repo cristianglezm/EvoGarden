@@ -153,7 +153,7 @@ interface SimulationViewProps {
 
 export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelectFlower, selectedFlowerId, grid }) => {
     return (
-        <div className="flex-grow bg-surface rounded-lg overflow-auto flex items-center justify-center p-4">
+        <div className="grow bg-surface rounded-lg overflow-auto flex items-center justify-center p-4">
             {grid.length > 0 && ( // Ensure grid is initialized before rendering canvas
                 <SimulationCanvas
                     grid={grid}

@@ -229,9 +229,9 @@ export default function App(): React.ReactNode {
         </div>
       </header>
       
-      <main className="flex-grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">
+      <main className="grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">
         {selectedFlower && (
-          <aside ref={detailsPanelRef} className="w-full lg:w-96 flex-shrink-0">
+          <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
             <FlowerDetailsPanel 
               flower={selectedFlower} 
               isRunning={isRunning}
@@ -240,7 +240,7 @@ export default function App(): React.ReactNode {
           </aside>
         )}
         
-        <div ref={simulationViewRef} className="flex-grow flex flex-col h-full">
+        <div ref={simulationViewRef} className="grow flex flex-col h-full">
           <SimulationView 
             params={params}
             grid={grid}
