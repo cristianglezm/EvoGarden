@@ -255,7 +255,7 @@ export default function App(): React.ReactNode {
             <button
                 ref={controlsButtonRef}
                 onClick={() => setIsControlsOpen(true)}
-                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200"
+                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
                 aria-label="Open controls panel"
                 title="Open Controls"
             >
@@ -263,7 +263,7 @@ export default function App(): React.ReactNode {
             </button>
              <button
                 onClick={() => setIsDataPanelOpen(true)}
-                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200"
+                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
                 aria-label="Open data panel"
                 title="Open Challenges & Analytics"
             >

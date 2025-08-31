@@ -38,7 +38,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose }) => {
                         <nav className="flex space-x-2 p-2" aria-label="Tabs">
                             <button
                                 onClick={() => setActiveTab('challenges')}
-                                className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'challenges' ? 'bg-accent-green/50 text-white' : 'text-secondary hover:bg-surface-hover/50'}`}
+                                className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'challenges' ? 'bg-accent-green/50 text-white' : 'text-secondary hover:bg-surface-hover/50'} cursor-pointer`}
                                 role="tab"
                                 aria-selected={activeTab === 'challenges'}
                             >
@@ -47,7 +47,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose }) => {
                             </button>
                             <button
                                 onClick={() => setActiveTab('analytics')}
-                                className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'analytics' ? 'bg-accent-green/50 text-white' : 'text-secondary hover:bg-surface-hover/50'}`}
+                                className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'analytics' ? 'bg-accent-green/50 text-white' : 'text-secondary hover:bg-surface-hover/50'} cursor-pointer`}
                                 role="tab"
                                 aria-selected={activeTab === 'analytics'}
                             >

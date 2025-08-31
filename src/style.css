@@ -1,1 +1,34 @@
 @import "tailwindcss";
+
+@theme {
+  /* Backgrounds */
+  --color-background: hsl(120, 100%, 15%);
+
+  /* Surface */
+  --color-surface: green;
+  --color-surface-hover: hsl(0, 0%, 25%);
+
+  /* Primary */
+  --color-primary: hsl(90, 60%, 80%);
+  --color-primary-light: hsl(90, 70%, 90%);
+
+  /* Secondary & Tertiary */
+  --color-secondary: hsl(90, 50%, 70%);
+  --color-tertiary: lightgreen;
+
+  /* Border */
+  --color-border: lime;
+
+  /* Chart */
+  --color-chart-background: hsl(120, 35%, 22%);
+  --color-chart-border: hsl(120, 35%, 35%);
+  --color-chart-grid: hsl(120, 10%, 45%);
+
+  /* Accent */
+  --color-accent: lightgreen;
+  --color-accent-blue: hsl(221, 83%, 60%);
+  --color-accent-purple: hsl(273, 80%, 65%);
+  --color-accent-yellow: hsl(45, 93%, 47%);
+  --color-accent-green: hsl(120, 100%, 50%);
+  --color-accent-red: hsl(0, 100%, 50%);
+}
