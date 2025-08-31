@@ -1,3 +1,4 @@
+[![CD](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml/badge.svg)](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml)
 
 > [!NOTE]
 > This project was created as an experiment with Google's Gemini 2.5 to explore what the LLM would build by giving it the API documentation of [@cristianglezm/flower-evolver-wasm](https://github.com/cristianglezm/FlowerEvolver-WASM) a npm package.
