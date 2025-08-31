@@ -1,0 +1,179 @@
+import React, { useState, useEffect } from 'react';
+import type { SimulationParams, WindDirection } from '../types';
+import { PlayIcon, PauseIcon, RefreshCwIcon, SaveIcon, UploadIcon, ChevronDownIcon, LoaderIcon } from './icons';
+
+interface ControlsProps {
+    params: SimulationParams;
+    onParamsChange: (params: SimulationParams) => void;
+    isRunning: boolean;
+    setIsRunning: (running: React.SetStateAction<boolean>) => void;
+    onSave: () => void;
+    onStart?: () => void;
+    onLoad: () => void;
+    hasSavedState: boolean;
+    isSaving: boolean;
+}
+
+const WIND_DIRECTIONS: WindDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const FLOWER_DETAIL_OPTIONS = [4, 8, 16, 32, 64];
+
+const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
+    const [isOpen, setIsOpen] = useState(true);
+    return (
+        <div className="pt-3 border-t border-border/50">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center justify-between w-full text-left py-2"
+                aria-expanded={isOpen}
+            >
+                <h3 className="text-lg font-semibold text-primary-light/80">{title}</h3>
+                <ChevronDownIcon className={`w-5 h-5 text-secondary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && <div className="mt-2 space-y-3">{children}</div>}
+        </div>
+    );
+};
+
+
+export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRunning, setIsRunning, onSave, onLoad, hasSavedState, isSaving, onStart }) => {
+    const [localParams, setLocalParams] = useState<SimulationParams>(params);
+
+    useEffect(() => {
+        setLocalParams(params);
+    }, [params]);
+
+    const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        const isFloat = name === 'humidity';
+        const isString = name === 'windDirection';
+        
+        setLocalParams(prev => {
+            const newParams = { 
+                ...prev, 
+                [name]: isString ? value : (isFloat ? parseFloat(value) : parseInt(value, 10))
+            };
+
+            // If grid size changes, ensure the number of flowers does not exceed the new capacity.
+            if (name === 'gridWidth' || name === 'gridHeight') {
+                const maxFlowers = newParams.gridWidth * newParams.gridHeight;
+                if (newParams.initialFlowers > maxFlowers) {
+                    newParams.initialFlowers = maxFlowers;
+                }
+            }
+            
+            return newParams;
+        });
+    };
+
+    const handleApply = () => {
+        onParamsChange(localParams);
+    };
+    
+    const maxFlowers = localParams.gridWidth * localParams.gridHeight;
+    
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+                <button
+                    onClick={() => {
+                        if (!isRunning) {
+                            onStart?.();
+                        }
+                        setIsRunning(p => !p);
+                    }}
+                    className="flex items-center justify-center px-4 py-2 bg-accent-green/50 hover:bg-accent-green/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    aria-label={isRunning ? 'Pause simulation' : 'Start simulation'}
+                    disabled={isSaving}
+                >
+                    {isRunning ? <PauseIcon className="w-5 h-5 mr-2" /> : <PlayIcon className="w-5 h-5 mr-2" />}
+                    {isRunning ? 'Pause' : 'Start'}
+                </button>
+                <button
+                    onClick={handleApply}
+                    className="flex items-center justify-center px-4 py-2 bg-accent-blue/50 hover:bg-accent-blue/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    title="Apply new parameters and reset simulation"
+                    disabled={isSaving}
+                >
+                    <RefreshCwIcon className="w-5 h-5 mr-2" />
+                    Apply & Reset
+                </button>
+                <button
+                    onClick={onSave}
+                    className="flex items-center justify-center px-4 py-2 bg-accent-purple/50 hover:bg-accent-purple/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    title="Save current simulation state"
+                    disabled={isSaving || isRunning}
+                >
+                    {isSaving ? (
+                        <><LoaderIcon className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
+                    ) : (
+                        <><SaveIcon className="w-5 h-5 mr-2" /> Save</>
+                    )}
+                </button>
+                 <button
+                    onClick={onLoad}
+                    disabled={!hasSavedState || isSaving}
+                    className="flex items-center justify-center px-4 py-2 bg-accent-yellow/50 hover:bg-accent-yellow/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    title="Load last saved simulation"
+                >
+                    <UploadIcon className="w-5 h-5 mr-2" />
+                    Load
+                </button>
+            </div>
+
+            <div className="space-y-1">
+                <CollapsibleSection title="World Parameters">
+                    <label className="block">
+                        <span className="text-secondary text-sm">Grid Width: {localParams.gridWidth}</span>
+                        <input type="range" name="gridWidth" min="10" max="15" value={localParams.gridWidth} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Grid Height: {localParams.gridHeight}</span>
+                        <input type="range" name="gridHeight" min="10" max="15" value={localParams.gridHeight} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Temperature: {localParams.temperature}°C</span>
+                        <input type="range" name="temperature" min="-10" max="50" value={localParams.temperature} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Humidity: {Math.round(localParams.humidity * 100)}%</span>
+                        <input type="range" name="humidity" min="0" max="1" step="0.01" value={localParams.humidity} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Wind Direction</span>
+                        <select name="windDirection" value={localParams.windDirection} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
+                            {WIND_DIRECTIONS.map(dir => <option key={dir} value={dir}>{dir}</option>)}
+                        </select>
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Wind Strength: {localParams.windStrength} cells</span>
+                        <input type="range" name="windStrength" min="1" max="15" value={localParams.windStrength} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="Radius">
+                    <label className="block">
+                        <span className="text-secondary text-sm">Flower Detail</span>
+                        <select name="flowerDetailRadius" value={localParams.flowerDetailRadius} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
+                            {FLOWER_DETAIL_OPTIONS.map(val => <option key={val} value={val}>x{val}</option>)}
+                        </select>
+                    </label>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="Initial Population">
+                    <label className="block">
+                        <span className="text-secondary text-sm">Flowers: {localParams.initialFlowers}</span>
+                        <input type="range" name="initialFlowers" min="0" max={maxFlowers} value={localParams.initialFlowers} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Insects: {localParams.initialInsects}</span>
+                        <input type="range" name="initialInsects" min="0" max="30" value={localParams.initialInsects} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Birds: {localParams.initialBirds}</span>
+                        <input type="range" name="initialBirds" min="0" max="20" value={localParams.initialBirds} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                </CollapsibleSection>
+            </div>
+        </div>
+    );
+};
