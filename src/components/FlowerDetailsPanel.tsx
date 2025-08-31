@@ -123,14 +123,14 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                         <div className="absolute top-2 right-2 flex flex-col space-y-1">
                             <button
                                 onClick={handleCopyGenome}
-                                className="p-1.5 bg-surface-hover hover:bg-surface-hover/80 rounded-md transition-colors"
+                                className="p-1.5 bg-surface-hover hover:bg-surface-hover/80 rounded-md transition-colors cursor-pointer"
                                 title="Copy genome"
                             >
                                 {copied ? <CheckIcon className="w-4 h-4 text-tertiary" /> : <CopyIcon className="w-4 h-4" />}
                             </button>
                              <button
                                 onClick={handleDownloadGenome}
-                                className="p-1.5 bg-surface-hover hover:bg-surface-hover/80 rounded-md transition-colors"
+                                className="p-1.5 bg-surface-hover hover:bg-surface-hover/80 rounded-md transition-colors cursor-pointer"
                                 title="Download genome as JSON"
                             >
                                 <DownloadIcon className="w-4 h-4" />
@@ -143,7 +143,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                     <button
                         onClick={handleView3D}
                         disabled={isLoading3D}
-                        className="w-full flex items-center justify-center px-4 py-2 bg-accent/50 hover:bg-accent/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface disabled:cursor-not-allowed"
+                        className="w-full flex items-center justify-center px-4 py-2 bg-accent/50 hover:bg-accent/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface disabled:cursor-not-allowed cursor-pointer"
                     >
                         {isLoading3D ? (
                             <><LoaderIcon className="w-5 h-5 mr-2 animate-spin" /> Generating...</>

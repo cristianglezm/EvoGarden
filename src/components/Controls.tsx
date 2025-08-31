@@ -23,7 +23,7 @@ const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode }>
         <div className="pt-3 border-t border-border/50">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-between w-full text-left py-2"
+                className="flex items-center justify-between w-full text-left py-2 cursor-pointer"
                 aria-expanded={isOpen}
             >
                 <h3 className="text-lg font-semibold text-primary-light/80">{title}</h3>
@@ -81,7 +81,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         }
                         setIsRunning(p => !p);
                     }}
-                    className="flex items-center justify-center px-4 py-2 bg-accent-green/50 hover:bg-accent-green/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-4 py-2 bg-accent-green/50 hover:bg-accent-green/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed cursor-pointer"
                     aria-label={isRunning ? 'Pause simulation' : 'Start simulation'}
                     disabled={isSaving}
                 >
@@ -90,7 +90,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                 </button>
                 <button
                     onClick={handleApply}
-                    className="flex items-center justify-center px-4 py-2 bg-accent-blue/50 hover:bg-accent-blue/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-4 py-2 bg-accent-blue/50 hover:bg-accent-blue/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed cursor-pointer"
                     title="Apply new parameters and reset simulation"
                     disabled={isSaving}
                 >
@@ -99,7 +99,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                 </button>
                 <button
                     onClick={onSave}
-                    className="flex items-center justify-center px-4 py-2 bg-accent-purple/50 hover:bg-accent-purple/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-4 py-2 bg-accent-purple/50 hover:bg-accent-purple/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed cursor-pointer"
                     title="Save current simulation state"
                     disabled={isSaving || isRunning}
                 >
@@ -112,7 +112,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                  <button
                     onClick={onLoad}
                     disabled={!hasSavedState || isSaving}
-                    className="flex items-center justify-center px-4 py-2 bg-accent-yellow/50 hover:bg-accent-yellow/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-4 py-2 bg-accent-yellow/50 hover:bg-accent-yellow/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface-hover/50 disabled:cursor-not-allowed cursor-pointer"
                     title="Load last saved simulation"
                 >
                     <UploadIcon className="w-5 h-5 mr-2" />
