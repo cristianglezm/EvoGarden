@@ -22,7 +22,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         className="bg-surface border border-border rounded-lg shadow-xl w-full max-w-3xl h-full max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border">
+        <header className="shrink-0 flex items-center justify-between p-4 border-b border-border">
           <h3 className="text-xl font-bold text-secondary">{title}</h3>
           <button
             onClick={onClose}
@@ -32,7 +32,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             <XIcon className="w-6 h-6" />
           </button>
         </header>
-        <main className="flex-grow h-0">
+        <main className="grow h-0">
           {children}
         </main>
       </div>

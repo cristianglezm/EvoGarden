@@ -40,7 +40,7 @@ export const Toast: React.FC<ToastProps> = ({ toast }) => {
       className={`flex items-start w-full max-w-sm p-4 text-primary bg-surface/80 backdrop-blur-md rounded-lg shadow-lg border border-border transition-all duration-300 ease-in-out ${isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'}`}
       role="alert"
     >
-      <div className={`inline-flex items-center justify-center flex-shrink-0 w-8 h-8 ${iconColorClass}`}>
+      <div className={`inline-flex items-center justify-center shrink-0 w-8 h-8 ${iconColorClass}`}>
         <InfoIcon className="w-6 h-6" />
         <span className="sr-only">{toast.type} icon</span>
       </div>
