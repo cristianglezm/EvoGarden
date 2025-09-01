@@ -125,12 +125,12 @@ describe('SimulationEngine', () => {
             const closeInsect = insects[1];
             
             bird.x = 5; bird.y = 5;
-            farInsect.x = 14; farInsect.y = 14;
+            farInsect.x = 14; farInsect.y = 9;
             closeInsect.x = 7; closeInsect.y = 7;
 
             const newGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
             newGrid[5][5].push(bird);
-            newGrid[14][14].push(farInsect);
+            newGrid[9][14].push(farInsect);
             newGrid[7][7].push(closeInsect);
             (engine as any).grid = newGrid;
             

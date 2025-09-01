@@ -4,7 +4,7 @@ export const TICK_RATE_MS = 250;
 
 export const DEFAULT_SIM_PARAMS: SimulationParams = {
     gridWidth: 15,
-    gridHeight: 15,
+    gridHeight: 10,
     initialFlowers: 30,
     initialInsects: 15,
     initialBirds: 3,

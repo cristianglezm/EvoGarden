@@ -26,7 +26,8 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "three": "^0.179.0",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "dexie": "^4.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.3",
