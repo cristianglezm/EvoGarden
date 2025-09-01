@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
-import type { Flower, SimulationParams } from './types';
+import type { CellContent, Flower, SimulationParams, Grid } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
@@ -11,8 +11,9 @@ import { flowerService } from './services/flowerService';
 import { useToastStore } from './stores/toastStore';
 import { DataPanel } from './components/DataPanel';
 import { useAnalyticsStore } from './stores/analyticsStore';
+import { db } from './services/db';
 
-const SAVE_KEY = 'evoGarden-savedState';
+const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
 
 export default function App(): React.ReactNode {
@@ -38,15 +39,12 @@ export default function App(): React.ReactNode {
 
   // Check for a saved state on initial load
   useEffect(() => {
-    setHasSavedState(!!localStorage.getItem(SAVE_KEY));
+    setHasSavedState(!!localStorage.getItem(META_SAVE_KEY));
   }, []);
   
   // Effect for one-time WASM initialization and auto-loading/initialization.
   useEffect(() => {
-    // This effect should only run once, when the worker is created and ready to receive messages.
-    if (!isWorkerInitialized) {
-        return;
-    }
+    if (!isWorkerInitialized) return;
 
     const initAndLoad = async () => {
         try {
@@ -57,16 +55,33 @@ export default function App(): React.ReactNode {
             // Race the main thread WASM initialization against the timeout
             await Promise.race([flowerService.initialize(), timeoutPromise]);
             setIsServiceInitialized(true);
+            
+            const metadataJSON = localStorage.getItem(META_SAVE_KEY);
+            if (metadataJSON) {
+                const metadata = JSON.parse(metadataJSON);
+                const flowers = await db.savedFlowers.toArray();
+                
+                if (flowers.length === 0 && metadata.grid.flat(2).some((a: any) => a.type === 'flower')) {
+                    throw new Error("Metadata found, but no flowers in the database. Save file may be corrupt.");
+                }
 
-            // The listener for 'initialized' or 'load-complete' is now inside the useSimulation hook,
-            // which will set isLoading to false at the appropriate time.
+                const flowerMap = new Map(flowers.map(f => [f.id, f]));
+                const rehydratedGrid = metadata.grid.map((row: CellContent[][]) => 
+                    row.map((cell: CellContent[]) => 
+                        cell.map((actor: CellContent) => {
+                            if (actor.type === 'flower') {
+                                return flowerMap.get(actor.id) || null;
+                            }
+                            return actor;
+                        }).filter((actor): actor is CellContent => actor !== null)
+                    )
+                );
 
-            const savedStateJSON = localStorage.getItem(SAVE_KEY);
-            if (savedStateJSON) {
-                const savedState = JSON.parse(savedStateJSON);
-                workerRef.current!.postMessage({ type: 'load-state', payload: savedState });
-                // Sync main thread state immediately
-                setParams(savedState.params);
+                const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
+                workerRef.current!.postMessage({ type: 'load-state', payload: fullStateToLoad });
+                
+                // Sync main thread state
+                setParams(fullStateToLoad.params);
                 setIsRunning(false);
                 setSelectedFlowerId(null);
                 useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
@@ -76,15 +91,18 @@ export default function App(): React.ReactNode {
                 setParams(DEFAULT_SIM_PARAMS);
             }
         } catch (err) {
-            console.error("Failed to initialize on main thread:", err);
-            setError("Failed to load core simulation components. This could be due to a network issue or an unsupported browser. Please refresh the page to try again.");
+            console.error("Failed to initialize or load on main thread:", err);
+            setError("Failed to load core simulation components. This could be due to a network issue, a corrupt save file, or an unsupported browser. Please refresh the page to try again.");
+            // Clear potentially corrupt state
+            localStorage.removeItem(META_SAVE_KEY);
+            db.savedFlowers.clear();
             setIsLoading(false);
         }
     };
 
     initAndLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWorkerInitialized]); // Depend on a state variable, which is safe.
+  }, [isWorkerInitialized]);
 
   // Effect to sync the main-thread flower service with params, needed for 3D viewer.
   useEffect(() => {
@@ -158,49 +176,119 @@ export default function App(): React.ReactNode {
     };
   }, [selectedFlowerId, handleSelectFlower]);
 
-  const handleSaveSimulation = useCallback(() => {
+  const handleSaveSimulation = useCallback(async () => {
     if (!workerRef.current || isSaving) return;
     
     setIsSaving(true);
     setIsRunning(false); // Pause simulation to get a stable state
 
-    const messageHandler = (e: MessageEvent) => {
-        if (e.data.type === 'state-response') {
-            const stateToSave = e.data.payload;
-            localStorage.setItem(SAVE_KEY, JSON.stringify(stateToSave));
-            setHasSavedState(true);
-            useToastStore.getState().addToast({ message: 'Garden state saved!', type: 'success' });
+    try {
+        const stateFromWorker = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Timeout getting state from worker")), 5000);
             
-            // Clean up the listener
-            workerRef.current?.removeEventListener('message', messageHandler);
-            setIsSaving(false);
-        }
-    };
-    
-    workerRef.current.addEventListener('message', messageHandler);
-    workerRef.current.postMessage({ type: 'get-state' });
+            const messageHandler = (e: MessageEvent) => {
+                if (e.data.type === 'state-response') {
+                    workerRef.current?.removeEventListener('message', messageHandler);
+                    clearTimeout(timeout);
+                    resolve(e.data.payload);
+                }
+            };
+            
+            workerRef.current!.addEventListener('message', messageHandler);
+            workerRef.current!.postMessage({ type: 'get-state' });
+        });
 
-  }, [workerRef, setIsRunning, isSaving]);
+        if (!stateFromWorker) throw new Error("Did not receive state from worker.");
 
-  const handleLoadSimulation = useCallback(() => {
-    const savedStateJSON = localStorage.getItem(SAVE_KEY);
-    if (savedStateJSON && workerRef.current) {
-        setIsLoading(true); // Show the full-screen loader
+        const fullState = stateFromWorker as { params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten: number };
+        const flowersToSave: Flower[] = [];
+
+        // Create a "skeleton" grid with placeholders for flowers
+        const skeletonGrid = fullState.grid.map(row => 
+            row.map(cell => 
+                cell.map(actor => {
+                    if (actor.type === 'flower') {
+                        flowersToSave.push(actor as Flower);
+                        return { id: actor.id, type: 'flower', x: actor.x, y: actor.y };
+                    }
+                    return actor;
+                })
+            )
+        );
+
+        const metadataToSave = {
+            params: fullState.params,
+            tick: fullState.tick,
+            totalInsectsEaten: fullState.totalInsectsEaten,
+            grid: skeletonGrid,
+        };
+
+        // Transactionally write to DB and localStorage
+        await db.transaction('rw', db.savedFlowers, async () => {
+            await db.savedFlowers.clear();
+            await db.savedFlowers.bulkAdd(flowersToSave);
+        });
+
+        localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
         
-        const savedState = JSON.parse(savedStateJSON);
-        workerRef.current.postMessage({ type: 'load-state', payload: savedState });
+        setHasSavedState(true);
+        useToastStore.getState().addToast({ message: 'Garden state saved!', type: 'success' });
 
-        // Sync main thread state
-        setParams(savedState.params);
+    } catch (err) {
+        console.error("Save failed:", err);
+        useToastStore.getState().addToast({ message: `Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+    } finally {
+        setIsSaving(false);
+    }
+  }, [workerRef, isSaving, setIsRunning]);
+
+  const handleLoadSimulation = useCallback(async () => {
+    const metadataJSON = localStorage.getItem(META_SAVE_KEY);
+    if (!metadataJSON || !workerRef.current) {
+        useToastStore.getState().addToast({ message: 'No saved state found.', type: 'error' });
+        return;
+    }
+
+    setIsLoading(true);
+
+    try {
+        const metadata = JSON.parse(metadataJSON);
+        const flowers = await db.savedFlowers.toArray();
+
+        if (flowers.length === 0 && metadata.grid.flat(2).some((a: any) => a.type === 'flower')) {
+            throw new Error("Metadata found, but no flowers in the database. Save file may be corrupt.");
+        }
+
+        const flowerMap = new Map(flowers.map(f => [f.id, f]));
+        const rehydratedGrid = metadata.grid.map((row: CellContent[][]) => 
+            row.map((cell: CellContent[]) => 
+                cell.map((actor: CellContent) => {
+                    if (actor.type === 'flower') {
+                        return flowerMap.get(actor.id) || null;
+                    }
+                    return actor;
+                }).filter((actor): actor is CellContent => actor !== null)
+            )
+        );
+
+        const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
+        workerRef.current.postMessage({ type: 'load-state', payload: fullStateToLoad });
+
+        setParams(fullStateToLoad.params);
         setIsRunning(false);
         setSelectedFlowerId(null);
-        setIsControlsOpen(false); // Close panel on load
+        setIsControlsOpen(false);
         useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
 
-    } else {
-        useToastStore.getState().addToast({ message: 'No saved state found.', type: 'error' });
+    } catch (err) {
+        console.error("Load failed:", err);
+        useToastStore.getState().addToast({ message: `Load failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+        setIsLoading(false);
+        localStorage.removeItem(META_SAVE_KEY);
+        await db.savedFlowers.clear();
+        setHasSavedState(false);
     }
-  }, [workerRef, setIsRunning]);
+  }, [workerRef, setIsRunning, setIsLoading]);
 
 
   if (error) {

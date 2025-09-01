@@ -124,11 +124,11 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                 <CollapsibleSection title="World Parameters">
                     <label className="block">
                         <span className="text-secondary text-sm">Grid Width: {localParams.gridWidth}</span>
-                        <input type="range" name="gridWidth" min="10" max="15" value={localParams.gridWidth} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        <input type="range" name="gridWidth" min="10" max="35" value={localParams.gridWidth} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
                     <label className="block">
                         <span className="text-secondary text-sm">Grid Height: {localParams.gridHeight}</span>
-                        <input type="range" name="gridHeight" min="10" max="15" value={localParams.gridHeight} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        <input type="range" name="gridHeight" min="10" max="35" value={localParams.gridHeight} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
                     <label className="block">
                         <span className="text-secondary text-sm">Temperature: {localParams.temperature}°C</span>
