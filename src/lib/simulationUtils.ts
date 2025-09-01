@@ -1,4 +1,4 @@
-import type { Coord, Grid, SimulationParams, CellContent, WindDirection } from '../types';
+import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect, Bird } from '../types';
 
 export const windVectors: Record<WindDirection, {dx: number, dy: number}> = {
     'N': {dx: 0, dy: -1}, 'NE': {dx: 1, dy: -1}, 'E': {dx: 1, dy: 0}, 'SE': {dx: 1, dy: 1},
@@ -75,4 +75,26 @@ export const findCellForStationaryActor = (grid: Grid, params: SimulationParams,
     }
     if (validCells.length === 0) return null;
     return validCells[Math.floor(Math.random() * validCells.length)];
-}
+};
+
+/**
+ * Creates a performance-optimized clone of an actor object.
+ * This is much faster than `JSON.parse(JSON.stringify(actor))` because it avoids
+ * serialization and only deep-copies nested objects that are known to be mutable.
+ */
+export const cloneActor = <T extends CellContent>(actor: T): T => {
+    // Start with a shallow copy, which is very fast.
+    const newActor = { ...actor };
+
+    // If the actor is an insect and has pollen, deep-copy the pollen object.
+    if ('pollen' in newActor && newActor.pollen) {
+        newActor.pollen = { ...(newActor.pollen as NonNullable<Insect['pollen']>) };
+    }
+    
+    // If the actor is a bird and has a target, deep-copy the target object.
+    if ('target' in newActor && newActor.target) {
+        newActor.target = { ...(newActor.target as NonNullable<Bird['target']>) };
+    }
+
+    return newActor;
+};

@@ -3,7 +3,7 @@ import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN } from '../
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
 import { initializeGridState, createNewFlower } from './simulationInitializer';
-import { findCellForStationaryActor } from './simulationUtils';
+import { findCellForStationaryActor, cloneActor } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
 import { processFlowerTick } from './behaviors/flowerBehavior';
@@ -39,7 +39,7 @@ export class SimulationEngine {
         let insectsBornThisTick = 0;
 
         const nextActorState = new Map<string, CellContent>(
-            currentActors.map(actor => [actor.id, JSON.parse(JSON.stringify(actor))])
+            currentActors.map(actor => [actor.id, cloneActor(actor)])
         );
 
         const newFlowerPromises: Promise<Flower | null>[] = [];
