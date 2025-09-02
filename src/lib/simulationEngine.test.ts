@@ -167,4 +167,38 @@ describe('SimulationEngine', () => {
             expect(nutrient?.y).toBe(6);
         });
     });
+
+    describe('Insect Reproduction', () => {
+        it('should lay an egg when two insects of the same type are on the same cell', async () => {
+            engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 2, initialBirds: 0 });
+            await engine.initializeGrid();
+            
+            const insects = (engine as any).grid.flat(2).filter((c: CellContent) => c.type === 'insect') as Insect[];
+            const insect1 = insects[0];
+            const insect2 = insects[1];
+            
+            insect1.emoji = '🦋';
+            insect2.emoji = '🦋';
+
+            const newGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
+            
+            insect1.x = 5; insect1.y = 5;
+            insect2.x = 5; insect2.y = 5;
+            newGrid[5][5].push(insect1, insect2);
+
+            (engine as any).grid = newGrid;
+            
+            const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+
+            const { toasts } = await engine.calculateNextTick();
+
+            const finalGrid = engine.getGridState().grid;
+            const egg = finalGrid.flat(2).find(c => c.type === 'egg');
+            
+            expect(egg).toBeDefined();
+            expect(toasts.some(t => t.message === `${insect1.emoji} laid an egg!`)).toBe(true);
+
+            randomSpy.mockRestore();
+        });
+    });
 });

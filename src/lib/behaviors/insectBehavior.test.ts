@@ -133,4 +133,26 @@ describe('insectBehavior', () => {
 
         vi.spyOn(Math, 'random').mockRestore();
     });
+
+    it('should die of old age, create a nutrient, and send a toast', () => {
+        insect.lifespan = 1; // Set lifespan to 1 so it dies on the next tick
+        
+        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        
+        // Verify insect is removed
+        expect(nextActorState.has(insect.id)).toBe(false);
+        
+        // Verify nutrient is created
+        const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
+        expect(nutrient).toBeDefined();
+        expect(nutrient?.x).toBe(insect.x);
+        expect(nutrient?.y).toBe(insect.y);
+        
+        // Verify toast is sent
+        expect(toasts.length).toBe(1);
+        expect(toasts[0].message).toBe('💀 An insect died of old age.');
+        
+        // Verify analytics counter is incremented
+        expect(incrementInsectsDiedOfOldAge).toHaveBeenCalledTimes(1);
+    });
 });

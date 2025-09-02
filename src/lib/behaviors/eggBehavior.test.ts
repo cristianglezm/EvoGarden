@@ -40,7 +40,7 @@ describe('eggBehavior', () => {
         expect(newInsect?.x).toBe(egg.x);
         expect(newInsect?.y).toBe(egg.y);
         expect(toasts.length).toBe(1);
-        expect(toasts[0].message).toContain('An insect has hatched!');
+        expect(toasts[0].message).toBe('🐣 An insect has hatched!');
         expect(incrementInsectsBorn).toHaveBeenCalledTimes(1);
     });
     

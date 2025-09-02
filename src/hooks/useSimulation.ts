@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Grid, SimulationParams } from '../types';
+import type { Grid, SimulationParams, ToastMessage } from '../types';
 import { useToastStore } from '../stores/toastStore';
 import { useChallengeStore } from '../stores/challengeStore';
 import { useAnalyticsStore } from '../stores/analyticsStore';
@@ -44,7 +44,15 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                     }
                     setIsLoading(false);
                     break;
+                case 'toast-batch': {
+                    const toasts = payload as Omit<ToastMessage, 'id' | 'key' | 'count'>[];
+                    for (const toast of toasts) {
+                        useToastStore.getState().addToast(toast);
+                    }
+                    break;
+                }
                 case 'toast':
+                    // This handles single, important toasts (like worker errors)
                     useToastStore.getState().addToast(payload);
                     break;
                 case 'initialized':

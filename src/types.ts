@@ -100,6 +100,8 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: 'info' | 'success' | 'error';
+  count?: number;
+  key?: number;
 }
 
 export interface FEService {

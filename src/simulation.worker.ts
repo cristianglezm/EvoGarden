@@ -36,7 +36,11 @@ const gameLoop = async () => {
     // Post grid updates, summary, and any new toasts
     self.postMessage({ type: 'gridUpdate', payload: state });
     self.postMessage({ type: 'tick-summary', payload: summary });
-    toasts.forEach(toast => self.postMessage({ type: 'toast', payload: toast }));
+    
+    // Batch toasts for more efficient processing on the main thread
+    if (toasts.length > 0) {
+        self.postMessage({ type: 'toast-batch', payload: toasts });
+    }
 
     gameLoopTimeoutId = self.setTimeout(gameLoop, TICK_RATE_MS);
 };
