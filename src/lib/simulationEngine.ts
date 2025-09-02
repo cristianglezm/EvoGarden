@@ -90,6 +90,7 @@ export class SimulationEngine {
                         grid: this.grid,
                         params: this.params,
                         qtree,
+                        flowerQtree,
                         nextActorState,
                         toasts,
                         incrementInsectsEaten: () => {

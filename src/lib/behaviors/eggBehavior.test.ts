@@ -46,7 +46,7 @@ describe('eggBehavior', () => {
     
     it('should not hatch if a bird is on the same cell', () => {
         egg.hatchTimer = 1;
-        const bird: Bird = { id: 'bird1', type: 'bird', x: 1, y: 1, target: null };
+        const bird: Bird = { id: 'bird1', type: 'bird', x: 1, y: 1, target: null, patrolTarget: null };
         nextActorState.set(bird.id, bird);
 
         processEggTick(egg, setupContext());

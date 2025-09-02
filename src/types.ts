@@ -79,6 +79,7 @@ export interface Insect extends Actor {
 export interface Bird extends Actor {
     type: 'bird';
     target: {x: number, y: number} | null; // target insect coordinates
+    patrolTarget: {x: number, y: number} | null;
 }
 
 export interface Nutrient extends Actor {

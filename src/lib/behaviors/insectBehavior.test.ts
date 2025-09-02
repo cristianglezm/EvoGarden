@@ -4,6 +4,9 @@ import type { Insect, Flower, Grid, CellContent, Coord, ToastMessage } from '../
 import { Quadtree, Rectangle } from '../Quadtree';
 import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN } from '../../constants';
 
+// The wander chance from the behavior file
+const INSECT_WANDER_CHANCE = 0.2;
+
 describe('insectBehavior', () => {
     let insect: Insect;
     let grid: Grid;
@@ -52,10 +55,32 @@ describe('insectBehavior', () => {
         grid[8][8].push(mockFlower);
         flowerQtree.insert({ x: mockFlower.x, y: mockFlower.y, data: mockFlower });
         
+        // Mock random to ensure it does NOT wander
+        vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
+        
         processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
         
         expect(insect.x).toBe(6);
         expect(insect.y).toBe(6);
+        vi.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should move randomly even with a target if wander chance is met', () => {
+        const initialX = insect.x;
+        const initialY = insect.y;
+        grid[8][8].push(mockFlower);
+        flowerQtree.insert({ x: mockFlower.x, y: mockFlower.y, data: mockFlower });
+
+        // Mock random to ensure it DOES wander
+        vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE - 0.1);
+
+        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+
+        // Position should have changed, but not necessarily to (6,6)
+        expect(insect.x !== initialX || insect.y !== initialY).toBe(true);
+        // It's possible but very unlikely for the random move to be the same as the target move
+        expect(`${insect.x},${insect.y}`).not.toBe('6,6'); 
+        vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('should move randomly if no flower is in vision', () => {
@@ -71,6 +96,7 @@ describe('insectBehavior', () => {
         nextActorState.set(flower.id, flower);
         flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
         
+        vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
         processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
         
         const flowerState = nextActorState.get(flower.id) as Flower;
@@ -78,6 +104,7 @@ describe('insectBehavior', () => {
         expect(insect.y).toBe(6);
         expect(flowerState.health).toBe(flower.maxHealth - INSECT_DAMAGE_TO_FLOWER);
         expect(insect.pollen).toEqual({ genome: flower.genome, sourceFlowerId: flower.id });
+        vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('should pollinate a different mature flower', () => {

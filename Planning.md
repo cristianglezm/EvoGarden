@@ -77,17 +77,17 @@ The application's architecture is designed to separate the computationally inten
 
     -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
         -   **Lifecycle**: Insects have a limited `lifespan`. Each tick, it decrements. If it reaches zero, the insect dies and is replaced by a nutrient, completing the cycle.
-        -   **AI**: Uses the `flowerQtree` to find the nearest flower within its vision range and moves towards it. If no flower is found, it wanders randomly.
+        -   **AI**: Uses the `flowerQtree` to find the nearest flower within its vision range and moves towards it. To prevent unnatural swarming behavior (or "zerging"), a degree of randomness is introduced. Even when a target is identified, there is a chance the insect will make a random move instead. If no flower is found, it wanders randomly.
         -   **Interaction**: When it lands on a flower's cell, it inflicts a small amount of damage and picks up the flower's pollen (genome).
         -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event by calling `createNewFlower`.
 
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
-        -   **AI**: Uses the main `qtree` to find prey. It has a target priority: it will always prefer to hunt unprotected insects, but if none are available, it will target stationary eggs.
+        -   **AI**: Uses the main `qtree` to find prey. It has a target priority: it will always prefer to hunt unprotected insects, but if none are available, it will target stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination to search for prey near food sources. Its vision check remains active during patrols, allowing it to divert and hunt if a target of opportunity appears.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it (removes the insect/egg from the simulation).
         -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping (`💩`) on that cell. Eating an egg does not produce a nutrient.
 
     -   **`eggBehavior` & `nutrientBehavior`**: Simple state-machine behaviors.
-        -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed and a new insect is spawned in its place.
+        -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed. A new insect is spawned in its place, unless a predator (like a bird) is occupying the same cell, in which case the egg is considered "eaten" and no insect spawns.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires. Its healing effect is handled globally by the `SimulationEngine` before its own tick is processed.
 
 ### 5.3. Performance Optimization with Quadtrees (`lib/Quadtree.ts`)
@@ -99,6 +99,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 
 -   **`flowerQtree`**: Contains only flowers. This is a critical optimization used exclusively by:
     -   `insectBehavior` to allow insects to find the nearest flower target without having to scan through birds, eggs, or other insects.
+    -   `birdBehavior` to allow birds to find patrol targets when idle.
 
 -   **`insectQtree`**: Contains only insects. This tree is built and used within the `SimulationEngine`'s main loop to handle:
     -   **Insect Reproduction**: Allows an insect to efficiently find if another insect of the same species is on the same cell to initiate a reproduction event. This avoids a costly `O(n^2)` check between all insects.
