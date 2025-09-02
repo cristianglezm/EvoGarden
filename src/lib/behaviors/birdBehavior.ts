@@ -1,4 +1,4 @@
-import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, ToastMessage } from '../../types';
+import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, ToastMessage, Flower } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 import { NUTRIENT_FROM_PREY_LIFESPAN, BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
 import { findCellForStationaryActor } from '../simulationUtils';
@@ -9,6 +9,7 @@ export interface BirdContext {
     grid: Grid;
     params: SimulationParams;
     qtree: Quadtree<CellContent>;
+    flowerQtree: Quadtree<CellContent>;
     nextActorState: Map<string, CellContent>;
     toasts: Omit<ToastMessage, 'id'>[];
     incrementInsectsEaten: () => void;
@@ -16,12 +17,12 @@ export interface BirdContext {
 }
 
 export const processBirdTick = (bird: Bird, context: BirdContext) => {
-    const { grid, params, qtree, nextActorState, toasts, incrementInsectsEaten, incrementEggsEaten } = context;
+    const { grid, params, qtree, flowerQtree, nextActorState, toasts, incrementInsectsEaten, incrementEggsEaten } = context;
     const { gridWidth, gridHeight } = params;
     const { x, y } = bird;
     let moved = false;
 
-    // 1. Find a target if we don't have one
+    // 1. Find a prey target if we don't have one
     if (!bird.target) {
         const vision = new Rectangle(x, y, BIRD_VISION_RANGE, BIRD_VISION_RANGE);
         const nearbyPoints = qtree.query(vision);
@@ -67,10 +68,10 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
         }
     }
     
-    // 2. Move towards target and attack
+    // 2. Move towards prey target and attack
     if (bird.target) {
         // Use original grid to find target, but check `nextActorState` for existence
-        const targetCellContent = grid[bird.target.y][bird.target.x];
+        const targetCellContent = grid[bird.target.y]?.[bird.target.x] ?? [];
         const targetActor = targetCellContent.find(c => (c.type === 'insect' || c.type === 'egg')) as Insect | Egg | undefined;
         
         if (targetActor && nextActorState.has(targetActor.id)) {
@@ -105,15 +106,34 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
         }
     }
 
-    // 3. Random movement if no target action was taken
-    if (!moved && !bird.target) {
-        const moves = [[0,1], [0,-1], [1,0], [-1,0]].sort(() => Math.random() - 0.5);
-        for (const [dx, dy] of moves) {
-            const newX = x + dx; const newY = y + dy;
-            if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight && !grid[newY][newX].some(c => c.type ==='bird')) {
-                bird.x = newX; bird.y = newY; 
-                break;
+    // 3. If the bird didn't move to attack prey, it should patrol or wander.
+    if (!moved) {
+        if (bird.patrolTarget && bird.x === bird.patrolTarget.x && bird.y === bird.patrolTarget.y) {
+            bird.patrolTarget = null;
+        }
+
+        if (!bird.patrolTarget) {
+            const allFlowers = flowerQtree.query(new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2)).map(p => p.data as Flower);
+            if (allFlowers.length > 0) {
+                const randomFlower = allFlowers[Math.floor(Math.random() * allFlowers.length)];
+                bird.patrolTarget = { x: randomFlower.x, y: randomFlower.y };
             }
+        }
+
+        let dx = 0, dy = 0;
+        if (bird.patrolTarget) {
+            dx = Math.sign(bird.patrolTarget.x - x);
+            dy = Math.sign(bird.patrolTarget.y - y);
+        } else {
+            const moves = [[0,1], [0,-1], [1,0], [-1,0]].sort(() => Math.random() - 0.5);
+            [dx, dy] = moves[0];
+        }
+        
+        const newX = x + dx;
+        const newY = y + dy;
+        if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight && !grid[newY][newX].some(c => c.type ==='bird')) {
+            bird.x = newX;
+            bird.y = newY;
         }
     }
 

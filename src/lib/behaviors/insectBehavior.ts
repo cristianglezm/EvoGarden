@@ -4,6 +4,7 @@ import { findCellForFlowerSpawn } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
 
 const INSECT_VISION_RANGE = 5;
+const INSECT_WANDER_CHANCE = 0.2; // 20% chance to wander even if a target is found
 
 export interface InsectContext {
     params: SimulationParams;
@@ -40,6 +41,7 @@ export const processInsectTick = (
     let target: Coord | null = null;
     let newX = x;
     let newY = y;
+    let movedDeterministically = false;
 
     // 2. Find a target flower using the Quadtree
     const vision = new Rectangle(x, y, INSECT_VISION_RANGE, INSECT_VISION_RANGE);
@@ -58,8 +60,8 @@ export const processInsectTick = (
         }
     }
 
-    // 3. Move towards target if one is found
-    if (target) {
+    // 3. Move towards target if one is found and not wandering
+    if (target && Math.random() > INSECT_WANDER_CHANCE) {
         const dx = Math.sign(target.x - x);
         const dy = Math.sign(target.y - y);
         const potentialX = x + dx;
@@ -68,9 +70,12 @@ export const processInsectTick = (
         if (potentialX >= 0 && potentialX < gridWidth && potentialY >= 0 && potentialY < gridHeight && !grid[potentialY][potentialX].some(c => c.type === 'bird')) {
             newX = potentialX;
             newY = potentialY;
+            movedDeterministically = true;
         }
-    } else { 
-        // 4. Fallback to random movement if no target
+    } 
+    
+    // 4. Fallback to random movement if no target or wander chance met
+    if (!movedDeterministically) {
         const moves = [[0,1], [0,-1], [1,0], [-1,0]].sort(() => Math.random() - 0.5);
         for (const [dx, dy] of moves) {
             const potentialX = x + dx; 

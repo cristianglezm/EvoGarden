@@ -90,7 +90,7 @@ export const initializeGridState = async (params: SimulationParams, flowerServic
         placeMobileActor({ id, type: 'insect', x: 0, y: 0, pollen: null, emoji, lifespan: INSECT_LIFESPAN });
     }
     for (let i = 0; i < initialBirds; i++) {
-        placeMobileActor({ id: `bird-init-${i}`, type: 'bird', x: 0, y: 0, target: null });
+        placeMobileActor({ id: `bird-init-${i}`, type: 'bird', x: 0, y: 0, target: null, patrolTarget: null });
     }
 
     return grid;

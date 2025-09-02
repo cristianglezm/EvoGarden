@@ -12,22 +12,25 @@ describe('birdBehavior', () => {
     let incrementEggsEaten: () => void;
     let grid: Grid;
     let qtree: Quadtree<CellContent>;
+    let flowerQtree: Quadtree<CellContent>;
 
     beforeEach(() => {
-        bird = { id: 'bird1', type: 'bird', x: 5, y: 5, target: null };
+        bird = { id: 'bird1', type: 'bird', x: 5, y: 5, target: null, patrolTarget: null };
         nextActorState = new Map();
         nextActorState.set(bird.id, bird);
         toasts = [];
         incrementInsectsEaten = vi.fn();
         incrementEggsEaten = vi.fn();
-        grid = Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => []));
-        qtree = new Quadtree(new Rectangle(7.5, 7.5, 7.5, 7.5), 4);
+        grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
+        qtree = new Quadtree(new Rectangle(DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2, DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2), 4);
+        flowerQtree = new Quadtree(new Rectangle(DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2, DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2), 4);
     });
 
     const setupContext = () => ({
         grid,
         params: DEFAULT_SIM_PARAMS,
         qtree,
+        flowerQtree,
         nextActorState,
         toasts,
         incrementInsectsEaten,
@@ -36,13 +39,13 @@ describe('birdBehavior', () => {
     
     it('should find the closest unprotected insect as a target', () => {
         const closeInsect: Insect = { id: 'insect1', type: 'insect', x: 7, y: 7, emoji: '🦋', pollen: null, lifespan: 100 };
-        const farInsect: Insect = { id: 'insect2', type: 'insect', x: 10, y: 10, emoji: '🦋', pollen: null, lifespan: 100 };
+        const farInsect: Insect = { id: 'insect2', type: 'insect', x: 9, y: 9, emoji: '🦋', pollen: null, lifespan: 100 };
         grid[7][7].push(closeInsect);
-        grid[10][10].push(farInsect);
+        grid[9][9].push(farInsect);
         nextActorState.set(closeInsect.id, closeInsect);
         nextActorState.set(farInsect.id, farInsect);
         qtree.insert({ x: 7, y: 7, data: closeInsect });
-        qtree.insert({ x: 10, y: 10, data: farInsect });
+        qtree.insert({ x: 9, y: 9, data: farInsect });
         
         processBirdTick(bird, setupContext());
 
@@ -66,13 +69,31 @@ describe('birdBehavior', () => {
         expect(bird.target).toEqual({ x: 8, y: 8 });
     });
 
-    it('should move one step towards its target', () => {
+    it('should find a patrol target if no prey is nearby', () => {
+        const flower = { id: 'flower1', type: 'flower', x: 10, y: 8 } as Flower;
+        flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
+        
+        processBirdTick(bird, setupContext());
+
+        expect(bird.target).toBeNull();
+        expect(bird.patrolTarget).toEqual({ x: 10, y: 8 });
+    });
+
+    it('should move one step towards its prey target', () => {
         // Setup the target insect in the grid and state so the bird can "see" it
         const targetInsect: Insect = { id: 'insect-target', type: 'insect', x: 8, y: 8, emoji: '🦋', pollen: null, lifespan: 100 };
         grid[8][8].push(targetInsect);
         nextActorState.set(targetInsect.id, targetInsect);
 
         bird.target = { x: 8, y: 8 };
+        processBirdTick(bird, setupContext());
+        
+        expect(bird.x).toBe(6);
+        expect(bird.y).toBe(6);
+    });
+    
+    it('should move one step towards its patrol target if no prey', () => {
+        bird.patrolTarget = { x: 8, y: 8 };
         processBirdTick(bird, setupContext());
         
         expect(bird.x).toBe(6);
