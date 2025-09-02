@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processBirdTick } from './birdBehavior';
-import type { Bird, Insect, Grid, CellContent, ToastMessage, Flower } from '../../types';
+import type { Bird, Insect, Grid, CellContent, ToastMessage, Flower, Egg } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 import { DEFAULT_SIM_PARAMS } from '../../constants';
 
@@ -92,12 +92,32 @@ describe('birdBehavior', () => {
         expect(nextActorState.has(targetInsect.id)).toBe(false);
         expect(incrementInsectsEaten).toHaveBeenCalledTimes(1);
         expect(toasts.length).toBe(1);
-        expect(toasts[0].message).toContain('A bird ate an insect!');
+        expect(toasts[0].message).toBe('🐦 An insect was eaten!');
         
         const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
         expect(nutrient).toBeDefined();
         expect(nutrient?.x).toBe(6);
         expect(nutrient?.y).toBe(6);
+        expect(bird.target).toBeNull();
+    });
+
+    it('should prey on an egg and not create a nutrient', () => {
+        const targetEgg: Egg = { id: 'egg1', type: 'egg', x: 6, y: 6, hatchTimer: 10, insectEmoji: '🐛' };
+        bird.x = 5; bird.y = 5;
+        bird.target = { x: 6, y: 6 };
+        
+        grid[6][6].push(targetEgg);
+        nextActorState.set(targetEgg.id, targetEgg);
+
+        processBirdTick(bird, setupContext());
+
+        expect(nextActorState.has(targetEgg.id)).toBe(false);
+        expect(incrementEggsEaten).toHaveBeenCalledTimes(1);
+        expect(toasts.length).toBe(1);
+        expect(toasts[0].message).toBe('🐦 An egg was eaten!');
+        
+        const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
+        expect(nutrient).toBeUndefined();
         expect(bird.target).toBeNull();
     });
 });

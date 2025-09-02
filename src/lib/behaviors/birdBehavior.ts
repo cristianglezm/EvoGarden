@@ -87,10 +87,10 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                     const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;
                     const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: NUTRIENT_FROM_PREY_LIFESPAN };
                     nextActorState.set(nutrientId, nutrient);
-                    toasts.push({ message: `A bird ate an insect! ${targetActor.emoji}`, type: 'info' });
+                    toasts.push({ message: '🐦 An insect was eaten!', type: 'info' });
                     incrementInsectsEaten();
                 } else { // It's an egg
-                    toasts.push({ message: `A bird ate an egg! 🥚`, type: 'info' });
+                    toasts.push({ message: '🐦 An egg was eaten!', type: 'info' });
                     incrementEggsEaten();
                     // Eating an egg provides no nutrient
                 }

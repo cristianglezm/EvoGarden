@@ -27,7 +27,7 @@ export const processEggTick = (egg: Egg, context: EggContext) => {
         const isOccupiedByBird = Array.from(nextActorState.values()).some(a => a.x === egg.x && a.y === egg.y && a.type === 'bird');
         if (!isOccupiedByBird) {
              nextActorState.set(newInsectId, newInsect);
-             toasts.push({ message: `An insect has hatched! ${newInsect.emoji}`, type: 'success' });
+             toasts.push({ message: '🐣 An insect has hatched!', type: 'success' });
              incrementInsectsBorn();
         }
     }
