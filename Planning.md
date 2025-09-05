@@ -32,6 +32,7 @@ Define the core data structures for the simulation state.
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, etc.), and its position.
     -   `Insect`: Includes `emoji`, position, `lifespan`, and `pollen` (tracking the genome and source ID of the last flower visited).
     -   `Bird`: Includes position and a `target` coordinate.
+    -   `Eagle`: Includes position and a `target` coordinate (for a bird).
     -   `Nutrient`: Includes position and a `lifespan` in ticks.
     -   `Egg`: Includes position, `hatchTimer`, and the `insectEmoji` it will spawn.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
@@ -85,16 +86,28 @@ The application's architecture is designed to separate the computationally inten
         -   **AI**: Uses the main `qtree` to find prey. It has a target priority: it will always prefer to hunt unprotected insects, but if none are available, it will target stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination to search for prey near food sources. Its vision check remains active during patrols, allowing it to divert and hunt if a target of opportunity appears.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it (removes the insect/egg from the simulation).
         -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping (`💩`) on that cell. Eating an egg does not produce a nutrient.
+    
+    -   **`eagleBehavior`**: The apex predator, spawned as a regulatory mechanism.
+        -   **AI**: Uses the main `qtree` to find the nearest bird.
+        -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it and is immediately removed from the simulation.
+        -   **Lifecycle**: Eagles are transient actors. If they cannot find a target, they despawn. Their purpose is to perform a single hunt to cull the bird population.
 
     -   **`eggBehavior` & `nutrientBehavior`**: Simple state-machine behaviors.
         -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed. A new insect is spawned in its place, unless a predator (like a bird) is occupying the same cell, in which case the egg is considered "eaten" and no insect spawns.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires. Its healing effect is handled globally by the `SimulationEngine` before its own tick is processed.
+
+-   **Dynamic Population Control**: To create a more resilient and self-regulating ecosystem, the `SimulationEngine` actively monitors population trends.
+    -   **Trend Analysis**: It maintains a history of insect population counts over a recent window of ticks (`POPULATION_TREND_WINDOW`).
+    -   **Predator Spawning**: If the insect population's growth rate exceeds a `POPULATION_GROWTH_THRESHOLD_INSECT`, a new **bird** is spawned at a random available location to act as a natural check.
+    -   **Apex Predator Intervention**: Conversely, if the insect population is declining too rapidly (exceeding `POPULATION_DECLINE_THRESHOLD_INSECT`), it suggests the bird population may be too high. To correct this, an **eagle** is spawned. The eagle hunts a single bird and then leaves the simulation, culling the predator population to allow insects to recover.
+    -   **Cooldowns**: To prevent chaotic fluctuations, both bird and eagle spawning events are subject to cooldowns (`BIRD_SPAWN_COOLDOWN`, `EAGLE_SPAWN_COOLDOWN`), ensuring these population controls act as gradual adjustments rather than sudden shocks.
 
 ### 5.3. Performance Optimization with Quadtrees (`lib/Quadtree.ts`)
 To avoid performance degradation as the number of actors grows, the `SimulationEngine` creates and populates several purpose-built Quadtrees **on every tick**. This provides highly efficient spatial lookups for different AI needs.
 
 -   **General `qtree`**: Contains all actors. Used for broad queries, such as:
     -   Bird vision (finding any nearby, unprotected insects and eggs).
+    -   Eagle vision (finding the nearest bird).
     -   Nutrient area-of-effect healing.
 
 -   **`flowerQtree`**: Contains only flowers. This is a critical optimization used exclusively by:

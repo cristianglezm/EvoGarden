@@ -55,6 +55,7 @@ const drawCell = (
         for (const entity of otherEntities) {
             const emoji =
                 entity.type === 'bird' ? '🐦' :
+                entity.type === 'eagle' ? '🦅' :
                 entity.type === 'insect' ? (entity as Insect).emoji :
                 entity.type === 'nutrient' ? '💩' :
                 entity.type === 'egg' ? '🥚' : '';

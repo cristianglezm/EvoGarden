@@ -66,6 +66,9 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
     -   **Predation Strategy**: Birds have a target priority. They prefer to hunt moving insects but will resort to eating stationary eggs if no unprotected insects are nearby.
     -   **Prey Protection**: Birds cannot see or prey on an insect while it is resting on the same cell as a flower. This makes flowers a crucial safe haven for insects.
     -   **Nutrient Cycle**: After killing an insect, the bird leaves behind a nutrient-rich dropping (`💩`) in that cell. Eating an egg does not produce a nutrient.
+-   **Eagles** (`🦅`): The apex predators of the garden, introduced dynamically by the simulation to maintain ecological balance.
+    -   **AI & Purpose**: Eagles are not a permanent part of the ecosystem but are a regulatory mechanism. When the insect population crashes due to too many birds, an eagle will spawn with a single purpose: to hunt one bird.
+    -   **Lifecycle**: After successfully hunting a bird, the eagle immediately leaves the simulation. This act of culling the predator population helps prevent the extinction of insects and restores balance to the food chain.
 
 ### Nutrients & The Ecosystem Loop
 Nutrients (`💩`) are the simulation's core resource.
@@ -73,6 +76,12 @@ Nutrients (`💩`) are the simulation's core resource.
 -   **Consumption**: Nutrients provide an area-of-effect heal. A nutrient will instantly heal all flowers in a 3x3 area around it (the flower on its own cell and all 8 neighbors) before being consumed and removed from the simulation.
 -   **Decay**: Unused nutrients have a limited lifespan and will disappear after a set number of ticks.
 This creates a dynamic resource cycle: predators consume prey -> deaths create nutrients -> nutrients heal flowers -> healthy flowers support more prey -> more prey supports more predators. This feedback loop drives natural selection, favoring flowers with genomes that are best adapted to the current resource and predator levels.
+
+### Ecosystem Balance & Dynamic Population Control
+The garden is more than just a collection of actors; it's a self-regulating system. The simulation engine actively monitors population trends to prevent ecological collapse.
+-   **Insect Booms**: If the insect population grows too rapidly, the simulation will dynamically spawn a new **bird** to increase predation pressure and bring the numbers back in check.
+-   **Insect Crashes & Apex Predators**: If the insect population begins to crash—often a sign of over-predation by too many birds—the simulation intervenes by spawning an **eagle**. This apex predator hunts a single bird and then leaves, acting as a natural check on the predator population itself.
+-   This dynamic control system creates a more realistic, multi-layered food web where populations ebb and flow in response to one another, leading to more complex and unpredictable emergent behavior.
 
 ## 🧬 The Genetics Engine: `@cristianglezm/flower-evolver-wasm`
 
