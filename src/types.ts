@@ -82,6 +82,11 @@ export interface Bird extends Actor {
     patrolTarget: {x: number, y: number} | null;
 }
 
+export interface Eagle extends Actor {
+    type: 'eagle';
+    target: {x: number, y: number} | null; // target bird coordinates
+}
+
 export interface Nutrient extends Actor {
     type: 'nutrient';
     lifespan: number;
@@ -93,7 +98,7 @@ export interface Egg extends Actor {
     insectEmoji: string;
 }
 
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle;
 
 export type Grid = (CellContent[])[][];
 
@@ -148,6 +153,7 @@ export interface AnalyticsDataPoint {
     flowers: number;
     insects: number;
     birds: number;
+    eagles: number;
     reproductions: number;
     insectsEaten: number;
     eggsEaten: number;
@@ -179,6 +185,7 @@ export interface TickSummary {
     flowerCount: number;
     insectCount: number;
     birdCount: number;
+    eagleCount: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative

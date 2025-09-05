@@ -1,5 +1,5 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord } from '../types';
-import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN } from '../constants';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord, Eagle } from '../types';
+import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
 import { initializeGridState, createNewFlower } from './simulationInitializer';
@@ -9,7 +9,10 @@ import { processEggTick } from './behaviors/eggBehavior';
 import { processFlowerTick } from './behaviors/flowerBehavior';
 import { processInsectTick } from './behaviors/insectBehavior';
 import { processNutrientTick } from './behaviors/nutrientBehavior';
+import { processEagleTick } from './behaviors/eagleBehavior';
 import { FLOWER_NUTRIENT_HEAL } from '../constants';
+
+type PopulationTrend = 'growing' | 'declining' | 'stable';
 
 export class SimulationEngine {
     private tick = 0;
@@ -17,6 +20,13 @@ export class SimulationEngine {
     private params: SimulationParams;
     private flowerService: FEService;
     private totalInsectsEaten = 0;
+    
+    // Properties for population control
+    private insectCountHistory: number[] = [];
+    private birdCountHistory: number[] = [];
+    private birdSpawnCooldown = 0;
+    private eagleSpawnCooldown = 0;
+    private lastInsectTrend: PopulationTrend = 'stable';
 
     constructor(params: SimulationParams, flowerService: FEService) {
         this.params = params;
@@ -27,17 +37,82 @@ export class SimulationEngine {
     public async initializeGrid() {
         this.grid = await initializeGridState(this.params, this.flowerService);
     }
+
+    private _calculatePopulationTrend(history: number[], growthThreshold: number, declineThreshold: number): PopulationTrend {
+        if (history.length < POPULATION_TREND_WINDOW) {
+            return 'stable';
+        }
+
+        const ratesOfChange: number[] = [];
+        for (let i = 1; i < history.length; i++) {
+            const oldVal = history[i - 1];
+            const newVal = history[i];
+            if (oldVal > 0) {
+                ratesOfChange.push((newVal - oldVal) / oldVal);
+            } else if (newVal > 0) {
+                ratesOfChange.push(1.0); // Handle growth from zero
+            } else {
+                ratesOfChange.push(0); // No change from zero
+            }
+        }
+
+        let weightedSum = 0;
+        let totalWeight = 0;
+        for (let i = 0; i < ratesOfChange.length; i++) {
+            const weight = i + 1; // Simple linear weighting
+            weightedSum += ratesOfChange[i] * weight;
+            totalWeight += weight;
+        }
+
+        const weightedAvg = totalWeight > 0 ? weightedSum / totalWeight : 0;
+        
+        if (weightedAvg > growthThreshold) return 'growing';
+        if (weightedAvg < -declineThreshold) return 'declining';
+        return 'stable';
+    }
     
     public async calculateNextTick(): Promise<{ toasts: Omit<ToastMessage, 'id'>[]; summary: TickSummary }> {
         const { gridWidth, gridHeight } = this.params;
-        const currentActors = this.grid.flat(2);
         const toasts: Omit<ToastMessage, 'id'>[] = [];
         let insectsEatenThisTick = 0;
         let eggsEatenThisTick = 0;
         let insectsDiedOfOldAgeThisTick = 0;
         let eggsLaidThisTick = 0;
         let insectsBornThisTick = 0;
+        const currentActors: CellContent[] = this.grid.flat(2);
 
+        // --- Population Control Phase (runs first based on previous tick history) ---
+        if (this.birdSpawnCooldown > 0) this.birdSpawnCooldown--;
+        if (this.eagleSpawnCooldown > 0) this.eagleSpawnCooldown--;
+
+        const insectTrend = this._calculatePopulationTrend(this.insectCountHistory, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT);
+
+        if (insectTrend !== this.lastInsectTrend) {
+            toasts.push({ message: `Insect population is now ${insectTrend}.`, type: 'info' });
+            this.lastInsectTrend = insectTrend;
+        }
+
+        if (insectTrend === 'growing' && this.birdSpawnCooldown === 0) {
+            const spot = findCellForStationaryActor(this.grid, this.params, 'bird');
+            if (spot) {
+                const birdId = `bird-dyn-${Date.now()}`;
+                currentActors.push({ id: birdId, type: 'bird', x: spot.x, y: spot.y, target: null, patrolTarget: null });
+                toasts.push({ message: '🐦 A new bird has arrived to hunt!', type: 'info' });
+                this.birdSpawnCooldown = BIRD_SPAWN_COOLDOWN;
+            }
+        } else if (insectTrend === 'declining') {
+            const birdCount = currentActors.filter(a => a.type === 'bird').length;
+            if (this.eagleSpawnCooldown === 0 && birdCount > 2) {
+                const spot = findCellForStationaryActor(this.grid, this.params, 'eagle');
+                if (spot) {
+                    const eagleId = `eagle-dyn-${Date.now()}`;
+                    currentActors.push({ id: eagleId, type: 'eagle', x: spot.x, y: spot.y, target: null });
+                    toasts.push({ message: '🦅 An eagle has appeared in the skies!', type: 'info' });
+                    this.eagleSpawnCooldown = EAGLE_SPAWN_COOLDOWN;
+                }
+            }
+        }
+        
         const nextActorState = new Map<string, CellContent>(
             currentActors.map(actor => [actor.id, cloneActor(actor)])
         );
@@ -100,6 +175,15 @@ export class SimulationEngine {
                         incrementEggsEaten: () => {
                             eggsEatenThisTick++;
                         }
+                    });
+                    break;
+                case 'eagle':
+                    processEagleTick(actor as Eagle, {
+                        grid: this.grid,
+                        params: this.params,
+                        qtree,
+                        nextActorState,
+                        toasts,
                     });
                     break;
                 case 'insect':
@@ -188,15 +272,8 @@ export class SimulationEngine {
             }
         });
 
-        const nextGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
-        for (const actor of nextActorState.values()) {
-            if(actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
-                nextGrid[actor.y][actor.x].push(actor);
-            }
-        }
-        
         // --- Summary Calculation ---
-        let flowerCount = 0, insectCount = 0, birdCount = 0, maxFlowerAge = 0;
+        let flowerCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, maxFlowerAge = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
@@ -212,10 +289,17 @@ export class SimulationEngine {
                 totalIntelligence += f.effects.intelligence; totalLuck += f.effects.luck;
             } else if (actor.type === 'insect') insectCount++;
             else if (actor.type === 'bird') birdCount++;
+            else if (actor.type === 'eagle') eagleCount++;
         }
+        
+        // --- History Update: Push CURRENT tick counts ---
+        this.insectCountHistory.push(insectCount);
+        if (this.insectCountHistory.length > POPULATION_TREND_WINDOW) this.insectCountHistory.shift();
+        this.birdCountHistory.push(birdCount);
+        if (this.birdCountHistory.length > POPULATION_TREND_WINDOW) this.birdCountHistory.shift();
 
         const summary: TickSummary = {
-            tick: this.tick, flowerCount, insectCount, birdCount,
+            tick: this.tick, flowerCount, insectCount, birdCount, eagleCount,
             reproductions: newFlowers.filter(Boolean).length,
             insectsEaten: insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             eggsLaid: eggsLaidThisTick,
@@ -230,6 +314,13 @@ export class SimulationEngine {
             avgStrength: flowerCount > 0 ? totalStrength / flowerCount : 0, avgIntelligence: flowerCount > 0 ? totalIntelligence / flowerCount : 0,
             avgLuck: flowerCount > 0 ? totalLuck / flowerCount : 0,
         };
+        
+        const nextGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
+        for (const actor of nextActorState.values()) {
+            if(actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
+                nextGrid[actor.y][actor.x].push(actor);
+            }
+        }
         
         this.grid = nextGrid;
         this.tick++;
@@ -259,6 +350,13 @@ export class SimulationEngine {
         this.params = loadedParams; this.tick = loadedTick; this.totalInsectsEaten = loadedTotalInsectsEaten || 0;
         this.grid = loadedGrid;
         this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+        
+        // Reset transient state
+        this.insectCountHistory = [];
+        this.birdCountHistory = [];
+        this.birdSpawnCooldown = 0;
+        this.eagleSpawnCooldown = 0;
+        this.lastInsectTrend = 'stable';
 
         const regenerationPromises = this.grid.flat(2).map(entity => {
             if (entity.type === 'flower' && entity.genome) {
@@ -279,6 +377,11 @@ export class SimulationEngine {
         this.params = newParams;
         this.tick = 0;
         this.totalInsectsEaten = 0;
+        this.insectCountHistory = [];
+        this.birdCountHistory = [];
+        this.birdSpawnCooldown = 0;
+        this.eagleSpawnCooldown = 0;
+        this.lastInsectTrend = 'stable';
         this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
     }
 }

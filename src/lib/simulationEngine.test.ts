@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SimulationEngine } from './simulationEngine';
-import { DEFAULT_SIM_PARAMS } from '../constants';
+import { DEFAULT_SIM_PARAMS, POPULATION_TREND_WINDOW } from '../constants';
 import type { FEService, Flower, Nutrient, FlowerGenomeStats, Grid, CellContent, Insect, Bird } from '../types';
 
 // Mock the flower service, a dependency of the engine
@@ -70,7 +70,7 @@ describe('SimulationEngine', () => {
         });
 
         it('loadState should restore state and regenerate flower images', async () => {
-            const savedGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, (_, y) => 
+            const savedGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, (_, y) =>
                 Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, (_, x) => {
                     if (x === 0 && y === 0) {
                         return [{
@@ -123,7 +123,7 @@ describe('SimulationEngine', () => {
             const insects = (engine as any).grid.flat(2).filter((c: CellContent) => c.type === 'insect') as Insect[];
             const farInsect = insects[0];
             const closeInsect = insects[1];
-            
+
             bird.x = 5; bird.y = 5;
             farInsect.x = 14; farInsect.y = 9;
             closeInsect.x = 7; closeInsect.y = 7;
@@ -133,7 +133,7 @@ describe('SimulationEngine', () => {
             newGrid[9][14].push(farInsect);
             newGrid[7][7].push(closeInsect);
             (engine as any).grid = newGrid;
-            
+
             await engine.calculateNextTick();
 
             const birdAfterTick = engine.getGridState().grid.flat(2).find((c: CellContent) => c.type === 'bird');
@@ -144,19 +144,19 @@ describe('SimulationEngine', () => {
         it('a bird should eat an insect and create a nutrient', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 1, initialBirds: 1 });
             await engine.initializeGrid();
-            
+
             const bird = (engine as any).grid.flat(2).find((c: CellContent) => c.type === 'bird') as Bird;
             const insect = (engine as any).grid.flat(2).find((c: CellContent) => c.type === 'insect') as Insect;
             bird.x = 5; bird.y = 5;
             insect.x = 6; insect.y = 6;
-            
+
             const newGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
             newGrid[5][5].push(bird);
             newGrid[6][6].push(insect);
             (engine as any).grid = newGrid;
 
             await engine.calculateNextTick();
-            
+
             const finalGrid = engine.getGridState().grid;
             const finalInsects = finalGrid.flat(2).filter(c => c.type === 'insect');
             const nutrient = finalGrid.flat(2).find(c => c.type === 'nutrient') as Nutrient | undefined;
@@ -172,33 +172,125 @@ describe('SimulationEngine', () => {
         it('should lay an egg when two insects of the same type are on the same cell', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 2, initialBirds: 0 });
             await engine.initializeGrid();
-            
+
             const insects = (engine as any).grid.flat(2).filter((c: CellContent) => c.type === 'insect') as Insect[];
             const insect1 = insects[0];
             const insect2 = insects[1];
-            
+
             insect1.emoji = '🦋';
             insect2.emoji = '🦋';
 
             const newGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
-            
+
             insect1.x = 5; insect1.y = 5;
             insect2.x = 5; insect2.y = 5;
             newGrid[5][5].push(insect1, insect2);
 
             (engine as any).grid = newGrid;
-            
+
             const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
             const { toasts } = await engine.calculateNextTick();
 
             const finalGrid = engine.getGridState().grid;
             const egg = finalGrid.flat(2).find(c => c.type === 'egg');
-            
+
             expect(egg).toBeDefined();
             expect(toasts.some(t => t.message === `${insect1.emoji} laid an egg!`)).toBe(true);
 
             randomSpy.mockRestore();
+        });
+    });
+
+    describe('Population Control', () => {
+        it('should spawn a new bird when insect population grows rapidly', async () => {
+            // Set params for a controlled test
+            engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 20, initialBirds: 1 });
+            await engine.initializeGrid();
+    
+            // Manually simulate population growth for POPULATION_TREND_WINDOW ticks
+            for (let i = 0; i < POPULATION_TREND_WINDOW; i++) {
+                const { grid } = engine.getGridState();
+                // Add two new insects each tick to ensure growth trend
+                const newInsect1: Insect = { id: `new-insect-${i}-a`, type: 'insect', x: 0, y: 0, emoji: '🐛', lifespan: 100, pollen: null };
+                const newInsect2: Insect = { id: `new-insect-${i}-b`, type: 'insect', x: 4, y: 4, emoji: '🐛', lifespan: 100, pollen: null };
+                const newInsect3: Insect = { id: `new-insect-${i}-c`, type: 'insect', x: 2, y: 2, emoji: '🐛', lifespan: 100, pollen: null };
+                const newInsect4: Insect = { id: `new-insect-${i}-d`, type: 'insect', x: 3, y: 9, emoji: '🐛', lifespan: 100, pollen: null };
+                grid[0][0].push(newInsect1);
+                grid[1][4].push(newInsect2);
+                grid[2][2].push(newInsect3);
+                grid[3][9].push(newInsect4);
+                await engine.calculateNextTick();
+            }
+    
+            const { toasts } = await engine.calculateNextTick();
+            const finalGrid = engine.getGridState().grid;
+            const birds = finalGrid.flat(2).filter(c => c.type === 'bird');
+    
+            // Initial bird + new bird
+            expect(birds.length).toBe(2);
+            expect(toasts.some(t => t.message === '🐦 A new bird has arrived to hunt!')).toBe(true);
+            // Check cooldown is active
+            expect((engine as any).birdSpawnCooldown).toBeGreaterThan(0);
+        });
+    
+        it('should spawn an eagle when insect population declines and bird count is sufficient', async () => {
+            // Setup with plenty of insects and birds
+            engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 250, initialBirds: 10 });
+            await engine.initializeGrid();
+    
+            // Manually simulate population decline for POPULATION_TREND_WINDOW ticks
+            for (let i = 0; i < POPULATION_TREND_WINDOW; i++) {
+                const { grid } = engine.getGridState();
+                let removedCount = 0;
+                for (const row of grid) {
+                    for (const cell of row) {
+                        const insectIndex = cell.findIndex(c => c.type === 'insect');
+                        if (insectIndex !== -1 && removedCount < 100) {
+                            cell.splice(insectIndex, 1);
+                            removedCount++;
+                        }
+                    }
+                }
+                await engine.calculateNextTick();
+            }
+    
+            const { toasts } = await engine.calculateNextTick();
+            const finalGrid = engine.getGridState().grid;
+            const eagles = finalGrid.flat(2).filter(c => c.type === 'eagle');
+    
+            expect(eagles.length).toBe(1);
+            expect(toasts.some(t => t.message === '🦅 An eagle has appeared in the skies!')).toBe(true);
+            expect((engine as any).eagleSpawnCooldown).toBeGreaterThan(0);
+        });
+    
+        it('should not spawn an eagle if there are not enough birds', async () => {
+            // Setup with plenty of insects but few birds
+            engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 30, initialBirds: 1 });
+            await engine.initializeGrid();
+    
+            // Manually simulate population decline for POPULATION_TREND_WINDOW ticks
+            for (let i = 0; i < POPULATION_TREND_WINDOW; i++) {
+                 const { grid } = engine.getGridState();
+                let removedCount = 0;
+                for (const row of grid) {
+                    for (const cell of row) {
+                        const insectIndex = cell.findIndex(c => c.type === 'insect');
+                        if (insectIndex !== -1 && removedCount < 5) {
+                            cell.splice(insectIndex, 1);
+                            removedCount++;
+                        }
+                    }
+                }
+                await engine.calculateNextTick();
+            }
+    
+            const { toasts } = await engine.calculateNextTick();
+            const finalGrid = engine.getGridState().grid;
+            const eagles = finalGrid.flat(2).filter(c => c.type === 'eagle');
+    
+            expect(eagles.length).toBe(0);
+            expect(toasts.some(t => t.message === '🦅 An eagle has appeared in the skies!')).toBe(false);
         });
     });
 });

@@ -52,7 +52,7 @@ export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, ori
     return suitableCells[Math.floor(Math.random() * suitableCells.length)];
 };
 
-export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg', origin?: Coord): Coord | null => {
+export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle', origin?: Coord): Coord | null => {
     if (origin) {
         const validNeighbors = neighborVectors
             .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
@@ -91,9 +91,14 @@ export const cloneActor = <T extends CellContent>(actor: T): T => {
         newActor.pollen = { ...(newActor.pollen as NonNullable<Insect['pollen']>) };
     }
     
-    // If the actor is a bird and has a target, deep-copy the target object.
+    // If the actor is a bird/eagle and has a target, deep-copy the target object.
     if ('target' in newActor && newActor.target) {
         newActor.target = { ...(newActor.target as NonNullable<Bird['target']>) };
+    }
+
+    // If the actor is a bird and has a patrol target, deep-copy it.
+    if ('patrolTarget' in newActor && newActor.patrolTarget) {
+        newActor.patrolTarget = { ...(newActor.patrolTarget as NonNullable<Bird['patrolTarget']>) };
     }
 
     return newActor;
