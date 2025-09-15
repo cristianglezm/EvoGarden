@@ -80,8 +80,8 @@ export default function App(): React.ReactNode {
                 const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
                 workerRef.current!.postMessage({ type: 'load-state', payload: fullStateToLoad });
                 
-                // Sync main thread state
-                setParams(fullStateToLoad.params);
+                // Sync main thread state, merging with defaults to handle new params
+                setParams({ ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params });
                 setIsRunning(false);
                 setSelectedFlowerId(null);
                 useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
@@ -274,7 +274,7 @@ export default function App(): React.ReactNode {
         const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
         workerRef.current.postMessage({ type: 'load-state', payload: fullStateToLoad });
 
-        setParams(fullStateToLoad.params);
+        setParams({ ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params });
         setIsRunning(false);
         setSelectedFlowerId(null);
         setIsControlsOpen(false);

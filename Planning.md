@@ -33,6 +33,8 @@ Define the core data structures for the simulation state.
     -   `Insect`: Includes `emoji`, position, `lifespan`, and `pollen` (tracking the genome and source ID of the last flower visited).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
+    -   `HerbicidePlane`: Includes position, a `path` vector, and an `end` coordinate.
+    -   `HerbicideSmoke`: Includes position, a `lifespan`, and a `canBeExpanded`.
     -   `Nutrient`: Includes position and a `lifespan` in ticks.
     -   `Egg`: Includes position, `hatchTimer`, and the `insectEmoji` it will spawn.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
@@ -92,6 +94,16 @@ The application's architecture is designed to separate the computationally inten
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it and is immediately removed from the simulation.
         -   **Lifecycle**: Eagles are transient actors. If they cannot find a target, they despawn. Their purpose is to perform a single hunt to cull the bird population.
 
+    -   **`herbicidePlaneBehavior`**: The plane follows a simple, deterministic path.
+        -   **Movement**: Spawns at a random edge of the grid and moves in a straight line towards the opposite edge, one cell per tick.
+        -   **Action**: At each cell on its path, it drops a single `HerbicideSmoke` actor.
+        -   **Lifecycle**: Once it moves past its destination coordinate, it is removed from the simulation.
+
+    -   **`herbicideSmokeBehavior`**: A temporary, damaging area-of-effect entity.
+        -   **Damage**: Each tick, it applies a fixed amount of damage to any flowers in its current cell.
+        -   **Expansion**: On its first tick of existence, it expands by creating new smoke actors in all 8 adjacent cells (if they don't already contain smoke). This happens only if `canBeExpanded` is higher than zero.
+        -   **Lifecycle**: It has a short `lifespan`. Each tick, the timer decrements. It is removed when the timer expires.
+
     -   **`eggBehavior` & `nutrientBehavior`**: Simple state-machine behaviors.
         -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed. A new insect is spawned in its place, unless a predator (like a bird) is occupying the same cell, in which case the egg is considered "eaten" and no insect spawns.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires. Its healing effect is handled globally by the `SimulationEngine` before its own tick is processed.
@@ -101,6 +113,11 @@ The application's architecture is designed to separate the computationally inten
     -   **Predator Spawning**: If the insect population's growth rate exceeds a `POPULATION_GROWTH_THRESHOLD_INSECT`, a new **bird** is spawned at a random available location to act as a natural check.
     -   **Apex Predator Intervention**: Conversely, if the insect population is declining too rapidly (exceeding `POPULATION_DECLINE_THRESHOLD_INSECT`), it suggests the bird population may be too high. To correct this, an **eagle** is spawned. The eagle hunts a single bird and then leaves the simulation, culling the predator population to allow insects to recover.
     -   **Cooldowns**: To prevent chaotic fluctuations, both bird and eagle spawning events are subject to cooldowns (`BIRD_SPAWN_COOLDOWN`, `EAGLE_SPAWN_COOLDOWN`), ensuring these population controls act as gradual adjustments rather than sudden shocks.
+
+-   **Herbicide Control**: To prevent the entire grid from being filled with flowers (a "flower deadlock" scenario that stops birds from hunting), the engine deploys an automated control mechanism.
+    -   **Trigger**: The engine monitors the total number of flowers. If the count exceeds a configurable percentage of the total grid cells (`herbicideFlowerDensityThreshold`), it triggers the event.
+    -   **Action**: An `HerbicidePlane` actor is spawned at a random point on the grid's perimeter.
+    -   **Cooldown**: To prevent constant spawning, this event is subject to a `herbicideCooldown`.
 
 ### 5.3. Performance Optimization with Quadtrees (`lib/Quadtree.ts`)
 To avoid performance degradation as the number of actors grows, the `SimulationEngine` creates and populates several purpose-built Quadtrees **on every tick**. This provides highly efficient spatial lookups for different AI needs.

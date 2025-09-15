@@ -44,7 +44,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        const isFloat = name === 'humidity';
+        const isFloat = name === 'humidity' || name === 'herbicideFlowerDensityThreshold';
         const isString = name === 'windDirection';
         
         setLocalParams(prev => {
@@ -147,6 +147,10 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                     <label className="block">
                         <span className="text-secondary text-sm">Wind Strength: {localParams.windStrength} cells</span>
                         <input type="range" name="windStrength" min="1" max="15" value={localParams.windStrength} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                     <label className="block">
+                        <span className="text-secondary text-sm">Herbicide Threshold: {Math.round(localParams.herbicideFlowerDensityThreshold * 100)}%</span>
+                        <input type="range" name="herbicideFlowerDensityThreshold" min="0.1" max="1" step="0.01" value={localParams.herbicideFlowerDensityThreshold} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
                 </CollapsibleSection>
 

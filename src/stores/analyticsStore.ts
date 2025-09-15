@@ -15,6 +15,8 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     insects: summary.insectCount,
                     birds: summary.birdCount,
                     eagles: summary.eagleCount,
+                    herbicidePlanes: summary.herbicidePlaneCount,
+                    herbicideSmokes: summary.herbicideSmokeCount,
                     reproductions: summary.reproductions,
                     insectsEaten: summary.insectsEaten,
                     eggsLaid: summary.eggsLaid,

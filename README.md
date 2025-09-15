@@ -23,6 +23,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Configurable Flower Detail**: Adjust the radius of flowers (from 4 to 64) to balance visual complexity with performance.
 -   **Genome & Environment-Driven Stats**: A flower's core statistics (e.g., max health, stamina, maturation period, nutrient efficiency) are all calculated from its genome in response to the current environmental conditions (temperature, humidity), meaning traits that improve survival can be naturally selected.
 -   **Dynamic Ecosystem**: An interactive simulation of flowers, pollinating insects, and predatory birds whose actions directly impact the environment.
+-   **Automated Ecosystem Balancing**: The simulation engine dynamically spawns predators (birds) or apex predators (eagles) in response to insect population booms and busts. An herbicide plane is also automatically deployed when flower density becomes too high, preventing ecological gridlock.
 -   **WASM-Powered Genetics**: A high-performance WebAssembly module handles complex genetic operations like mutation, reproduction, and stat calculation.
 -   **Interactive Simulation**: Control world parameters like climate and population, pause/play the world, and reset with new initial conditions.
 -   **Inspect Individuals**: Click on any flower to view its detailed real-time stats, including health, age, genetic traits, and its raw genome, which can be copied or downloaded as a JSON file.
@@ -69,6 +70,12 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Eagles** (`🦅`): The apex predators of the garden, introduced dynamically by the simulation to maintain ecological balance.
     -   **AI & Purpose**: Eagles are not a permanent part of the ecosystem but are a regulatory mechanism. When the insect population crashes due to too many birds, an eagle will spawn with a single purpose: to hunt one bird.
     -   **Lifecycle**: After successfully hunting a bird, the eagle immediately leaves the simulation. This act of culling the predator population helps prevent the extinction of insects and restores balance to the food chain.
+-   **Herbicide Plane** (`✈️`): A regulatory mechanism to prevent flower overgrowth.
+    -   **Trigger & Purpose**: When the flower population becomes too dense (exceeding a percentage of the grid), the simulation deploys a plane to cull the population. This prevents a "flower deadlock" where the entire grid is filled, making it impossible for birds to find and hunt insects.
+    -   **Behavior**: The plane spawns at a random edge of the grid and flies in a straight line to the opposite side, leaving a trail of temporary herbicide smoke.
+-   **Herbicide Smoke** (`💨`): The payload dropped by the plane.
+    -   **Area of Effect**: Smoke clouds are short-lived. On their first tick, they expand to their 8 neighboring cells, creating a wider path of effect.
+    -   **Damage**: Each tick, a smoke cloud applies damage to any flowers within its cell. This helps remove weaker flowers, creating open space in the garden and restoring balance so that the predator-prey cycle can continue.
 
 ### Nutrients & The Ecosystem Loop
 Nutrients (`💩`) are the simulation's core resource.

@@ -58,7 +58,9 @@ const drawCell = (
                 entity.type === 'eagle' ? '🦅' :
                 entity.type === 'insect' ? (entity as Insect).emoji :
                 entity.type === 'nutrient' ? '💩' :
-                entity.type === 'egg' ? '🥚' : '';
+                entity.type === 'egg' ? '🥚' :
+                entity.type === 'herbicidePlane' ? '✈️' :
+                entity.type === 'herbicideSmoke' ? '💨' : '';
             
             if (emoji) {
                 ctx.save();
