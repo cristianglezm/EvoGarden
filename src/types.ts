@@ -11,6 +11,11 @@ export interface SimulationParams {
     windDirection: WindDirection;
     windStrength: number;
     flowerDetailRadius: number;
+    herbicideFlowerDensityThreshold: number;
+    herbicideDamage: number;
+    herbicideSmokeLifespan: number;
+    herbicideCooldown: number;
+    herbicideSmokeExpansionCount: number;
 }
 
 export interface Coord {
@@ -98,7 +103,22 @@ export interface Egg extends Actor {
     insectEmoji: string;
 }
 
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle;
+export interface HerbicidePlane extends Actor {
+    type: 'herbicidePlane';
+    dx: number; // Current direction x
+    dy: number; // Current direction y
+    turnDx: number; // Direction to turn x
+    turnDy: number; // Direction to turn y
+    stride: number;
+}
+
+export interface HerbicideSmoke extends Actor {
+    type: 'herbicideSmoke';
+    lifespan: number;
+    canBeExpanded: number;
+}
+
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke;
 
 export type Grid = (CellContent[])[][];
 
@@ -154,6 +174,8 @@ export interface AnalyticsDataPoint {
     insects: number;
     birds: number;
     eagles: number;
+    herbicidePlanes: number;
+    herbicideSmokes: number;
     reproductions: number;
     insectsEaten: number;
     eggsEaten: number;
@@ -186,6 +208,8 @@ export interface TickSummary {
     insectCount: number;
     birdCount: number;
     eagleCount: number;
+    herbicidePlaneCount: number;
+    herbicideSmokeCount: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative

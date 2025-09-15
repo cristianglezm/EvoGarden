@@ -293,4 +293,68 @@ describe('SimulationEngine', () => {
             expect(toasts.some(t => t.message === '🦅 An eagle has appeared in the skies!')).toBe(false);
         });
     });
+
+    describe('Herbicide Control', () => {
+        it('should spawn a herbicide plane when flower density threshold is met', async () => {
+            // Set params where initial flowers exceed the density threshold
+            const testParams = { 
+                ...DEFAULT_SIM_PARAMS, 
+                gridWidth: 10, 
+                gridHeight: 10, 
+                initialFlowers: 50, 
+                herbicideFlowerDensityThreshold: 0.49 // threshold is 49
+            };
+            engine.setParams(testParams);
+            await engine.initializeGrid(); // This will create 50 flowers
+
+            const { toasts } = await engine.calculateNextTick();
+            
+            const finalActors = engine.getGridState().grid.flat(2);
+            const plane = finalActors.find(c => c.type === 'herbicidePlane');
+            
+            expect(plane).toBeDefined();
+            expect(toasts.some(t => t.message.includes('Herbicide plane deployed'))).toBe(true);
+            expect((engine as any).herbicideCooldown).toBeGreaterThan(0);
+        });
+
+        it('should not spawn a plane if density threshold is not met', async () => {
+            const testParams = { 
+                ...DEFAULT_SIM_PARAMS, 
+                gridWidth: 10, 
+                gridHeight: 10, 
+                initialFlowers: 49, 
+                herbicideFlowerDensityThreshold: 0.5 // threshold is 50
+            };
+            engine.setParams(testParams);
+            await engine.initializeGrid();
+
+            await engine.calculateNextTick();
+            
+            const finalActors = engine.getGridState().grid.flat(2);
+            const plane = finalActors.find(c => c.type === 'herbicidePlane');
+            
+            expect(plane).toBeUndefined();
+        });
+
+        it('should not spawn a plane if on cooldown', async () => {
+            const testParams = { 
+                ...DEFAULT_SIM_PARAMS, 
+                gridWidth: 10, 
+                gridHeight: 10, 
+                initialFlowers: 50, 
+                herbicideFlowerDensityThreshold: 0.49,
+                herbicideCooldown: 5 
+            };
+            engine.setParams(testParams);
+            await engine.initializeGrid();
+            (engine as any).herbicideCooldown = 5; // Manually set cooldown
+            
+            await engine.calculateNextTick();
+
+            const finalActors = engine.getGridState().grid.flat(2);
+            const plane = finalActors.find(c => c.type === 'herbicidePlane');
+            
+            expect(plane).toBeUndefined();
+        });
+    });
 });

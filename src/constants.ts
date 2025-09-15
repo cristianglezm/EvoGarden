@@ -7,19 +7,22 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     gridHeight: 10,
     initialFlowers: 30,
     initialInsects: 15,
-    initialBirds: 3,
+    initialBirds: 0,
     humidity: 0.7, // 70%
     temperature: 20, // 20°C
     windDirection: 'S',
     windStrength: 2,
     flowerDetailRadius: 8,
+    herbicideFlowerDensityThreshold: 0.65,
+    herbicideDamage: 25,
+    herbicideSmokeLifespan: 2,
+    herbicideCooldown: 90,
+    herbicideSmokeExpansionCount: 2,
 };
 
-// Flower stats like max health, stamina, and maturation age are now dynamic
-// and calculated from the flower's genome via the WASM service.
 // Fallback values are defined in src/lib/simulationEngine.ts.
 // This is the overall energy consumption rate for flowers. Lower values make flowers live longer.
-export const FLOWER_TICK_COST_MULTIPLIER = 0.5; 
+export const FLOWER_TICK_COST_MULTIPLIER = 0.8; 
 export const FLOWER_STAMINA_COST_PER_TICK = 1;
 export const FLOWER_HEALTH_COST_PER_TICK = 2; // when stamina is 0
 export const FLOWER_NUTRIENT_HEAL = 4;

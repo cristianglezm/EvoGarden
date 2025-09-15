@@ -1,5 +1,5 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord, Eagle } from '../types';
-import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN } from '../constants';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke } from '../types';
+import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
 import { initializeGridState, createNewFlower } from './simulationInitializer';
@@ -10,6 +10,8 @@ import { processFlowerTick } from './behaviors/flowerBehavior';
 import { processInsectTick } from './behaviors/insectBehavior';
 import { processNutrientTick } from './behaviors/nutrientBehavior';
 import { processEagleTick } from './behaviors/eagleBehavior';
+import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
+import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { FLOWER_NUTRIENT_HEAL } from '../constants';
 
 type PopulationTrend = 'growing' | 'declining' | 'stable';
@@ -26,6 +28,7 @@ export class SimulationEngine {
     private birdCountHistory: number[] = [];
     private birdSpawnCooldown = 0;
     private eagleSpawnCooldown = 0;
+    private herbicideCooldown = 0;
     private lastInsectTrend: PopulationTrend = 'stable';
 
     constructor(params: SimulationParams, flowerService: FEService) {
@@ -84,6 +87,7 @@ export class SimulationEngine {
         // --- Population Control Phase (runs first based on previous tick history) ---
         if (this.birdSpawnCooldown > 0) this.birdSpawnCooldown--;
         if (this.eagleSpawnCooldown > 0) this.eagleSpawnCooldown--;
+        if (this.herbicideCooldown > 0) this.herbicideCooldown--;
 
         const insectTrend = this._calculatePopulationTrend(this.insectCountHistory, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT);
 
@@ -113,6 +117,57 @@ export class SimulationEngine {
             }
         }
         
+        const flowerCountForDensity = currentActors.filter(a => a.type === 'flower').length;
+        const totalCells = gridWidth * gridHeight;
+        const flowerDensityThresholdCount = totalCells * this.params.herbicideFlowerDensityThreshold;
+        const hasPlane = currentActors.some(a => a.type === 'herbicidePlane');
+        
+        if (this.herbicideCooldown === 0 && !hasPlane && flowerCountForDensity >= flowerDensityThresholdCount) {
+            const STRIDE = 3;
+            const pattern = Math.floor(Math.random() * 4);
+
+            let start: Coord = { x: 1, y: 1 };
+            let dx = 0, dy = 0, turnDx = 0, turnDy = 0;
+
+            // Inner bounds (safe zone)
+            const minX = 1;
+            const maxX = gridWidth - 2;
+            const minY = 1;
+            const maxY = gridHeight - 2;
+
+            switch (pattern) {
+                case 0: // Horizontal sweep from top-left
+                    start = { x: minX, y: minY };
+                    dx = 1; dy = 0;
+                    turnDx = 0; turnDy = STRIDE;
+                    break;
+                case 1: // Horizontal sweep from bottom-right
+                    start = { x: maxX, y: maxY - (STRIDE - 1) };
+                    dx = -1; dy = 0;
+                    turnDx = 0; turnDy = -STRIDE;
+                    break;
+                case 2: // Vertical sweep from top-left
+                    start = { x: minX, y: minY };
+                    dx = 0; dy = 1;
+                    turnDx = STRIDE; turnDy = 0;
+                    break;
+                case 3: // Vertical sweep from bottom-right
+                    start = { x: maxX - (STRIDE - 1), y: maxY };
+                    dx = 0; dy = -1;
+                    turnDx = -STRIDE; turnDy = 0;
+                    break;
+            }
+            
+            const planeId = `plane-${Date.now()}`;
+            const newPlane: HerbicidePlane = { 
+                id: planeId, type: 'herbicidePlane', ...start, 
+                dx, dy, turnDx, turnDy, stride: STRIDE 
+            };
+            currentActors.push(newPlane);
+            toasts.push({ message: '✈️ Herbicide plane deployed to control flower overgrowth!', type: 'info' });
+            this.herbicideCooldown = this.params.herbicideCooldown;
+        }
+
         const nextActorState = new Map<string, CellContent>(
             currentActors.map(actor => [actor.id, cloneActor(actor)])
         );
@@ -184,6 +239,20 @@ export class SimulationEngine {
                         qtree,
                         nextActorState,
                         toasts,
+                    });
+                    break;
+                case 'herbicidePlane':
+                    processHerbicidePlaneTick(actor as HerbicidePlane, {
+                        grid: this.grid,
+                        params: this.params,
+                        nextActorState,
+                    });
+                    break;
+                case 'herbicideSmoke':
+                    processHerbicideSmokeTick(actor as HerbicideSmoke, {
+                        grid: this.grid,
+                        params: this.params,
+                        nextActorState,
                     });
                     break;
                 case 'insect':
@@ -273,7 +342,7 @@ export class SimulationEngine {
         });
 
         // --- Summary Calculation ---
-        let flowerCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, maxFlowerAge = 0;
+        let flowerCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
@@ -290,6 +359,8 @@ export class SimulationEngine {
             } else if (actor.type === 'insect') insectCount++;
             else if (actor.type === 'bird') birdCount++;
             else if (actor.type === 'eagle') eagleCount++;
+            else if (actor.type === 'herbicidePlane') herbicidePlaneCount++;
+            else if (actor.type === 'herbicideSmoke') herbicideSmokeCount++;
         }
         
         // --- History Update: Push CURRENT tick counts ---
@@ -299,7 +370,7 @@ export class SimulationEngine {
         if (this.birdCountHistory.length > POPULATION_TREND_WINDOW) this.birdCountHistory.shift();
 
         const summary: TickSummary = {
-            tick: this.tick, flowerCount, insectCount, birdCount, eagleCount,
+            tick: this.tick, flowerCount, insectCount, birdCount, eagleCount, herbicidePlaneCount, herbicideSmokeCount,
             reproductions: newFlowers.filter(Boolean).length,
             insectsEaten: insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             eggsLaid: eggsLaidThisTick,
@@ -347,7 +418,9 @@ export class SimulationEngine {
             return;
         }
 
-        this.params = loadedParams; this.tick = loadedTick; this.totalInsectsEaten = loadedTotalInsectsEaten || 0;
+        this.params = { ...DEFAULT_SIM_PARAMS, ...loadedParams };
+        this.tick = loadedTick; 
+        this.totalInsectsEaten = loadedTotalInsectsEaten || 0;
         this.grid = loadedGrid;
         this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
         
@@ -356,6 +429,7 @@ export class SimulationEngine {
         this.birdCountHistory = [];
         this.birdSpawnCooldown = 0;
         this.eagleSpawnCooldown = 0;
+        this.herbicideCooldown = 0;
         this.lastInsectTrend = 'stable';
 
         const regenerationPromises = this.grid.flat(2).map(entity => {
@@ -381,6 +455,7 @@ export class SimulationEngine {
         this.birdCountHistory = [];
         this.birdSpawnCooldown = 0;
         this.eagleSpawnCooldown = 0;
+        this.herbicideCooldown = 0;
         this.lastInsectTrend = 'stable';
         this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
     }

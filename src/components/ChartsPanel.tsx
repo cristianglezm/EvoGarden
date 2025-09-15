@@ -39,13 +39,15 @@ export const ChartsPanel: React.FC = () => {
         return {
             ...baseChartOptions,
             title: { text: 'Population Dynamics', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Flowers', 'Insects', 'Birds', 'Eagles'], top: 35, textStyle: { color: '#bbf7d0' } },
+            legend: { data: ['Flowers', 'Insects', 'Birds', 'Eagles', 'Herbicide Planes', 'Herbicide Smokes'], top: 35, textStyle: { color: '#bbf7d0' } },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
                 { name: 'Flowers', type: 'line', data: history.map(h => h.flowers), color: '#48bb78' },
                 { name: 'Insects', type: 'line', data: history.map(h => h.insects), color: '#4299e1' },
                 { name: 'Birds', type: 'line', data: history.map(h => h.birds), color: '#f56565' },
                 { name: 'Eagles', type: 'line', data: history.map(h => h.eagles), color: '#d69e2e' },
+                { name: 'Herbicide Planes', type: 'line', data: history.map(h => h.herbicidePlanes || 0), color: '#cbd5e0' },
+                { name: 'Herbicide Smokes', type: 'line', data: history.map(h => h.herbicideSmokes || 0), color: '#718096' },
             ],
         };
     }, [history]);
