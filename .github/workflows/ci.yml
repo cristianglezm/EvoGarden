@@ -22,7 +22,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install chromium --only-shell
 
       - name: Build
         run: bash .devops/build.sh
