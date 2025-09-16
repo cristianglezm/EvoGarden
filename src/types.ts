@@ -16,6 +16,7 @@ export interface SimulationParams {
     herbicideSmokeLifespan: number;
     herbicideCooldown: number;
     herbicideSmokeExpansionCount: number;
+    toastsEnabled: boolean;
 }
 
 export interface Coord {
@@ -121,6 +122,8 @@ export interface HerbicideSmoke extends Actor {
 export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke;
 
 export type Grid = (CellContent[])[][];
+
+export type PopulationTrend = 'growing' | 'declining' | 'stable';
 
 export interface ToastMessage {
   id: string;

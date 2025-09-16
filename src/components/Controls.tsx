@@ -17,8 +17,8 @@ interface ControlsProps {
 const WIND_DIRECTIONS: WindDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const FLOWER_DETAIL_OPTIONS = [4, 8, 16, 32, 64];
 
-const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
-    const [isOpen, setIsOpen] = useState(true);
+const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, children, defaultOpen = true }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div className="pt-3 border-t border-border/50">
             <button
@@ -43,14 +43,21 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
     }, [params]);
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
+        const { name, value, type } = e.target;
         const isFloat = name === 'humidity' || name === 'herbicideFlowerDensityThreshold';
         const isString = name === 'windDirection';
         
         setLocalParams(prev => {
+            let processedValue: string | number | boolean = value;
+            if (type === 'checkbox') {
+                processedValue = (e.target as HTMLInputElement).checked;
+            } else if (!isString) {
+                processedValue = isFloat ? parseFloat(value) : parseInt(value, 10);
+            }
+
             const newParams = { 
                 ...prev, 
-                [name]: isString ? value : (isFloat ? parseFloat(value) : parseInt(value, 10))
+                [name]: processedValue
             };
 
             // If grid size changes, ensure the number of flowers does not exceed the new capacity.
@@ -175,6 +182,19 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                     <label className="block">
                         <span className="text-secondary text-sm">Birds: {localParams.initialBirds}</span>
                         <input type="range" name="initialBirds" min="0" max="20" value={localParams.initialBirds} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                </CollapsibleSection>
+                <CollapsibleSection title="UI Settings" defaultOpen={false}>
+                     <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-secondary text-sm">Enable Notifications</span>
+                        <input 
+                            type="checkbox" 
+                            name="toastsEnabled" 
+                            checked={localParams.toastsEnabled}
+                            onChange={handleParamChange} 
+                            className="sr-only peer"
+                        />
+                        <div className="relative w-11 h-6 bg-surface-hover peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent-blue rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-blue"></div>
                     </label>
                 </CollapsibleSection>
             </div>

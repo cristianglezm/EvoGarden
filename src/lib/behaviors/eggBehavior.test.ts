@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processEggTick } from './eggBehavior';
 import type { Egg, CellContent, ToastMessage, Bird } from '../../types';
+import { DEFAULT_SIM_PARAMS } from '../../constants';
 
 describe('eggBehavior', () => {
     let egg: Egg;
@@ -21,6 +22,7 @@ describe('eggBehavior', () => {
         nextActorState,
         toasts,
         incrementInsectsBorn,
+        params: DEFAULT_SIM_PARAMS,
     });
 
     it('should decrement the hatch timer', () => {

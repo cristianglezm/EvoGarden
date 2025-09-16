@@ -1,11 +1,11 @@
-[![CI](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml) [![CD](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml/badge.svg)](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml)
-
 > [!NOTE]
 > This project was created as an experiment with Google's Gemini 2.5 to explore what the LLM would build by giving it the documentation of [@cristianglezm/flower-evolver-wasm](https://github.com/cristianglezm/FlowerEvolver-WASM) (a npm package).
 > 
 > it made an emoji ecosystem where flowers evolve and survive, insects reproduce and pollinate the flowers, birds hunt insects not protected by the flowers.
 
 # EvoGarden: A Predator-Prey Simulation
+
+[![CI](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml) [![CD](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml/badge.svg)](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml)
 
 A dynamic garden simulation where flowers evolve under the pressure of insects and birds. Watch a Darwinian battlefield unfold as flowers, insects, and birds interact in a delicate ecosystem, with visual traits driven by the NEAT algorithm.
 
