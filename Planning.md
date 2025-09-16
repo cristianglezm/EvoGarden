@@ -152,7 +152,7 @@ To decouple the simulation from the UI and improve performance, a centralized ev
 
 ## 6. Component Architecture (`src/components/`)
 -   **`App.tsx`**: Root component. Manages UI state (sidebar visibility), orchestrates the `useSimulation` hook, and handles the save/load logic on the main thread.
--   **`SimulationView.tsx`**: A pure presentation component that renders the `grid` state onto an HTML5 canvas. It also handles click events to report selected flowers.
+-   **`SimulationView.tsx`**: The host component for the rendering engine. It creates and manages two stacked `<canvas>` elements (one for static background, one for dynamic foreground) and passes them to the `RenderingEngine`. It also captures user click events on the top canvas and forwards them to the application state.
 -   **`Controls.tsx`**: The UI for all `SimulationParams`, allowing users to configure and reset the simulation.
 -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower, including stats, genome, and a button to launch the 3D viewer.
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber` inside a modal.

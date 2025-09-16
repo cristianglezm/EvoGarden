@@ -46,7 +46,9 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 
 ### Performance & Architecture
 -   **Delta-Based State Updates**: To ensure a fluid UI, the simulation worker doesn't send the entire world state every tick. Instead, it computes and sends only a small list of "deltas"—the specific changes (additions, updates, removals) that occurred. This minimizes data transfer and allows the UI to update its state efficiently without expensive processing.
--   **Canvas Rendering**: The simulation is rendered on a single HTML `<canvas>` element for optimal performance, avoiding the overhead of managing thousands of DOM elements.
+-   **Layered Canvas & Change Detection**: To eliminate the bottleneck of re-drawing hundreds of complex SVGs every frame, the simulation is rendered across two stacked canvas layers.
+    -   **Static Background Layer**: This canvas is responsible for drawing the grid and all the flowers. It is only redrawn when a change to the static environment occurs (e.g., a flower is added/removed or the user selection changes). This avoids expensive redraws on every tick.
+    -   **Dynamic Foreground Layer**: This transparent canvas sits on top of the background and is responsible for drawing all mobile actors (insects, birds, eggs, etc.). Since these are simple emojis, this layer can be cleared and redrawn very quickly on every tick.
 -   **Multi-Quadtree Optimization**: The simulation uses multiple Quadtree data structures each tick for high-performance spatial querying.
     -   A Quadtree for all actors is used for general lookups.
     -   A dedicated Quadtree for **flowers** allows insects to find the nearest flower efficiently.
@@ -121,8 +123,9 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
     -   `src/lib/simulationEngine.ts`: **The heart of the simulation.** This class contains the main simulation loop (`calculateNextTick`), all state management (the grid, actors), and orchestrates actor logic. It is instantiated and run exclusively within the web worker.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
+    -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
-    -   `src/components/SimulationView.tsx`: Renders the simulation grid onto the `<canvas>`.
+    -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
     -   `src/components/Controls.tsx`: UI for changing simulation parameters.
     -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.

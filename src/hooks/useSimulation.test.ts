@@ -78,19 +78,19 @@ describe('useSimulation hook', () => {
         expect(mockPostMessage).toHaveBeenCalledWith({ type: 'update-params', payload: newParams });
     });
 
-    it('updates actor state and derives grid correctly from "tick-update" deltas', () => {
+    it('updates actor state correctly from worker messages', () => {
         const { result } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
         
         // 1. Initial state from 'init-complete'
-        const initialActors: CellContent[] = [
+        const initialActorsList: CellContent[] = [
             { id: 'flower-1', type: 'flower', x: 0, y: 0, health: 100 } as Flower,
             { id: 'insect-1', type: 'insect', x: 1, y: 1, lifespan: 50, emoji: '🦋' } as Insect,
         ];
 
         // Construct a simple 2x2 grid for the initial payload
         const initialGrid: (CellContent[])[][] = [
-            [[initialActors[0]], []],
-            [[], [initialActors[1]]],
+            [[initialActorsList[0]], []],
+            [[], [initialActorsList[1]]],
         ];
 
         const initMessage = {
@@ -107,14 +107,19 @@ describe('useSimulation hook', () => {
             if (onmessageCallback) onmessageCallback(initMessage);
         });
         
-        expect(result.current.grid[0][0][0]).toEqual(initialActors[0]);
-        expect(result.current.grid[1][1][0]).toEqual(initialActors[1]);
+        // Assert initial actors map
+        const initialActorsMap = result.current.actors;
+        expect(initialActorsMap.size).toBe(2);
+        expect(initialActorsMap.get('flower-1')).toEqual(initialActorsList[0]);
+        expect(initialActorsMap.get('insect-1')).toEqual(initialActorsList[1]);
+
 
         // 2. Deltas from 'tick-update'
+        const birdActor: Bird = { id: 'bird-1', type: 'bird', x: 1, y: 0, target: null, patrolTarget: null };
         const deltas: ActorDelta[] = [
             { type: 'update', id: 'flower-1', changes: { health: 90 } },
             { type: 'remove', id: 'insect-1' },
-            { type: 'add', actor: { id: 'bird-1', type: 'bird', x: 1, y: 0 } as Bird },
+            { type: 'add', actor: birdActor },
         ];
         const tickMessage = {
             data: {
@@ -131,22 +136,29 @@ describe('useSimulation hook', () => {
             if (onmessageCallback) onmessageCallback(tickMessage);
         });
 
-        // 3. Assert final derived grid state
-        const finalGrid = result.current.grid;
+        // 3. Assert final actors map state
+        const finalActorsMap = result.current.actors;
+        expect(finalActorsMap.size).toBe(2);
+        
         // Flower updated
-        expect(finalGrid[0][0].length).toBe(1);
-        expect((finalGrid[0][0][0] as Flower).health).toBe(90);
+        const updatedFlower = finalActorsMap.get('flower-1') as Flower;
+        expect(updatedFlower).toBeDefined();
+        expect(updatedFlower.health).toBe(90);
+        
         // Insect removed
-        expect(finalGrid[1][1].length).toBe(0);
+        expect(finalActorsMap.has('insect-1')).toBe(false);
+        
         // Bird added
-        expect(finalGrid[0][1].length).toBe(1);
-        expect(finalGrid[0][1][0].id).toBe('bird-1');
+        const addedBird = finalActorsMap.get('bird-1') as Bird;
+        expect(addedBird).toBeDefined();
+        expect(addedBird.id).toBe('bird-1');
+        expect(addedBird).toEqual(birdActor);
     });
     
     it('does not change state for unhandled message types', () => {
         const { result } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
         
-        const initialGrid = result.current.grid;
+        const initialActors = result.current.actors;
         const mockMessage = { data: { type: 'some-other-type', payload: {} } } as MessageEvent;
 
         act(() => {
@@ -155,6 +167,6 @@ describe('useSimulation hook', () => {
            }
         });
 
-        expect(result.current.grid).toBe(initialGrid); // Should not have changed
+        expect(result.current.actors).toBe(initialActors); // Should not have changed
     });
 });
