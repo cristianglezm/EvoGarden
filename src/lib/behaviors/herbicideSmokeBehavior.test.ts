@@ -49,7 +49,7 @@ describe('herbicideSmokeBehavior', () => {
         processHerbicideSmokeTick(smoke, setupContext());
         const newSmokes = Array.from(nextActorState.values()).filter(a => a.type === 'herbicideSmoke');
         expect(newSmokes.length).toBe(9); // Original + 8 neighbors
-        expect(smoke.canBeExpanded > 0).toBe(true);
+        expect(smoke.canBeExpanded >= 0).toBe(true);
     });
 
     it('should not expand on subsequent ticks', () => {

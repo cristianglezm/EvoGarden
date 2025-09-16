@@ -1,4 +1,3 @@
-
 import { test, expect } from '@playwright/test';
 import { ControlPanelController } from './controllers/ControlPanelController';
 import { FlowerPanelController } from './controllers/FlowerPanelController';
@@ -75,14 +74,14 @@ test.describe('Save and Load State', () => {
     await flowers.waitCanvasStable(canvas);
     await controls.open();
     await controls.getSave().click();
-    await expect(eventLog.getHeaderLog().getByText('Garden state saved!')).toBeVisible();
+    await expect(eventLog.getHeaderLog().getByText('Garden state saved!')).toBeVisible({ timeout: 10000 });
 
     await controls.getBirdsInput().fill('4');
     await controls.getApplyAndReset().click();
     await flowers.waitCanvasStable(canvas);
     await controls.open();
     await controls.getLoad().click();
-    await expect(eventLog.getHeaderLog().getByText('Loaded last saved garden!')).toBeVisible();
+    await expect(eventLog.getHeaderLog().getByText('Loaded last saved garden!')).toBeVisible({ timeout: 10000 });
 
     await flowers.waitCanvasStable(canvas);
   });
@@ -98,7 +97,7 @@ test.describe('Event Log Panel', () => {
         await controls.setMaxCapacities();
 
         // Run sim for a few seconds to generate plenty of events
-        await controls.runSimulation(8);
+        await controls.runSimulation(10);
         
         await eventLog.open();
         

@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend, ActorDelta } from '../types';
 import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
@@ -13,6 +13,24 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { FLOWER_NUTRIENT_HEAL } from '../constants';
+
+const shallowObjectEquals = (o1: any, o2: any): boolean => {
+    if (o1 === o2) return true;
+    if (o1 == null || o2 == null) return o1 === o2;
+    if (typeof o1 !== 'object' || typeof o2 !== 'object') return o1 === o2;
+
+    const keys1 = Object.keys(o1);
+    const keys2 = Object.keys(o2);
+
+    if (keys1.length !== keys2.length) return false;
+
+    for (const key of keys1) {
+        if (!Object.prototype.hasOwnProperty.call(o2, key) || o1[key] !== o2[key]) {
+            return false;
+        }
+    }
+    return true;
+};
 
 export class SimulationEngine {
     private tick = 0;
@@ -60,7 +78,7 @@ export class SimulationEngine {
         if (this.herbicideCooldown > 0) this.herbicideCooldown--;
     }
     
-    private _handlePopulationControl(currentActors: CellContent[], events: AppEvent[]): void {
+    private _handlePopulationControl(nextActorState: Map<string, CellContent>, events: AppEvent[]): void {
         const { gridWidth, gridHeight } = this.params;
         const insectTrend = calculatePopulationTrend(this.insectCountHistory, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT);
 
@@ -73,27 +91,29 @@ export class SimulationEngine {
             const spot = findCellForStationaryActor(this.grid, this.params, 'bird');
             if (spot) {
                 const birdId = `bird-dyn-${Date.now()}`;
-                currentActors.push({ id: birdId, type: 'bird', x: spot.x, y: spot.y, target: null, patrolTarget: null });
+                const newBird: Bird = { id: birdId, type: 'bird', x: spot.x, y: spot.y, target: null, patrolTarget: null };
+                nextActorState.set(birdId, newBird);
                 events.push({ message: '🐦 A new bird has arrived to hunt!', type: 'info', importance: 'high' });
                 this.birdSpawnCooldown = BIRD_SPAWN_COOLDOWN;
             }
         } else if (insectTrend === 'declining') {
-            const birdCount = currentActors.filter(a => a.type === 'bird').length;
+            const birdCount = Array.from(nextActorState.values()).filter(a => a.type === 'bird').length;
             if (this.eagleSpawnCooldown === 0 && birdCount > 2) {
                 const spot = findCellForStationaryActor(this.grid, this.params, 'eagle');
                 if (spot) {
                     const eagleId = `eagle-dyn-${Date.now()}`;
-                    currentActors.push({ id: eagleId, type: 'eagle', x: spot.x, y: spot.y, target: null });
+                    const newEagle: Eagle = { id: eagleId, type: 'eagle', x: spot.x, y: spot.y, target: null };
+                    nextActorState.set(eagleId, newEagle);
                     events.push({ message: '🦅 An eagle has appeared in the skies!', type: 'info', importance: 'high' });
                     this.eagleSpawnCooldown = EAGLE_SPAWN_COOLDOWN;
                 }
             }
         }
         
-        const flowerCountForDensity = currentActors.filter(a => a.type === 'flower').length;
+        const flowerCountForDensity = Array.from(nextActorState.values()).filter(a => a.type === 'flower').length;
         const totalCells = gridWidth * gridHeight;
         const flowerDensityThresholdCount = totalCells * this.params.herbicideFlowerDensityThreshold;
-        const hasPlane = currentActors.some(a => a.type === 'herbicidePlane');
+        const hasPlane = Array.from(nextActorState.values()).some(a => a.type === 'herbicidePlane');
         
         if (this.herbicideCooldown === 0 && !hasPlane && flowerCountForDensity >= flowerDensityThresholdCount) {
             const STRIDE = 3;
@@ -113,7 +133,7 @@ export class SimulationEngine {
             
             const planeId = `plane-${Date.now()}`;
             const newPlane: HerbicidePlane = { id: planeId, type: 'herbicidePlane', ...start, dx, dy, turnDx, turnDy, stride: STRIDE };
-            currentActors.push(newPlane);
+            nextActorState.set(planeId, newPlane);
             events.push({ message: '✈️ Herbicide plane deployed to control flower overgrowth!', type: 'info', importance: 'high' });
             this.herbicideCooldown = this.params.herbicideCooldown;
         }
@@ -140,7 +160,7 @@ export class SimulationEngine {
     }
     
     private _processActorTicks(
-        currentActors: CellContent[],
+        actorsToProcess: CellContent[],
         nextActorState: Map<string, CellContent>,
         qtree: Quadtree<CellContent>,
         flowerQtree: Quadtree<CellContent>,
@@ -150,7 +170,7 @@ export class SimulationEngine {
         const newFlowerPositions: Coord[] = [];
         const createFlowerCallback = (x: number, y: number, g1?: string, g2?: string) => createNewFlower(this.flowerService, this.params, x, y, g1, g2);
         
-        for (const currentActor of currentActors) {
+        for (const currentActor of actorsToProcess) {
             if (!nextActorState.has(currentActor.id)) continue;
             const actor = nextActorState.get(currentActor.id)!;
 
@@ -300,24 +320,72 @@ export class SimulationEngine {
         this.grid = nextGrid;
     }
 
-    public async calculateNextTick(): Promise<{ events: AppEvent[]; summary: TickSummary }> {
+    private _calculateDeltas(initialActors: CellContent[], finalActorState: Map<string, CellContent>): ActorDelta[] {
+        const deltas: ActorDelta[] = [];
+        const initialActorMap = new Map(initialActors.map(actor => [actor.id, actor]));
+
+        // Check for updates and removals
+        for (const [id, initialActor] of initialActorMap.entries()) {
+            const finalActor = finalActorState.get(id);
+            if (!finalActor) {
+                deltas.push({ type: 'remove', id });
+            } else {
+                const changes: Partial<CellContent> = {};
+                let hasChanged = false;
+
+                for (const key in finalActor) {
+                    if (key === 'id') continue;
+                    
+                    const initialValue = (initialActor as any)[key];
+                    const finalValue = (finalActor as any)[key];
+                    
+                    if (typeof finalValue === 'object' && finalValue !== null) {
+                        if (!shallowObjectEquals(initialValue, finalValue)) {
+                            (changes as any)[key] = finalValue;
+                            hasChanged = true;
+                        }
+                    } else if (initialValue !== finalValue) {
+                        (changes as any)[key] = finalValue;
+                        hasChanged = true;
+                    }
+                }
+                if (hasChanged) {
+                    deltas.push({ type: 'update', id, changes });
+                }
+            }
+        }
+
+        // Check for additions
+        for (const [id, finalActor] of finalActorState.entries()) {
+            if (!initialActorMap.has(id)) {
+                deltas.push({ type: 'add', actor: finalActor });
+            }
+        }
+        
+        return deltas;
+    }
+
+    public async calculateNextTick(): Promise<{ events: AppEvent[]; summary: TickSummary; deltas: ActorDelta[] }> {
         this._resetTickCounters();
         const events: AppEvent[] = [];
-        const currentActors: CellContent[] = this.grid.flat(2);
+        
+        // Create a definitive list of actors that exist at the start of this tick.
+        const actorsToProcess = this.grid.flat(2).map(cloneActor);
+        const nextActorState = new Map<string, CellContent>(actorsToProcess.map(actor => [actor.id, cloneActor(actor)]));
 
         this._processCooldowns();
-        this._handlePopulationControl(currentActors, events);
+
+        // Population control now adds new actors directly to the state for the *next* tick.
+        // These new actors will NOT be processed in the current tick loop.
+        this._handlePopulationControl(nextActorState, events);
         
-        const nextActorState = new Map<string, CellContent>(
-            currentActors.map(actor => [actor.id, cloneActor(actor)])
-        );
-        
-        const { qtree, flowerQtree } = buildQuadtrees(currentActors, this.params);
+        const { qtree, flowerQtree } = buildQuadtrees(Array.from(nextActorState.values()), this.params);
         
         this._processNutrientHealing(nextActorState, qtree);
 
+        // CRITICAL: Iterate over the original list of actors, not the potentially modified state.
         const { newFlowerPromises, newFlowerPositions } = this._processActorTicks(
-            currentActors, nextActorState, qtree, flowerQtree, events
+            actorsToProcess, nextActorState, qtree, flowerQtree, events
         );
 
         this._handleInsectReproduction(nextActorState, events);
@@ -326,14 +394,17 @@ export class SimulationEngine {
         
         const summary = this._calculateTickSummary(nextActorState, newFlowerCount);
         
+        // Deltas are calculated against the initial state and the final state.
+        const deltas = this._calculateDeltas(actorsToProcess, nextActorState);
+        
         this._updateGrid(nextActorState);
         
         this.tick++;
 
-        return { events, summary };
+        return { events, summary, deltas };
     }
 
-    public getGridState() { return { grid: this.grid, tick: this.tick }; }
+    public getGridState() { return { grid: this.grid, tick: this.tick, params: this.params }; }
 
     public getStateForSave() {
         const stateToSave = JSON.parse(JSON.stringify({ 

@@ -12,7 +12,6 @@ let isLoadingState = false;
 
 const INIT_TIMEOUT_MS = 15000; // Match the main thread timeout
 
-// Helper to initialize the WASM service with a timeout
 const initializeWasm = async (): Promise<boolean> => {
     try {
         const timeoutPromise = new Promise((_, reject) =>
@@ -30,12 +29,9 @@ const initializeWasm = async (): Promise<boolean> => {
 const gameLoop = async () => {
     if (!isRunning || !engine) return;
 
-    const { events, summary } = await engine.calculateNextTick();
-    const state = engine.getGridState();
+    const { events, summary, deltas } = await engine.calculateNextTick();
 
-    // Post grid updates, summary, and any new events
-    self.postMessage({ type: 'gridUpdate', payload: state });
-    self.postMessage({ type: 'events-batch', payload: { events, summary } });
+    self.postMessage({ type: 'tick-update', payload: { deltas, events, summary } });
 
     gameLoopTimeoutId = self.setTimeout(gameLoop, TICK_RATE_MS);
 };
@@ -44,11 +40,10 @@ self.onmessage = async (e: MessageEvent) => {
     const { type, payload } = e.data;
     switch (type) {
         case 'update-params':
-            if (isLoadingState) return; // Prevent race condition on load
+            if (isLoadingState) return;
             isRunning = false;
             if (gameLoopTimeoutId) clearTimeout(gameLoopTimeoutId);
-            self.postMessage({ type: 'gridUpdate', payload: { grid: [], tick: 0 } });
-
+            
             if (!engine) {
                 if (!(await initializeWasm())) return;
                 engine = new SimulationEngine(payload as SimulationParams, flowerService);
@@ -57,8 +52,7 @@ self.onmessage = async (e: MessageEvent) => {
             }
             
             await engine.initializeGrid();
-            self.postMessage({ type: 'gridUpdate', payload: engine.getGridState() });
-            self.postMessage({ type: 'initialized' });
+            self.postMessage({ type: 'init-complete', payload: engine.getGridState() });
             break;
 
         case 'start':

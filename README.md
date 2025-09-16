@@ -1,11 +1,11 @@
+# EvoGarden: A Predator-Prey Simulation
+
+[![CI](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml) [![CD](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml/badge.svg)](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml)
+
 > [!NOTE]
 > This project was created as an experiment with Google's Gemini 2.5 to explore what the LLM would build by giving it the documentation of [@cristianglezm/flower-evolver-wasm](https://github.com/cristianglezm/FlowerEvolver-WASM) (a npm package).
 > 
 > it made an emoji ecosystem where flowers evolve and survive, insects reproduce and pollinate the flowers, birds hunt insects not protected by the flowers.
-
-# EvoGarden: A Predator-Prey Simulation
-
-[![CI](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml) [![CD](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml/badge.svg)](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml)
 
 A dynamic garden simulation where flowers evolve under the pressure of insects and birds. Watch a Darwinian battlefield unfold as flowers, insects, and birds interact in a delicate ecosystem, with visual traits driven by the NEAT algorithm.
 
@@ -45,6 +45,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 ## 🔬 Simulation Deep Dive
 
 ### Performance & Architecture
+-   **Delta-Based State Updates**: To ensure a fluid UI, the simulation worker doesn't send the entire world state every tick. Instead, it computes and sends only a small list of "deltas"—the specific changes (additions, updates, removals) that occurred. This minimizes data transfer and allows the UI to update its state efficiently without expensive processing.
 -   **Canvas Rendering**: The simulation is rendered on a single HTML `<canvas>` element for optimal performance, avoiding the overhead of managing thousands of DOM elements.
 -   **Multi-Quadtree Optimization**: The simulation uses multiple Quadtree data structures each tick for high-performance spatial querying.
     -   A Quadtree for all actors is used for general lookups.

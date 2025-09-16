@@ -83,6 +83,9 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
             if (newX === bird.target.x && newY === bird.target.y) { // Attack
                 nextActorState.delete(targetActor.id);
                 bird.target = null;
+                bird.x = newX; // Move onto the cell
+                bird.y = newY;
+                moved = true;
                 
                 if (targetActor.type === 'insect') {
                     const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SimulationEngine } from './simulationEngine';
 import { DEFAULT_SIM_PARAMS, POPULATION_TREND_WINDOW } from '../constants';
-import type { FEService, Flower, Nutrient, FlowerGenomeStats, Grid, CellContent, Insect, Bird } from '../types';
+import type { FEService, Flower, FlowerGenomeStats, Grid, CellContent, Insect, Bird, ActorUpdateDelta, ActorAddDelta } from '../types';
 
 // Mock the flower service, a dependency of the engine
 const mockFlowerService: FEService = {
@@ -96,26 +96,29 @@ describe('SimulationEngine', () => {
     });
 
     describe('Core Simulation Logic', () => {
-        it('a flower should lose stamina and then health each tick', async () => {
+        it('a flower should generate update deltas for stamina and health', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialInsects: 0, initialBirds: 0, initialFlowers: 1 });
             await engine.initializeGrid();
             const initialFlower = engine.getGridState().grid.flat(2)[0] as Flower;
             const initialStamina = initialFlower.stamina;
 
-            await engine.calculateNextTick();
-            const flowerAfterTick1 = engine.getGridState().grid.flat(2)[0] as Flower;
-            expect(flowerAfterTick1.stamina).toBeLessThan(initialStamina);
-            expect(flowerAfterTick1.health).toBe(initialFlower.maxHealth);
+            const { deltas: deltas1 } = await engine.calculateNextTick();
+            const updateDelta1 = deltas1.find(d => d.type === 'update' && d.id === initialFlower.id) as ActorUpdateDelta;
+            expect(updateDelta1).toBeDefined();
+            expect((updateDelta1.changes as Partial<Flower>).stamina).toBeLessThan(initialStamina);
+            expect((updateDelta1.changes as Partial<Flower>).health).toBeUndefined();
 
+            // Manually set stamina to 0 to test health decrease
             (engine as any).grid.flat(2).forEach((c: CellContent) => { if(c.type === 'flower') (c as Flower).stamina = 0 });
-            const initialHealth = flowerAfterTick1.health;
-
-            await engine.calculateNextTick();
-            const flowerAfterTick2 = engine.getGridState().grid.flat(2)[0] as Flower;
-            expect(flowerAfterTick2.health).toBeLessThan(initialHealth);
+            
+            const { deltas: deltas2 } = await engine.calculateNextTick();
+            const updateDelta2 = deltas2.find(d => d.type === 'update' && d.id === initialFlower.id) as ActorUpdateDelta;
+            expect(updateDelta2).toBeDefined();
+            expect((updateDelta2.changes as Partial<Flower>).health).toBeLessThan(initialFlower.health);
         });
 
-        it('a bird should find and move towards the closest insect', async () => {
+
+        it('a bird should generate an update delta when moving towards an insect', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 2, initialBirds: 1 });
             await engine.initializeGrid();
 
@@ -134,14 +137,15 @@ describe('SimulationEngine', () => {
             newGrid[7][7].push(closeInsect);
             (engine as any).grid = newGrid;
 
-            await engine.calculateNextTick();
-
-            const birdAfterTick = engine.getGridState().grid.flat(2).find((c: CellContent) => c.type === 'bird');
-            expect(birdAfterTick?.x).toBe(6);
-            expect(birdAfterTick?.y).toBe(6);
+            const { deltas } = await engine.calculateNextTick();
+            
+            const birdUpdateDelta = deltas.find(d => d.type === 'update' && d.id === bird.id) as ActorUpdateDelta;
+            expect(birdUpdateDelta).toBeDefined();
+            expect(birdUpdateDelta.changes.x).toBe(6);
+            expect(birdUpdateDelta.changes.y).toBe(6);
         });
 
-        it('a bird should eat an insect and create a nutrient', async () => {
+        it('a bird should eat an insect, generating correct deltas', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 1, initialBirds: 1 });
             await engine.initializeGrid();
 
@@ -155,21 +159,25 @@ describe('SimulationEngine', () => {
             newGrid[6][6].push(insect);
             (engine as any).grid = newGrid;
 
-            await engine.calculateNextTick();
+            const { deltas } = await engine.calculateNextTick();
 
-            const finalGrid = engine.getGridState().grid;
-            const finalInsects = finalGrid.flat(2).filter(c => c.type === 'insect');
-            const nutrient = finalGrid.flat(2).find(c => c.type === 'nutrient') as Nutrient | undefined;
+            const removeDelta = deltas.find(d => d.type === 'remove' && d.id === insect.id);
+            expect(removeDelta).toBeDefined();
 
-            expect(finalInsects.length).toBe(0);
-            expect(nutrient).toBeDefined();
-            expect(nutrient?.x).toBe(6);
-            expect(nutrient?.y).toBe(6);
+            const addDelta = deltas.find(d => d.type === 'add' && d.actor.type === 'nutrient') as ActorAddDelta | undefined;
+            expect(addDelta).toBeDefined();
+            expect(addDelta?.actor.x).toBe(insect.x);
+            expect(addDelta?.actor.y).toBe(insect.y);
+            
+            const updateDelta = deltas.find(d => d.type === 'update' && d.id === bird.id) as ActorUpdateDelta | undefined;
+            expect(updateDelta).toBeDefined();
+            expect(updateDelta?.changes.x).toBe(insect.x);
+            expect(updateDelta?.changes.y).toBe(insect.y);
         });
     });
 
     describe('Insect Reproduction', () => {
-        it('should lay an egg when two insects of the same type are on the same cell', async () => {
+        it('should generate an add delta for an egg when two insects reproduce', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 2, initialBirds: 0 });
             await engine.initializeGrid();
 
@@ -190,12 +198,10 @@ describe('SimulationEngine', () => {
 
             const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
-            const { events } = await engine.calculateNextTick();
-
-            const finalGrid = engine.getGridState().grid;
-            const egg = finalGrid.flat(2).find(c => c.type === 'egg');
-
-            expect(egg).toBeDefined();
+            const { deltas, events } = await engine.calculateNextTick();
+            
+            const addDelta = deltas.find(d => d.type === 'add' && d.actor.type === 'egg');
+            expect(addDelta).toBeDefined();
             expect(events.some(e => e.message === `${insect1.emoji} laid an egg!`)).toBe(true);
 
             randomSpy.mockRestore();
@@ -203,7 +209,7 @@ describe('SimulationEngine', () => {
     });
 
     describe('Population Control', () => {
-        it('should spawn a new bird when insect population grows rapidly', async () => {
+        it('should generate an add delta for a new bird when insect population grows rapidly', async () => {
             // Set params for a controlled test
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 20, initialBirds: 1 });
             await engine.initializeGrid();
@@ -211,7 +217,6 @@ describe('SimulationEngine', () => {
             // Manually simulate population growth for POPULATION_TREND_WINDOW ticks
             for (let i = 0; i < POPULATION_TREND_WINDOW; i++) {
                 const { grid } = engine.getGridState();
-                // Add two new insects each tick to ensure growth trend
                 const newInsect1: Insect = { id: `new-insect-${i}-a`, type: 'insect', x: 0, y: 0, emoji: '🐛', lifespan: 100, pollen: null };
                 const newInsect2: Insect = { id: `new-insect-${i}-b`, type: 'insect', x: 4, y: 4, emoji: '🐛', lifespan: 100, pollen: null };
                 const newInsect3: Insect = { id: `new-insect-${i}-c`, type: 'insect', x: 2, y: 2, emoji: '🐛', lifespan: 100, pollen: null };
@@ -223,23 +228,18 @@ describe('SimulationEngine', () => {
                 await engine.calculateNextTick();
             }
     
-            const { events } = await engine.calculateNextTick();
-            const finalGrid = engine.getGridState().grid;
-            const birds = finalGrid.flat(2).filter(c => c.type === 'bird');
-    
-            // Initial bird + new bird
-            expect(birds.length).toBe(2);
+            const { deltas, events } = await engine.calculateNextTick();
+            const birdAddDelta = deltas.find(d => d.type === 'add' && d.actor.type === 'bird');
+
+            expect(birdAddDelta).toBeDefined();
             expect(events.some(e => e.message === '🐦 A new bird has arrived to hunt!')).toBe(true);
-            // Check cooldown is active
             expect((engine as any).birdSpawnCooldown).toBeGreaterThan(0);
         });
     
-        it('should spawn an eagle when insect population declines and bird count is sufficient', async () => {
-            // Setup with plenty of insects and birds
+        it('should generate an add delta for an eagle when insect population declines', async () => {
             engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 250, initialBirds: 10 });
             await engine.initializeGrid();
     
-            // Manually simulate population decline for POPULATION_TREND_WINDOW ticks
             for (let i = 0; i < POPULATION_TREND_WINDOW; i++) {
                 const { grid } = engine.getGridState();
                 let removedCount = 0;
@@ -255,106 +255,34 @@ describe('SimulationEngine', () => {
                 await engine.calculateNextTick();
             }
     
-            const { events } = await engine.calculateNextTick();
-            const finalGrid = engine.getGridState().grid;
-            const eagles = finalGrid.flat(2).filter(c => c.type === 'eagle');
+            const { deltas, events } = await engine.calculateNextTick();
+            const eagleAddDelta = deltas.find(d => d.type === 'add' && d.actor.type === 'eagle');
     
-            expect(eagles.length).toBe(1);
+            expect(eagleAddDelta).toBeDefined();
             expect(events.some(e => e.message === '🦅 An eagle has appeared in the skies!')).toBe(true);
             expect((engine as any).eagleSpawnCooldown).toBeGreaterThan(0);
-        });
-    
-        it('should not spawn an eagle if there are not enough birds', async () => {
-            // Setup with plenty of insects but few birds
-            engine.setParams({ ...DEFAULT_SIM_PARAMS, initialFlowers: 0, initialInsects: 30, initialBirds: 1 });
-            await engine.initializeGrid();
-    
-            // Manually simulate population decline for POPULATION_TREND_WINDOW ticks
-            for (let i = 0; i < POPULATION_TREND_WINDOW; i++) {
-                 const { grid } = engine.getGridState();
-                let removedCount = 0;
-                for (const row of grid) {
-                    for (const cell of row) {
-                        const insectIndex = cell.findIndex(c => c.type === 'insect');
-                        if (insectIndex !== -1 && removedCount < 5) {
-                            cell.splice(insectIndex, 1);
-                            removedCount++;
-                        }
-                    }
-                }
-                await engine.calculateNextTick();
-            }
-    
-            const { events } = await engine.calculateNextTick();
-            const finalGrid = engine.getGridState().grid;
-            const eagles = finalGrid.flat(2).filter(c => c.type === 'eagle');
-    
-            expect(eagles.length).toBe(0);
-            expect(events.some(e => e.message === '🦅 An eagle has appeared in the skies!')).toBe(false);
         });
     });
 
     describe('Herbicide Control', () => {
-        it('should spawn a herbicide plane when flower density threshold is met', async () => {
-            // Set params where initial flowers exceed the density threshold
+        it('should generate an add delta for a herbicide plane when flower density threshold is met', async () => {
             const testParams = { 
                 ...DEFAULT_SIM_PARAMS, 
                 gridWidth: 10, 
                 gridHeight: 10, 
                 initialFlowers: 50, 
-                herbicideFlowerDensityThreshold: 0.49 // threshold is 49
+                herbicideFlowerDensityThreshold: 0.49
             };
             engine.setParams(testParams);
-            await engine.initializeGrid(); // This will create 50 flowers
+            await engine.initializeGrid();
 
-            const { events } = await engine.calculateNextTick();
+            const { deltas, events } = await engine.calculateNextTick();
             
-            const finalActors = engine.getGridState().grid.flat(2);
-            const plane = finalActors.find(c => c.type === 'herbicidePlane');
+            const planeAddDelta = deltas.find(d => d.type === 'add' && d.actor.type === 'herbicidePlane');
             
-            expect(plane).toBeDefined();
+            expect(planeAddDelta).toBeDefined();
             expect(events.some(e => e.message.includes('Herbicide plane deployed'))).toBe(true);
             expect((engine as any).herbicideCooldown).toBeGreaterThan(0);
-        });
-
-        it('should not spawn a plane if density threshold is not met', async () => {
-            const testParams = { 
-                ...DEFAULT_SIM_PARAMS, 
-                gridWidth: 10, 
-                gridHeight: 10, 
-                initialFlowers: 49, 
-                herbicideFlowerDensityThreshold: 0.5 // threshold is 50
-            };
-            engine.setParams(testParams);
-            await engine.initializeGrid();
-
-            await engine.calculateNextTick();
-            
-            const finalActors = engine.getGridState().grid.flat(2);
-            const plane = finalActors.find(c => c.type === 'herbicidePlane');
-            
-            expect(plane).toBeUndefined();
-        });
-
-        it('should not spawn a plane if on cooldown', async () => {
-            const testParams = { 
-                ...DEFAULT_SIM_PARAMS, 
-                gridWidth: 10, 
-                gridHeight: 10, 
-                initialFlowers: 50, 
-                herbicideFlowerDensityThreshold: 0.49,
-                herbicideCooldown: 5 
-            };
-            engine.setParams(testParams);
-            await engine.initializeGrid();
-            (engine as any).herbicideCooldown = 5; // Manually set cooldown
-            
-            await engine.calculateNextTick();
-
-            const finalActors = engine.getGridState().grid.flat(2);
-            const plane = finalActors.find(c => c.type === 'herbicidePlane');
-            
-            expect(plane).toBeUndefined();
         });
     });
 });

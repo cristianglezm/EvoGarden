@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Grid, SimulationParams, AppEvent } from '../types';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { Grid, SimulationParams, AppEvent, CellContent, ActorDelta } from '../types';
 import { useChallengeStore } from '../stores/challengeStore';
 import { useAnalyticsStore } from '../stores/analyticsStore';
 import { eventService } from '../services/eventService';
@@ -9,58 +9,84 @@ interface UseSimulationProps {
 }
 
 export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
-    const [grid, setGrid] = useState<Grid>([]);
+    const [actors, setActors] = useState<Map<string, CellContent>>(new Map());
     const [isRunning, _setIsRunning] = useState(false);
     const [isWorkerInitialized, setIsWorkerInitialized] = useState(false);
     const workerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
+    const paramsRef = useRef<SimulationParams | null>(null);
     
+    // The grid is now derived from the actor map.
+    const grid = useMemo<Grid>(() => {
+        if (!paramsRef.current) return [];
+        const { gridWidth, gridHeight } = paramsRef.current;
+        const newGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
+        for (const actor of actors.values()) {
+            if (typeof actor.x === 'number' && typeof actor.y === 'number' && actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
+                newGrid[actor.y][actor.x].push(actor);
+            }
+        }
+        return newGrid;
+    }, [actors]);
+
     // Effect to initialize and terminate the worker
     useEffect(() => {
-        // Create the worker
         const worker = new Worker(new URL('../simulation.worker.ts', import.meta.url), {
             type: 'module',
         });
         workerRef.current = worker;
         setIsWorkerInitialized(true);
         
-        // Listen for messages from the worker
         worker.onmessage = (e: MessageEvent) => {
             const { type, payload } = e.data;
             switch (type) {
-                case 'gridUpdate':
-                    setGrid(payload.grid);
+                case 'init-complete':
+                case 'load-complete': {
+                    paramsRef.current = payload.params;
+                    const newActors = new Map<string, CellContent>();
+                    payload.grid.flat(2).forEach((actor: CellContent) => {
+                        if (actor) newActors.set(actor.id, actor);
+                    });
+                    setActors(newActors);
+                    setIsLoading(false);
                     break;
-                case 'events-batch': {
-                    const { events, summary } = payload;
+                }
+                case 'tick-update': {
+                    const { deltas, events, summary } = payload;
+
+                    setActors(currentActors => {
+                        const newActors = new Map(currentActors);
+                        for (const delta of (deltas as ActorDelta[])) {
+                            switch (delta.type) {
+                                case 'add':
+                                    newActors.set(delta.actor.id, delta.actor);
+                                    break;
+                                case 'remove':
+                                    newActors.delete(delta.id);
+                                    break;
+                                case 'update': {
+                                    const actorToUpdate = newActors.get(delta.id);
+                                    if (actorToUpdate) {
+                                        newActors.set(delta.id, { ...actorToUpdate, ...delta.changes } as CellContent);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        return newActors;
+                    });
+                    
                     useChallengeStore.getState().processTick(summary);
                     useAnalyticsStore.getState().addDataPoint(summary);
                     for (const event of (events as AppEvent[])) {
-                        // Enrich event with the tick number from the summary
+                        // @todo add a fromTick to events
                         eventService.dispatch({ ...event, tick: summary.tick });
                     }
                     break;
                 }
-                case 'load-complete':
-                    // This message now carries the grid state.
-                    // We update the grid and signal that loading is finished
-                    // in the same event handler to prevent race conditions.
-                    if (payload?.grid) {
-                        setGrid(payload.grid);
-                    }
-                    setIsLoading(false);
-                    break;
-                case 'initialized':
-                    // This is a signal that the worker is ready and has sent its initial grid.
-                    // We can now hide the main loading screen.
-                    setIsLoading(false);
-                    break;
-                // Note: 'state-response' is handled by a separate listener in App.tsx
-                // to avoid re-renders of the entire simulation hook.
             }
         };
 
-        // Cleanup: terminate the worker when the component unmounts
         return () => {
             worker.terminate();
             workerRef.current = null;
@@ -68,8 +94,8 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         };
     }, [setIsLoading]);
 
-    // Explicit function to reset the simulation with new parameters
     const resetWithNewParams = useCallback((params: SimulationParams) => {
+        paramsRef.current = params; // Store params to derive grid dimensions
         workerRef.current?.postMessage({ type: 'update-params', payload: params });
     }, []);
 
