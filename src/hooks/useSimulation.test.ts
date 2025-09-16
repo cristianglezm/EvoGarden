@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSimulation } from './useSimulation';
 import { DEFAULT_SIM_PARAMS } from '../constants';
+import type { ActorDelta, Bird, CellContent, Flower, Insect } from '../types';
 
 // --- Mock Worker Setup ---
 const mockPostMessage = vi.fn();
@@ -77,23 +78,69 @@ describe('useSimulation hook', () => {
         expect(mockPostMessage).toHaveBeenCalledWith({ type: 'update-params', payload: newParams });
     });
 
-    it('updates the grid state when it receives a "gridUpdate" message from the worker', () => {
+    it('updates actor state and derives grid correctly from "tick-update" deltas', () => {
         const { result } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
         
-        expect(result.current.grid).toEqual([]);
+        // 1. Initial state from 'init-complete'
+        const initialActors: CellContent[] = [
+            { id: 'flower-1', type: 'flower', x: 0, y: 0, health: 100 } as Flower,
+            { id: 'insect-1', type: 'insect', x: 1, y: 1, lifespan: 50, emoji: '🦋' } as Insect,
+        ];
 
-        const mockGrid = [[[{ type: 'flower', id: '1' }]]];
-        // We have to cast here because MessageEvent is a complex type
-        const mockMessage = { data: { type: 'gridUpdate', payload: { grid: mockGrid } } } as MessageEvent;
+        // Construct a simple 2x2 grid for the initial payload
+        const initialGrid: (CellContent[])[][] = [
+            [[initialActors[0]], []],
+            [[], [initialActors[1]]],
+        ];
+
+        const initMessage = {
+            data: {
+                type: 'init-complete',
+                payload: {
+                    grid: initialGrid,
+                    params: { ...DEFAULT_SIM_PARAMS, gridWidth: 2, gridHeight: 2 }
+                }
+            }
+        } as MessageEvent;
+        
+        act(() => {
+            if (onmessageCallback) onmessageCallback(initMessage);
+        });
+        
+        expect(result.current.grid[0][0][0]).toEqual(initialActors[0]);
+        expect(result.current.grid[1][1][0]).toEqual(initialActors[1]);
+
+        // 2. Deltas from 'tick-update'
+        const deltas: ActorDelta[] = [
+            { type: 'update', id: 'flower-1', changes: { health: 90 } },
+            { type: 'remove', id: 'insect-1' },
+            { type: 'add', actor: { id: 'bird-1', type: 'bird', x: 1, y: 0 } as Bird },
+        ];
+        const tickMessage = {
+            data: {
+                type: 'tick-update',
+                payload: {
+                    deltas,
+                    events: [],
+                    summary: { tick: 1, flowerCount: 1, insectCount: 0, birdCount: 1 /* other props */ }
+                }
+            }
+        } as MessageEvent;
 
         act(() => {
-            // Simulate the worker sending a message to the hook
-            if (onmessageCallback) {
-                onmessageCallback(mockMessage);
-            }
+            if (onmessageCallback) onmessageCallback(tickMessage);
         });
 
-        expect(result.current.grid).toEqual(mockGrid);
+        // 3. Assert final derived grid state
+        const finalGrid = result.current.grid;
+        // Flower updated
+        expect(finalGrid[0][0].length).toBe(1);
+        expect((finalGrid[0][0][0] as Flower).health).toBe(90);
+        // Insect removed
+        expect(finalGrid[1][1].length).toBe(0);
+        // Bird added
+        expect(finalGrid[0][1].length).toBe(1);
+        expect(finalGrid[0][1][0].id).toBe('bird-1');
     });
     
     it('does not change state for unhandled message types', () => {

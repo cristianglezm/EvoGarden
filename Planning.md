@@ -62,10 +62,10 @@ The application's architecture is designed to separate the computationally inten
 
 ### 5.1. Web Worker for Performance (`src/simulation.worker.ts`)
 -   **Role**: The worker acts as a simple, robust **host** for the `SimulationEngine`. Its primary responsibility is to run on a separate thread, isolating all heavy computation from the UI.
--   **Message Broker**: It functions as a message broker, receiving commands from the UI (via the `useSimulation` hook) and forwarding them to the `SimulationEngine` instance. It then relays results from the engine (a batch of events and the tick summary) back to the UI thread. This keeps the worker's own logic minimal.
+-   **Message Broker**: It functions as a message broker, receiving commands from the UI (via the `useSimulation` hook) and forwarding them to the `SimulationEngine` instance. It then relays results from the engine (an array of state changes called deltas, a batch of events, and a tick summary) back to the UI thread. This keeps the worker's own logic minimal.
 
 ### 5.2. The Simulation Engine & Behavior System (`src/lib/`)
--   **`SimulationEngine` (`simulationEngine.ts`)**: This class is the **orchestrator** of the simulation. Its main game loop (`calculateNextTick`) manages the simulation's state and sequence of events. It does not contain actor-specific logic itself; instead, it delegates that to the Behavior System. Its responsibilities include:
+-   **`SimulationEngine` (`simulationEngine.ts`)**: This class is the **orchestrator** of the simulation. Its main game loop (`calculateNextTick`) manages the simulation's state and sequence of events. Instead of returning the entire grid state, it now calculates a minimal set of "delta" updates (e.g., actor added, removed, or properties changed) which are sent to the UI for efficient state synchronization. It does not contain actor-specific logic itself; instead, it delegates that to the Behavior System. Its responsibilities include:
     -   Maintaining the master actor state (`grid`, `tick` count).
     -   Creating and populating the Quadtrees each tick.
     -   Iterating through actors and calling the appropriate behavior module.
@@ -141,7 +141,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 ### 5.4. UI/Worker Communication (`src/hooks/useSimulation.ts`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
     -   **Responsibilities**: Manages the worker's lifecycle, sends commands (start, pause, reset), and listens for incoming messages.
-    -   **State Synchronization**: When it receives an `events-batch` message, it updates its local `grid` state, triggers a re-render of the `SimulationView`, forwards the `summary` data to the appropriate Zustand stores (`challengeStore`, `analyticsStore`), and sends all `events` to the `EventService`.
+    -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas. It maintains a local Map of actors and applies these changes (add, update, remove) to reconstruct the new grid state. This avoids the expensive process of deserializing the entire grid on every tick. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
 
 ### 5.5. Centralized Event & Notification System
 To decouple the simulation from the UI and improve performance, a centralized event service manages all notifications.

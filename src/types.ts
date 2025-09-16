@@ -145,6 +145,22 @@ export interface ToastMessage {
   key?: number;
 }
 
+export type ActorAddDelta = {
+    type: 'add';
+    actor: CellContent;
+};
+export type ActorUpdateDelta = {
+    type: 'update';
+    id: string;
+    changes: Partial<CellContent>;
+};
+export type ActorRemoveDelta = {
+    type: 'remove';
+    id: string;
+};
+export type ActorDelta = ActorAddDelta | ActorUpdateDelta | ActorRemoveDelta;
+
+
 export interface FEService {
     initialize(): Promise<void>;
     setParams(params: FEParams): void;
