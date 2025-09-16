@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { Grid, SimulationParams, AppEvent, CellContent, ActorDelta } from '../types';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { SimulationParams, AppEvent, CellContent, ActorDelta } from '../types';
 import { useChallengeStore } from '../stores/challengeStore';
 import { useAnalyticsStore } from '../stores/analyticsStore';
 import { eventService } from '../services/eventService';
@@ -14,21 +14,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const [isWorkerInitialized, setIsWorkerInitialized] = useState(false);
     const workerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
-    const paramsRef = useRef<SimulationParams | null>(null);
     
-    // The grid is now derived from the actor map.
-    const grid = useMemo<Grid>(() => {
-        if (!paramsRef.current) return [];
-        const { gridWidth, gridHeight } = paramsRef.current;
-        const newGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
-        for (const actor of actors.values()) {
-            if (typeof actor.x === 'number' && typeof actor.y === 'number' && actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
-                newGrid[actor.y][actor.x].push(actor);
-            }
-        }
-        return newGrid;
-    }, [actors]);
-
     // Effect to initialize and terminate the worker
     useEffect(() => {
         const worker = new Worker(new URL('../simulation.worker.ts', import.meta.url), {
@@ -42,7 +28,6 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
             switch (type) {
                 case 'init-complete':
                 case 'load-complete': {
-                    paramsRef.current = payload.params;
                     const newActors = new Map<string, CellContent>();
                     payload.grid.flat(2).forEach((actor: CellContent) => {
                         if (actor) newActors.set(actor.id, actor);
@@ -79,7 +64,6 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                     useChallengeStore.getState().processTick(summary);
                     useAnalyticsStore.getState().addDataPoint(summary);
                     for (const event of (events as AppEvent[])) {
-                        // @todo add a fromTick to events
                         eventService.dispatch({ ...event, tick: summary.tick });
                     }
                     break;
@@ -95,7 +79,6 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     }, [setIsLoading]);
 
     const resetWithNewParams = useCallback((params: SimulationParams) => {
-        paramsRef.current = params; // Store params to derive grid dimensions
         workerRef.current?.postMessage({ type: 'update-params', payload: params });
     }, []);
 
@@ -112,5 +95,5 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         }
     };
 
-    return { grid, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized };
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized };
 };

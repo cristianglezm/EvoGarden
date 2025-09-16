@@ -45,7 +45,7 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { grid, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized } = useSimulation({ setIsLoading });
 
   // Initialize the main-thread event service
   useEffect(() => {
@@ -129,19 +129,10 @@ export default function App(): React.ReactNode {
 
 
   const selectedFlower = useMemo(() => {
-    if (!selectedFlowerId || !grid) return null;
-    for (const row of grid) {
-        for (const cell of row) {
-            const flower = cell.find(
-                (entity): entity is Flower => entity.type === 'flower' && entity.id === selectedFlowerId
-            );
-            if (flower) {
-                return flower;
-            }
-        }
-    }
-    return null;
-  }, [selectedFlowerId, grid]);
+    if (!selectedFlowerId) return null;
+    const actor = actors.get(selectedFlowerId);
+    return actor?.type === 'flower' ? actor : null;
+  }, [selectedFlowerId, actors]);
 
   const handleParamsChange = (newParams: SimulationParams) => {
     setIsRunning(false); // Stop the simulation on reset
@@ -373,7 +364,7 @@ export default function App(): React.ReactNode {
         <div ref={simulationViewRef} className="grow flex flex-col h-full">
           <SimulationView 
             params={params}
-            grid={grid}
+            actors={actors}
             onSelectFlower={handleSelectFlower}
             selectedFlowerId={selectedFlowerId}
           />
