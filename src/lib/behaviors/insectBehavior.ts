@@ -32,7 +32,9 @@ export const processInsectTick = (
         const nutrientId = `nutrient-${insect.x}-${insect.y}-${Date.now()}`;
         const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: insect.x, y: insect.y, lifespan: NUTRIENT_FROM_OLD_AGE_LIFESPAN };
         nextActorState.set(nutrientId, nutrient);
-        toasts.push({ message: '💀 An insect died of old age.', type: 'info' });
+        if (params.toastsEnabled) {
+            toasts.push({ message: '💀 An insect died of old age.', type: 'info' });
+        }
         incrementInsectsDiedOfOldAge();
         return; // End tick processing for this insect
     }

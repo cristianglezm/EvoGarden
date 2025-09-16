@@ -48,7 +48,9 @@ export const processEagleTick = (eagle: Eagle, context: EagleContext) => {
             if (newX === eagle.target.x && newY === eagle.target.y) { // Hunt successful
                 nextActorState.delete(targetBird.id); // Eat the bird
                 nextActorState.delete(eagle.id);    // Eagle leaves after the hunt
-                toasts.push({ message: '🦅 An eagle hunted a bird!', type: 'info' });
+                if (params.toastsEnabled) {
+                    toasts.push({ message: '🦅 An eagle hunted a bird!', type: 'info' });
+                }
 
             } else if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight) {
                 eagle.x = newX; 

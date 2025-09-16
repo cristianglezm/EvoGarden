@@ -1,4 +1,6 @@
-import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect, Bird } from '../types';
+import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect, Bird, PopulationTrend } from '../types';
+import { POPULATION_TREND_WINDOW } from '../constants';
+import { Quadtree, Rectangle } from './Quadtree';
 
 export const windVectors: Record<WindDirection, {dx: number, dy: number}> = {
     'N': {dx: 0, dy: -1}, 'NE': {dx: 1, dy: -1}, 'E': {dx: 1, dy: 0}, 'SE': {dx: 1, dy: 1},
@@ -102,4 +104,52 @@ export const cloneActor = <T extends CellContent>(actor: T): T => {
     }
 
     return newActor;
+};
+
+export const calculatePopulationTrend = (history: number[], growthThreshold: number, declineThreshold: number): PopulationTrend => {
+    if (history.length < POPULATION_TREND_WINDOW) {
+        return 'stable';
+    }
+
+    const ratesOfChange: number[] = [];
+    for (let i = 1; i < history.length; i++) {
+        const oldVal = history[i - 1];
+        const newVal = history[i];
+        if (oldVal > 0) {
+            ratesOfChange.push((newVal - oldVal) / oldVal);
+        } else if (newVal > 0) {
+            ratesOfChange.push(1.0); // Handle growth from zero
+        } else {
+            ratesOfChange.push(0); // No change from zero
+        }
+    }
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+    for (let i = 0; i < ratesOfChange.length; i++) {
+        const weight = i + 1; // Simple linear weighting
+        weightedSum += ratesOfChange[i] * weight;
+        totalWeight += weight;
+    }
+
+    const weightedAvg = totalWeight > 0 ? weightedSum / totalWeight : 0;
+    
+    if (weightedAvg > growthThreshold) return 'growing';
+    if (weightedAvg < -declineThreshold) return 'declining';
+    return 'stable';
+};
+
+export const buildQuadtrees = (actors: CellContent[], params: { gridWidth: number, gridHeight: number }): { qtree: Quadtree<CellContent>, flowerQtree: Quadtree<CellContent> } => {
+    const { gridWidth, gridHeight } = params;
+    const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
+    const qtree = new Quadtree<CellContent>(boundary, 4);
+    const flowerQtree = new Quadtree<CellContent>(boundary, 4);
+    
+    for (const actor of actors) {
+        qtree.insert({ x: actor.x, y: actor.y, data: actor });
+        if (actor.type === 'flower') {
+            flowerQtree.insert({ x: actor.x, y: actor.y, data: actor });
+        }
+    }
+    return { qtree, flowerQtree };
 };

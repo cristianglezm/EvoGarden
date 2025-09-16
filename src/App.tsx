@@ -4,7 +4,7 @@ import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
 import type { CellContent, Flower, SimulationParams, Grid } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
-import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon } from './components/icons';
+import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
 import { ToastContainer } from './components/ToastContainer';
 import { flowerService } from './services/flowerService';
@@ -81,10 +81,13 @@ export default function App(): React.ReactNode {
                 workerRef.current!.postMessage({ type: 'load-state', payload: fullStateToLoad });
                 
                 // Sync main thread state, merging with defaults to handle new params
-                setParams({ ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params });
+                const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
+                setParams(loadedParams);
                 setIsRunning(false);
                 setSelectedFlowerId(null);
-                useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
+                if (loadedParams.toastsEnabled) {
+                  useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
+                }
             } else {
                 // Initialize with default params
                 workerRef.current!.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
@@ -232,20 +235,26 @@ export default function App(): React.ReactNode {
         localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
         
         setHasSavedState(true);
-        useToastStore.getState().addToast({ message: 'Garden state saved!', type: 'success' });
+        if (params.toastsEnabled) {
+          useToastStore.getState().addToast({ message: 'Garden state saved!', type: 'success' });
+        }
 
     } catch (err) {
         console.error("Save failed:", err);
-        useToastStore.getState().addToast({ message: `Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+        if (params.toastsEnabled) {
+          useToastStore.getState().addToast({ message: `Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+        }
     } finally {
         setIsSaving(false);
     }
-  }, [workerRef, isSaving, setIsRunning]);
+  }, [workerRef, isSaving, setIsRunning, params.toastsEnabled]);
 
   const handleLoadSimulation = useCallback(async () => {
     const metadataJSON = localStorage.getItem(META_SAVE_KEY);
     if (!metadataJSON || !workerRef.current) {
-        useToastStore.getState().addToast({ message: 'No saved state found.', type: 'error' });
+        if (params.toastsEnabled) {
+          useToastStore.getState().addToast({ message: 'No saved state found.', type: 'error' });
+        }
         return;
     }
 
@@ -274,21 +283,26 @@ export default function App(): React.ReactNode {
         const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
         workerRef.current.postMessage({ type: 'load-state', payload: fullStateToLoad });
 
-        setParams({ ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params });
+        const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
+        setParams(loadedParams);
         setIsRunning(false);
         setSelectedFlowerId(null);
         setIsControlsOpen(false);
-        useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
+        if (loadedParams.toastsEnabled) {
+          useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
+        }
 
     } catch (err) {
         console.error("Load failed:", err);
-        useToastStore.getState().addToast({ message: `Load failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+        if (params.toastsEnabled) {
+          useToastStore.getState().addToast({ message: `Load failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+        }
         setIsLoading(false);
         localStorage.removeItem(META_SAVE_KEY);
         await db.savedFlowers.clear();
         setHasSavedState(false);
     }
-  }, [workerRef, setIsRunning, setIsLoading]);
+  }, [workerRef, setIsRunning, setIsLoading, params.toastsEnabled]);
 
 
   if (error) {
@@ -315,6 +329,16 @@ export default function App(): React.ReactNode {
           <LogoIcon className="h-8 w-8 text-tertiary" />
           <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
         </div>
+        <a 
+          href="https://github.com/cristianglezm/EvoGarden" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-primary hover:text-tertiary transition-colors"
+          aria-label="View on GitHub"
+          title="View on GitHub"
+        >
+          <GitHubIcon className="h-7 w-7" />
+        </a>
       </header>
       
       <main className="grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">

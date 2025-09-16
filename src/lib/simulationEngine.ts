@@ -1,9 +1,9 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend } from '../types';
 import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
 import { initializeGridState, createNewFlower } from './simulationInitializer';
-import { findCellForStationaryActor, cloneActor } from './simulationUtils';
+import { findCellForStationaryActor, cloneActor, calculatePopulationTrend, buildQuadtrees } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
 import { processFlowerTick } from './behaviors/flowerBehavior';
@@ -13,8 +13,6 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { FLOWER_NUTRIENT_HEAL } from '../constants';
-
-type PopulationTrend = 'growing' | 'declining' | 'stable';
 
 export class SimulationEngine {
     private tick = 0;
@@ -31,6 +29,13 @@ export class SimulationEngine {
     private herbicideCooldown = 0;
     private lastInsectTrend: PopulationTrend = 'stable';
 
+    // Tick-specific counters
+    private insectsEatenThisTick = 0;
+    private eggsEatenThisTick = 0;
+    private insectsDiedOfOldAgeThisTick = 0;
+    private eggsLaidThisTick = 0;
+    private insectsBornThisTick = 0;
+
     constructor(params: SimulationParams, flowerService: FEService) {
         this.params = params;
         this.flowerService = flowerService;
@@ -41,57 +46,25 @@ export class SimulationEngine {
         this.grid = await initializeGridState(this.params, this.flowerService);
     }
 
-    private _calculatePopulationTrend(history: number[], growthThreshold: number, declineThreshold: number): PopulationTrend {
-        if (history.length < POPULATION_TREND_WINDOW) {
-            return 'stable';
-        }
-
-        const ratesOfChange: number[] = [];
-        for (let i = 1; i < history.length; i++) {
-            const oldVal = history[i - 1];
-            const newVal = history[i];
-            if (oldVal > 0) {
-                ratesOfChange.push((newVal - oldVal) / oldVal);
-            } else if (newVal > 0) {
-                ratesOfChange.push(1.0); // Handle growth from zero
-            } else {
-                ratesOfChange.push(0); // No change from zero
-            }
-        }
-
-        let weightedSum = 0;
-        let totalWeight = 0;
-        for (let i = 0; i < ratesOfChange.length; i++) {
-            const weight = i + 1; // Simple linear weighting
-            weightedSum += ratesOfChange[i] * weight;
-            totalWeight += weight;
-        }
-
-        const weightedAvg = totalWeight > 0 ? weightedSum / totalWeight : 0;
-        
-        if (weightedAvg > growthThreshold) return 'growing';
-        if (weightedAvg < -declineThreshold) return 'declining';
-        return 'stable';
+    private _resetTickCounters() {
+        this.insectsEatenThisTick = 0;
+        this.eggsEatenThisTick = 0;
+        this.insectsDiedOfOldAgeThisTick = 0;
+        this.eggsLaidThisTick = 0;
+        this.insectsBornThisTick = 0;
     }
-    
-    public async calculateNextTick(): Promise<{ toasts: Omit<ToastMessage, 'id'>[]; summary: TickSummary }> {
-        const { gridWidth, gridHeight } = this.params;
-        const toasts: Omit<ToastMessage, 'id'>[] = [];
-        let insectsEatenThisTick = 0;
-        let eggsEatenThisTick = 0;
-        let insectsDiedOfOldAgeThisTick = 0;
-        let eggsLaidThisTick = 0;
-        let insectsBornThisTick = 0;
-        const currentActors: CellContent[] = this.grid.flat(2);
 
-        // --- Population Control Phase (runs first based on previous tick history) ---
+    private _processCooldowns() {
         if (this.birdSpawnCooldown > 0) this.birdSpawnCooldown--;
         if (this.eagleSpawnCooldown > 0) this.eagleSpawnCooldown--;
         if (this.herbicideCooldown > 0) this.herbicideCooldown--;
+    }
+    
+    private _handlePopulationControl(currentActors: CellContent[], toasts: Omit<ToastMessage, 'id'>[]): void {
+        const { gridWidth, gridHeight, toastsEnabled } = this.params;
+        const insectTrend = calculatePopulationTrend(this.insectCountHistory, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT);
 
-        const insectTrend = this._calculatePopulationTrend(this.insectCountHistory, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT);
-
-        if (insectTrend !== this.lastInsectTrend) {
+        if (toastsEnabled && insectTrend !== this.lastInsectTrend) {
             toasts.push({ message: `Insect population is now ${insectTrend}.`, type: 'info' });
             this.lastInsectTrend = insectTrend;
         }
@@ -101,7 +74,9 @@ export class SimulationEngine {
             if (spot) {
                 const birdId = `bird-dyn-${Date.now()}`;
                 currentActors.push({ id: birdId, type: 'bird', x: spot.x, y: spot.y, target: null, patrolTarget: null });
-                toasts.push({ message: '🐦 A new bird has arrived to hunt!', type: 'info' });
+                if (toastsEnabled) {
+                    toasts.push({ message: '🐦 A new bird has arrived to hunt!', type: 'info' });
+                }
                 this.birdSpawnCooldown = BIRD_SPAWN_COOLDOWN;
             }
         } else if (insectTrend === 'declining') {
@@ -111,7 +86,9 @@ export class SimulationEngine {
                 if (spot) {
                     const eagleId = `eagle-dyn-${Date.now()}`;
                     currentActors.push({ id: eagleId, type: 'eagle', x: spot.x, y: spot.y, target: null });
-                    toasts.push({ message: '🦅 An eagle has appeared in the skies!', type: 'info' });
+                     if (toastsEnabled) {
+                        toasts.push({ message: '🦅 An eagle has appeared in the skies!', type: 'info' });
+                    }
                     this.eagleSpawnCooldown = EAGLE_SPAWN_COOLDOWN;
                 }
             }
@@ -129,66 +106,27 @@ export class SimulationEngine {
             let start: Coord = { x: 1, y: 1 };
             let dx = 0, dy = 0, turnDx = 0, turnDy = 0;
 
-            // Inner bounds (safe zone)
-            const minX = 1;
-            const maxX = gridWidth - 2;
-            const minY = 1;
-            const maxY = gridHeight - 2;
+            const minX = 1, maxX = gridWidth - 2, minY = 1, maxY = gridHeight - 2;
 
             switch (pattern) {
-                case 0: // Horizontal sweep from top-left
-                    start = { x: minX, y: minY };
-                    dx = 1; dy = 0;
-                    turnDx = 0; turnDy = STRIDE;
-                    break;
-                case 1: // Horizontal sweep from bottom-right
-                    start = { x: maxX, y: maxY - (STRIDE - 1) };
-                    dx = -1; dy = 0;
-                    turnDx = 0; turnDy = -STRIDE;
-                    break;
-                case 2: // Vertical sweep from top-left
-                    start = { x: minX, y: minY };
-                    dx = 0; dy = 1;
-                    turnDx = STRIDE; turnDy = 0;
-                    break;
-                case 3: // Vertical sweep from bottom-right
-                    start = { x: maxX - (STRIDE - 1), y: maxY };
-                    dx = 0; dy = -1;
-                    turnDx = -STRIDE; turnDy = 0;
-                    break;
+                case 0: start = { x: minX, y: minY }; dx = 1; dy = 0; turnDx = 0; turnDy = STRIDE; break;
+                case 1: start = { x: maxX, y: maxY - (STRIDE - 1) }; dx = -1; dy = 0; turnDx = 0; turnDy = -STRIDE; break;
+                case 2: start = { x: minX, y: minY }; dx = 0; dy = 1; turnDx = STRIDE; turnDy = 0; break;
+                case 3: start = { x: maxX - (STRIDE - 1), y: maxY }; dx = 0; dy = -1; turnDx = -STRIDE; turnDy = 0; break;
             }
             
             const planeId = `plane-${Date.now()}`;
-            const newPlane: HerbicidePlane = { 
-                id: planeId, type: 'herbicidePlane', ...start, 
-                dx, dy, turnDx, turnDy, stride: STRIDE 
-            };
+            const newPlane: HerbicidePlane = { id: planeId, type: 'herbicidePlane', ...start, dx, dy, turnDx, turnDy, stride: STRIDE };
             currentActors.push(newPlane);
-            toasts.push({ message: '✈️ Herbicide plane deployed to control flower overgrowth!', type: 'info' });
+            if (toastsEnabled) {
+                toasts.push({ message: '✈️ Herbicide plane deployed to control flower overgrowth!', type: 'info' });
+            }
             this.herbicideCooldown = this.params.herbicideCooldown;
         }
-
-        const nextActorState = new Map<string, CellContent>(
-            currentActors.map(actor => [actor.id, cloneActor(actor)])
-        );
-
-        const newFlowerPromises: Promise<Flower | null>[] = [];
-        const newFlowerPositions: Coord[] = [];
-
-        // --- Quadtree Setup Phase ---
-        const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
-        const qtree = new Quadtree<CellContent>(boundary, 4);
-        const flowerQtree = new Quadtree<CellContent>(boundary, 4); // For insect AI
-        
-        for (const actor of currentActors) {
-            qtree.insert({ x: actor.x, y: actor.y, data: actor });
-            if (actor.type === 'flower') {
-                flowerQtree.insert({ x: actor.x, y: actor.y, data: actor });
-            }
-        }
-        
-        // --- Nutrient Healing Phase ---
-        const nutrientsToProcess = currentActors.filter(a => a.type === 'nutrient') as Nutrient[];
+    }
+    
+    private _processNutrientHealing(nextActorState: Map<string, CellContent>, qtree: Quadtree<CellContent>): void {
+        const nutrientsToProcess = Array.from(nextActorState.values()).filter(a => a.type === 'nutrient') as Nutrient[];
         for (const nutrient of nutrientsToProcess) {
             if (!nextActorState.has(nutrient.id)) continue;
 
@@ -205,99 +143,67 @@ export class SimulationEngine {
                 nextActorState.delete(nutrient.id);
             }
         }
-
-        // --- Actor Logic Phase ---
+    }
+    
+    private _processActorTicks(
+        currentActors: CellContent[],
+        nextActorState: Map<string, CellContent>,
+        qtree: Quadtree<CellContent>,
+        flowerQtree: Quadtree<CellContent>,
+        toasts: Omit<ToastMessage, 'id'>[]
+    ): { newFlowerPromises: Promise<Flower | null>[], newFlowerPositions: Coord[] } {
+        const newFlowerPromises: Promise<Flower | null>[] = [];
+        const newFlowerPositions: Coord[] = [];
         const createFlowerCallback = (x: number, y: number, g1?: string, g2?: string) => createNewFlower(this.flowerService, this.params, x, y, g1, g2);
-
+        
         for (const currentActor of currentActors) {
             if (!nextActorState.has(currentActor.id)) continue;
-
             const actor = nextActorState.get(currentActor.id)!;
 
             switch (actor.type) {
                 case 'bird':
-                    processBirdTick(actor as Bird, {
-                        grid: this.grid,
-                        params: this.params,
-                        qtree,
-                        flowerQtree,
-                        nextActorState,
-                        toasts,
-                        incrementInsectsEaten: () => {
-                            insectsEatenThisTick++;
-                            this.totalInsectsEaten++;
-                        },
-                        incrementEggsEaten: () => {
-                            eggsEatenThisTick++;
-                        }
+                    processBirdTick(actor as Bird, { grid: this.grid, params: this.params, qtree, flowerQtree, nextActorState, toasts,
+                        incrementInsectsEaten: () => { this.insectsEatenThisTick++; this.totalInsectsEaten++; },
+                        incrementEggsEaten: () => { this.eggsEatenThisTick++; }
                     });
                     break;
                 case 'eagle':
-                    processEagleTick(actor as Eagle, {
-                        grid: this.grid,
-                        params: this.params,
-                        qtree,
-                        nextActorState,
-                        toasts,
-                    });
+                    processEagleTick(actor as Eagle, { grid: this.grid, params: this.params, qtree, nextActorState, toasts });
                     break;
                 case 'herbicidePlane':
-                    processHerbicidePlaneTick(actor as HerbicidePlane, {
-                        grid: this.grid,
-                        params: this.params,
-                        nextActorState,
-                    });
+                    processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState });
                     break;
                 case 'herbicideSmoke':
-                    processHerbicideSmokeTick(actor as HerbicideSmoke, {
-                        grid: this.grid,
-                        params: this.params,
-                        nextActorState,
-                    });
+                    processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState });
                     break;
                 case 'insect':
-                    processInsectTick(actor as Insect, {
-                        grid: this.grid,
-                        params: this.params,
-                        nextActorState,
-                        createNewFlower: createFlowerCallback,
-                        flowerQtree,
-                        toasts,
-                        incrementInsectsDiedOfOldAge: () => {
-                            insectsDiedOfOldAgeThisTick++;
-                        }
+                    processInsectTick(actor as Insect, { grid: this.grid, params: this.params, nextActorState, createNewFlower: createFlowerCallback, flowerQtree, toasts,
+                        incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; }
                     }, newFlowerPromises, newFlowerPositions);
                     break;
                 case 'flower': {
                     const flower = actor as Flower;
-                    processFlowerTick(flower, {
-                        grid: this.grid,
-                        params: this.params,
-                        createNewFlower: createFlowerCallback,
-                    }, newFlowerPromises, newFlowerPositions);
-                    if (flower.health <= 0) {
-                        nextActorState.delete(flower.id);
-                    }
+                    processFlowerTick(flower, { grid: this.grid, params: this.params, createNewFlower: createFlowerCallback }, newFlowerPromises, newFlowerPositions);
+                    if (flower.health <= 0) nextActorState.delete(flower.id);
                     break;
                 }
                 case 'egg':
-                    processEggTick(actor as Egg, {
-                        nextActorState,
-                        toasts,
-                        incrementInsectsBorn: () => {
-                            insectsBornThisTick++;
-                        }
-                    });
+                    processEggTick(actor as Egg, { nextActorState, toasts, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params });
                     break;
                 case 'nutrient':
                     processNutrientTick(actor as Nutrient, { nextActorState });
                     break;
             }
         }
-        
-        // --- Insect Reproduction Phase ---
+        return { newFlowerPromises, newFlowerPositions };
+    }
+    
+    private _handleInsectReproduction(nextActorState: Map<string, CellContent>, toasts: Omit<ToastMessage, 'id'>[]): void {
+        const { gridWidth, gridHeight, toastsEnabled } = this.params;
+        const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
         const insectQtree = new Quadtree<CellContent>(boundary, 4);
         const allInsects: Insect[] = [];
+        
         for (const actor of nextActorState.values()) {
             if (actor.type === 'insect') {
                 const insect = actor as Insect;
@@ -311,37 +217,44 @@ export class SimulationEngine {
             if (reproducedInsects.has(insect.id)) continue;
 
             const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
-            const nearby = insectQtree.query(range).map(p => p.data as Insect);
-            const partners = nearby.filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id));
+            const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id));
 
-            if (partners.length > 0) {
-                const partner = partners[0];
-                if (Math.random() < INSECT_REPRODUCTION_CHANCE) {
-                    const spot = findCellForStationaryActor(this.grid, this.params, 'egg', { x: insect.x, y: insect.y });
-                    if (spot) {
-                        const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
-                        const newEgg: Egg = { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji };
-                        nextActorState.set(eggId, newEgg);
-                        eggsLaidThisTick++;
-                        reproducedInsects.add(insect.id);
-                        reproducedInsects.add(partner.id);
+            if (partners.length > 0 && Math.random() < INSECT_REPRODUCTION_CHANCE) {
+                const spot = findCellForStationaryActor(this.grid, this.params, 'egg', { x: insect.x, y: insect.y });
+                if (spot) {
+                    const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
+                    nextActorState.set(eggId, { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji });
+                    this.eggsLaidThisTick++;
+                    reproducedInsects.add(insect.id).add(partners[0].id);
+                    if (toastsEnabled) {
                         toasts.push({ message: `${insect.emoji} laid an egg!`, type: 'info' });
                     }
                 }
             }
         }
-
-        // --- Finalization Phase ---
+    }
+    
+    private async _finalizeNewFlowers(
+        newFlowerPromises: Promise<Flower | null>[], 
+        newFlowerPositions: Coord[], 
+        nextActorState: Map<string, CellContent>
+    ): Promise<number> {
         const newFlowers = await Promise.all(newFlowerPromises);
+        let newFlowerCount = 0;
         newFlowers.forEach((flower, i) => {
             if (flower) {
                 const pos = newFlowerPositions[i];
                 const isOccupied = Array.from(nextActorState.values()).some(a => a.x === pos.x && a.y === pos.y && a.type === 'flower');
-                if (!isOccupied) nextActorState.set(flower.id, flower);
+                if (!isOccupied) {
+                    nextActorState.set(flower.id, flower);
+                    newFlowerCount++;
+                }
             }
         });
-
-        // --- Summary Calculation ---
+        return newFlowerCount;
+    }
+    
+    private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number): TickSummary {
         let flowerCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
@@ -362,21 +275,18 @@ export class SimulationEngine {
             else if (actor.type === 'herbicidePlane') herbicidePlaneCount++;
             else if (actor.type === 'herbicideSmoke') herbicideSmokeCount++;
         }
-        
-        // --- History Update: Push CURRENT tick counts ---
+
         this.insectCountHistory.push(insectCount);
         if (this.insectCountHistory.length > POPULATION_TREND_WINDOW) this.insectCountHistory.shift();
         this.birdCountHistory.push(birdCount);
         if (this.birdCountHistory.length > POPULATION_TREND_WINDOW) this.birdCountHistory.shift();
 
-        const summary: TickSummary = {
+        return {
             tick: this.tick, flowerCount, insectCount, birdCount, eagleCount, herbicidePlaneCount, herbicideSmokeCount,
-            reproductions: newFlowers.filter(Boolean).length,
-            insectsEaten: insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
-            eggsLaid: eggsLaidThisTick,
-            insectsBorn: insectsBornThisTick,
-            eggsEaten: eggsEatenThisTick,
-            insectsDiedOfOldAge: insectsDiedOfOldAgeThisTick,
+            reproductions: newFlowerCount,
+            insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
+            eggsLaid: this.eggsLaidThisTick, insectsBorn: this.insectsBornThisTick, eggsEaten: this.eggsEatenThisTick,
+            insectsDiedOfOldAge: this.insectsDiedOfOldAgeThisTick,
             avgHealth: flowerCount > 0 ? totalHealth / flowerCount : 0, avgStamina: flowerCount > 0 ? totalStamina / flowerCount : 0,
             maxHealth: maxHealthSoFar, maxStamina: maxStaminaSoFar, maxToxicity: maxToxicitySoFar,
             avgNutrientEfficiency: flowerCount > 0 ? totalNutrientEfficiency / flowerCount : 0,
@@ -385,15 +295,47 @@ export class SimulationEngine {
             avgStrength: flowerCount > 0 ? totalStrength / flowerCount : 0, avgIntelligence: flowerCount > 0 ? totalIntelligence / flowerCount : 0,
             avgLuck: flowerCount > 0 ? totalLuck / flowerCount : 0,
         };
-        
+    }
+    
+    private _updateGrid(nextActorState: Map<string, CellContent>): void {
+        const { gridWidth, gridHeight } = this.params;
         const nextGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
         for (const actor of nextActorState.values()) {
             if(actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
                 nextGrid[actor.y][actor.x].push(actor);
             }
         }
-        
         this.grid = nextGrid;
+    }
+
+    public async calculateNextTick(): Promise<{ toasts: Omit<ToastMessage, 'id'>[]; summary: TickSummary }> {
+        this._resetTickCounters();
+        const toasts: Omit<ToastMessage, 'id'>[] = [];
+        const currentActors: CellContent[] = this.grid.flat(2);
+
+        this._processCooldowns();
+        this._handlePopulationControl(currentActors, toasts);
+        
+        const nextActorState = new Map<string, CellContent>(
+            currentActors.map(actor => [actor.id, cloneActor(actor)])
+        );
+        
+        const { qtree, flowerQtree } = buildQuadtrees(currentActors, this.params);
+        
+        this._processNutrientHealing(nextActorState, qtree);
+
+        const { newFlowerPromises, newFlowerPositions } = this._processActorTicks(
+            currentActors, nextActorState, qtree, flowerQtree, toasts
+        );
+
+        this._handleInsectReproduction(nextActorState, toasts);
+
+        const newFlowerCount = await this._finalizeNewFlowers(newFlowerPromises, newFlowerPositions, nextActorState);
+        
+        const summary = this._calculateTickSummary(nextActorState, newFlowerCount);
+        
+        this._updateGrid(nextActorState);
+        
         this.tick++;
 
         return { toasts, summary };
