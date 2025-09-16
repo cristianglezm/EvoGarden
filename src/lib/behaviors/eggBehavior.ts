@@ -1,15 +1,15 @@
-import type { Egg, CellContent, Insect, ToastMessage, SimulationParams } from '../../types';
+import type { Egg, CellContent, Insect, AppEvent, SimulationParams } from '../../types';
 import { INSECT_LIFESPAN } from '../../constants';
 
 interface EggContext {
     nextActorState: Map<string, CellContent>;
-    toasts: Omit<ToastMessage, 'id'>[];
+    events: AppEvent[];
     incrementInsectsBorn: () => void;
     params: SimulationParams;
 }
 
 export const processEggTick = (egg: Egg, context: EggContext) => {
-    const { nextActorState, toasts, incrementInsectsBorn, params } = context;
+    const { nextActorState, events, incrementInsectsBorn } = context;
     
     egg.hatchTimer--;
     if (egg.hatchTimer <= 0) {
@@ -28,9 +28,7 @@ export const processEggTick = (egg: Egg, context: EggContext) => {
         const isOccupiedByBird = Array.from(nextActorState.values()).some(a => a.x === egg.x && a.y === egg.y && a.type === 'bird');
         if (!isOccupiedByBird) {
              nextActorState.set(newInsectId, newInsect);
-             if (params.toastsEnabled) {
-                toasts.push({ message: '🐣 An insect has hatched!', type: 'success' });
-             }
+             events.push({ message: '🐣 An insect has hatched!', type: 'success', importance: 'low' });
              incrementInsectsBorn();
         }
     }

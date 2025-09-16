@@ -1,5 +1,6 @@
 export type WindDirection = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
 
+export type NotificationMode = 'toasts' | 'log' | 'both';
 export interface SimulationParams {
     gridWidth: number;
     gridHeight: number;
@@ -16,7 +17,7 @@ export interface SimulationParams {
     herbicideSmokeLifespan: number;
     herbicideCooldown: number;
     herbicideSmokeExpansionCount: number;
-    toastsEnabled: boolean;
+    notificationMode: NotificationMode;
 }
 
 export interface Coord {
@@ -124,6 +125,17 @@ export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | Herb
 export type Grid = (CellContent[])[][];
 
 export type PopulationTrend = 'growing' | 'declining' | 'stable';
+
+export interface AppEvent {
+  message: string;
+  type: 'info' | 'success' | 'error';
+  importance: 'low' | 'high';
+  tick?: number;
+}
+
+export interface LogEntry extends AppEvent {
+  id: string;
+}
 
 export interface ToastMessage {
   id: string;

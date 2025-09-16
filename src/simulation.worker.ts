@@ -30,17 +30,12 @@ const initializeWasm = async (): Promise<boolean> => {
 const gameLoop = async () => {
     if (!isRunning || !engine) return;
 
-    const { toasts, summary } = await engine.calculateNextTick();
+    const { events, summary } = await engine.calculateNextTick();
     const state = engine.getGridState();
 
-    // Post grid updates, summary, and any new toasts
+    // Post grid updates, summary, and any new events
     self.postMessage({ type: 'gridUpdate', payload: state });
-    self.postMessage({ type: 'tick-summary', payload: summary });
-    
-    // Batch toasts for more efficient processing on the main thread
-    if (toasts.length > 0) {
-        self.postMessage({ type: 'toast-batch', payload: toasts });
-    }
+    self.postMessage({ type: 'events-batch', payload: { events, summary } });
 
     gameLoopTimeoutId = self.setTimeout(gameLoop, TICK_RATE_MS);
 };

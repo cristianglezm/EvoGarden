@@ -8,10 +8,13 @@ import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } fro
 import { useSimulation } from './hooks/useSimulation';
 import { ToastContainer } from './components/ToastContainer';
 import { flowerService } from './services/flowerService';
-import { useToastStore } from './stores/toastStore';
+import { eventService } from './services/eventService';
 import { DataPanel } from './components/DataPanel';
 import { useAnalyticsStore } from './stores/analyticsStore';
 import { db } from './services/db';
+import { EventLog } from './components/EventLog';
+import { useEventLogStore } from './stores/eventLogStore';
+import { FullEventLogPanel } from './components/FullEventLogPanel';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -21,21 +24,33 @@ export default function App(): React.ReactNode {
   const [selectedFlowerId, setSelectedFlowerId] = useState<string | null>(null);
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
+  const [isFullLogOpen, setIsFullLogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSavedState, setHasSavedState] = useState(false);
   const [isServiceInitialized, setIsServiceInitialized] = useState(false);
   const wasRunningBeforeSelectionRef = useRef(false);
+  const wasRunningBeforeLogRef = useRef(false);
 
   // Refs for "click outside" logic
   const detailsPanelRef = useRef<HTMLDivElement>(null);
   const controlsButtonRef = useRef<HTMLButtonElement>(null);
   const controlsPanelRef = useRef<HTMLDivElement>(null);
   const simulationViewRef = useRef<HTMLDivElement>(null);
+  const paramsRef = useRef(params);
+
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
 
 
   const { grid, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized } = useSimulation({ setIsLoading });
+
+  // Initialize the main-thread event service
+  useEffect(() => {
+    eventService.initialize(() => paramsRef.current);
+  }, []);
 
   // Check for a saved state on initial load
   useEffect(() => {
@@ -85,9 +100,7 @@ export default function App(): React.ReactNode {
                 setParams(loadedParams);
                 setIsRunning(false);
                 setSelectedFlowerId(null);
-                if (loadedParams.toastsEnabled) {
-                  useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
-                }
+                eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
             } else {
                 // Initialize with default params
                 workerRef.current!.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
@@ -137,6 +150,7 @@ export default function App(): React.ReactNode {
     setSelectedFlowerId(null);
     setIsControlsOpen(false); // Close panel on apply
     useAnalyticsStore.getState().reset(); // Reset analytics data
+    useEventLogStore.getState().reset(); // Reset event log
   };
   
   const handleSelectFlower = useCallback((flower: Flower | null) => {
@@ -235,26 +249,20 @@ export default function App(): React.ReactNode {
         localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
         
         setHasSavedState(true);
-        if (params.toastsEnabled) {
-          useToastStore.getState().addToast({ message: 'Garden state saved!', type: 'success' });
-        }
-
+        eventService.dispatch({ message: 'Garden state saved!', type: 'success', importance: 'high' });
     } catch (err) {
         console.error("Save failed:", err);
-        if (params.toastsEnabled) {
-          useToastStore.getState().addToast({ message: `Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
-        }
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        eventService.dispatch({ message: `Save failed: ${errorMessage}`, type: 'error', importance: 'high' });
     } finally {
         setIsSaving(false);
     }
-  }, [workerRef, isSaving, setIsRunning, params.toastsEnabled]);
+  }, [workerRef, isSaving, setIsRunning]);
 
   const handleLoadSimulation = useCallback(async () => {
     const metadataJSON = localStorage.getItem(META_SAVE_KEY);
     if (!metadataJSON || !workerRef.current) {
-        if (params.toastsEnabled) {
-          useToastStore.getState().addToast({ message: 'No saved state found.', type: 'error' });
-        }
+        eventService.dispatch({ message: 'No saved state found.', type: 'error', importance: 'high' });
         return;
     }
 
@@ -288,21 +296,28 @@ export default function App(): React.ReactNode {
         setIsRunning(false);
         setSelectedFlowerId(null);
         setIsControlsOpen(false);
-        if (loadedParams.toastsEnabled) {
-          useToastStore.getState().addToast({ message: 'Loaded last saved garden!', type: 'info' });
-        }
-
+        eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
     } catch (err) {
         console.error("Load failed:", err);
-        if (params.toastsEnabled) {
-          useToastStore.getState().addToast({ message: `Load failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
-        }
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        eventService.dispatch({ message: `Load failed: ${errorMessage}`, type: 'error', importance: 'high' });
         setIsLoading(false);
         localStorage.removeItem(META_SAVE_KEY);
         await db.savedFlowers.clear();
         setHasSavedState(false);
     }
-  }, [workerRef, setIsRunning, setIsLoading, params.toastsEnabled]);
+  }, [workerRef, setIsRunning, setIsLoading]);
+
+  const handleOpenFullLog = useCallback(() => {
+    wasRunningBeforeLogRef.current = isRunning;
+    setIsRunning(false);
+    setIsFullLogOpen(true);
+  }, [isRunning, setIsRunning]);
+
+  const handleCloseFullLog = useCallback(() => {
+    setIsFullLogOpen(false);
+    setIsRunning(wasRunningBeforeLogRef.current);
+  }, [setIsRunning]);
 
 
   if (error) {
@@ -324,20 +339,23 @@ export default function App(): React.ReactNode {
 
   return (
     <div className="min-h-screen bg-background text-primary flex flex-col font-sans relative overflow-hidden">
-      <header className="bg-background p-2 shadow-lg flex items-center justify-between z-10">
-        <div className="flex items-center space-x-3">
-          <LogoIcon className="h-8 w-8 text-tertiary" />
-          <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
+      <header className="bg-background p-2 shadow-lg flex items-stretch justify-between z-10 h-20 gap-4">
+        <div className="flex items-center space-x-3 flex-shrink-0">
+            <LogoIcon className="h-8 w-8 text-tertiary" />
+            <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
+        </div>
+        <div className="W-1/2">
+            <EventLog onClick={handleOpenFullLog} />
         </div>
         <a 
-          href="https://github.com/cristianglezm/EvoGarden" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-primary hover:text-tertiary transition-colors"
-          aria-label="View on GitHub"
-          title="View on GitHub"
+            href="https://github.com/cristianglezm/EvoGarden" 
+            target="_blank" 
+            rel="noopener"
+            className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center"
+            aria-label="View on GitHub"
+            title="View on GitHub"
         >
-          <GitHubIcon className="h-7 w-7" />
+            <GitHubIcon className="h-7 w-7" />
         </a>
       </header>
       
@@ -363,7 +381,7 @@ export default function App(): React.ReactNode {
       </main>
 
        {/* UI Buttons */}
-      <div className="fixed top-20 right-4 z-20 flex flex-col space-y-2">
+      <div className="fixed top-24 right-4 z-20 flex flex-col space-y-2">
             <button
                 ref={controlsButtonRef}
                 onClick={() => setIsControlsOpen(true)}
@@ -384,6 +402,7 @@ export default function App(): React.ReactNode {
       </div>
       
       <DataPanel isOpen={isDataPanelOpen} onClose={() => setIsDataPanelOpen(false)} />
+      <FullEventLogPanel isOpen={isFullLogOpen} onClose={handleCloseFullLog} />
 
       {/* Controls Panel Overlay */}
       <div 

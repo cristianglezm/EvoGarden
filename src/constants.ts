@@ -18,7 +18,7 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     herbicideSmokeLifespan: 2,
     herbicideCooldown: 90,
     herbicideSmokeExpansionCount: 2,
-    toastsEnabled: true,
+    notificationMode: 'toasts',
 };
 
 // Fallback values are defined in src/lib/simulationEngine.ts.

@@ -1,4 +1,4 @@
-import type { Insect, SimulationParams, Grid, Flower, CellContent, Coord, Nutrient, ToastMessage } from '../../types';
+import type { Insect, SimulationParams, Grid, Flower, CellContent, Coord, Nutrient, AppEvent } from '../../types';
 import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN } from '../../constants';
 import { findCellForFlowerSpawn } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
@@ -12,7 +12,7 @@ export interface InsectContext {
     nextActorState: Map<string, CellContent>;
     createNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => Promise<Flower | null>;
     flowerQtree: Quadtree<CellContent>;
-    toasts: Omit<ToastMessage, 'id'>[];
+    events: AppEvent[];
     incrementInsectsDiedOfOldAge: () => void;
 }
 
@@ -22,7 +22,7 @@ export const processInsectTick = (
     newFlowerPromises: Promise<Flower | null>[],
     newFlowerPositions: Coord[]
 ) => {
-    const { params, grid, nextActorState, createNewFlower, flowerQtree, toasts, incrementInsectsDiedOfOldAge } = context;
+    const { params, grid, nextActorState, createNewFlower, flowerQtree, events, incrementInsectsDiedOfOldAge } = context;
     const { gridWidth, gridHeight } = params;
     
     // 1. Lifecycle: Check for death from old age
@@ -32,9 +32,7 @@ export const processInsectTick = (
         const nutrientId = `nutrient-${insect.x}-${insect.y}-${Date.now()}`;
         const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: insect.x, y: insect.y, lifespan: NUTRIENT_FROM_OLD_AGE_LIFESPAN };
         nextActorState.set(nutrientId, nutrient);
-        if (params.toastsEnabled) {
-            toasts.push({ message: '💀 An insect died of old age.', type: 'info' });
-        }
+        events.push({ message: '💀 An insect died of old age.', type: 'info', importance: 'low' });
         incrementInsectsDiedOfOldAge();
         return; // End tick processing for this insect
     }

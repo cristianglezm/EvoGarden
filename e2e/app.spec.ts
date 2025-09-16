@@ -1,7 +1,9 @@
+
 import { test, expect } from '@playwright/test';
 import { ControlPanelController } from './controllers/ControlPanelController';
 import { FlowerPanelController } from './controllers/FlowerPanelController';
 import { DataPanelController } from './controllers/DataPanelController';
+import { EventLogPanelController } from './controllers/EventLogPanelController';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -64,25 +66,51 @@ test.describe('Simulation Controls', () => {
 });
 
 test.describe('Save and Load State', () => {
-  test('should save and load state, showing toast notifications', async ({ page }) => {
+  test('should save and load state, showing event log messages', async ({ page }) => {
     const controls = new ControlPanelController(page);
     const flowers = new FlowerPanelController(page);
+    const eventLog = new EventLogPanelController(page);
     const canvas = page.getByRole('grid', { name: 'EvoGarden simulation grid' });
 
     await flowers.waitCanvasStable(canvas);
     await controls.open();
     await controls.getSave().click();
-    await expect(page.getByRole('alert').filter({ hasText: 'Garden state saved!' })).toBeVisible();
+    await expect(eventLog.getHeaderLog().getByText('Garden state saved!')).toBeVisible();
 
     await controls.getBirdsInput().fill('4');
     await controls.getApplyAndReset().click();
     await flowers.waitCanvasStable(canvas);
     await controls.open();
     await controls.getLoad().click();
-    await expect(page.getByRole('alert').filter({ hasText: 'Loaded last saved garden!' })).toBeVisible();
+    await expect(eventLog.getHeaderLog().getByText('Loaded last saved garden!')).toBeVisible();
 
     await flowers.waitCanvasStable(canvas);
   });
+});
+
+test.describe('Event Log Panel', () => {
+    test('should open, display events, and close the full event log', async ({ page }) => {
+        const controls = new ControlPanelController(page);
+        const eventLog = new EventLogPanelController(page);
+
+        // Set a dense initial population to guarantee events
+        await controls.open();
+        await controls.setMaxCapacities();
+
+        // Run sim for a few seconds to generate plenty of events
+        await controls.runSimulation(8);
+        
+        await eventLog.open();
+        
+        // Verify the panel is visible and contains event text.
+        // We check for "Tick" as a reliable indicator that log entries are rendered.
+        await expect(eventLog.getFullPanel()).toBeVisible();
+        const tickCount = await eventLog.getFullPanel().getByText(/Tick/).count();
+        expect(tickCount).toBeGreaterThan(1);
+        
+        await eventLog.close();
+        await expect(eventLog.getFullPanel()).not.toBeInViewport();
+    });
 });
 
 test.describe('Canvas and Flower Details Panel', () => {

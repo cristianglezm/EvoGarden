@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processBirdTick } from './birdBehavior';
-import type { Bird, Insect, Grid, CellContent, ToastMessage, Flower, Egg } from '../../types';
+import type { Bird, Insect, Grid, CellContent, AppEvent, Flower, Egg } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 import { DEFAULT_SIM_PARAMS } from '../../constants';
 
 describe('birdBehavior', () => {
     let bird: Bird;
     let nextActorState: Map<string, CellContent>;
-    let toasts: Omit<ToastMessage, 'id'>[];
+    let events: AppEvent[];
     let incrementInsectsEaten: () => void;
     let incrementEggsEaten: () => void;
     let grid: Grid;
@@ -18,7 +18,7 @@ describe('birdBehavior', () => {
         bird = { id: 'bird1', type: 'bird', x: 5, y: 5, target: null, patrolTarget: null };
         nextActorState = new Map();
         nextActorState.set(bird.id, bird);
-        toasts = [];
+        events = [];
         incrementInsectsEaten = vi.fn();
         incrementEggsEaten = vi.fn();
         grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
@@ -32,7 +32,7 @@ describe('birdBehavior', () => {
         qtree,
         flowerQtree,
         nextActorState,
-        toasts,
+        events,
         incrementInsectsEaten,
         incrementEggsEaten,
     });
@@ -112,8 +112,8 @@ describe('birdBehavior', () => {
 
         expect(nextActorState.has(targetInsect.id)).toBe(false);
         expect(incrementInsectsEaten).toHaveBeenCalledTimes(1);
-        expect(toasts.length).toBe(1);
-        expect(toasts[0].message).toBe('🐦 An insect was eaten!');
+        expect(events.length).toBe(1);
+        expect(events[0].message).toBe('🐦 An insect was eaten!');
         
         const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
         expect(nutrient).toBeDefined();
@@ -134,8 +134,8 @@ describe('birdBehavior', () => {
 
         expect(nextActorState.has(targetEgg.id)).toBe(false);
         expect(incrementEggsEaten).toHaveBeenCalledTimes(1);
-        expect(toasts.length).toBe(1);
-        expect(toasts[0].message).toBe('🐦 An egg was eaten!');
+        expect(events.length).toBe(1);
+        expect(events[0].message).toBe('🐦 An egg was eaten!');
         
         const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
         expect(nutrient).toBeUndefined();
