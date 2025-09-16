@@ -1,4 +1,4 @@
-import type { Eagle, Bird, CellContent, Grid, SimulationParams, ToastMessage } from '../../types';
+import type { Eagle, Bird, CellContent, Grid, SimulationParams, AppEvent } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 
 const EAGLE_VISION_RANGE = 15;
@@ -8,11 +8,11 @@ export interface EagleContext {
     params: SimulationParams;
     qtree: Quadtree<CellContent>;
     nextActorState: Map<string, CellContent>;
-    toasts: Omit<ToastMessage, 'id'>[];
+    events: AppEvent[];
 }
 
 export const processEagleTick = (eagle: Eagle, context: EagleContext) => {
-    const { params, qtree, nextActorState, toasts } = context;
+    const { params, qtree, nextActorState, events } = context;
     const { gridWidth, gridHeight } = params;
     const { x, y } = eagle;
 
@@ -48,9 +48,7 @@ export const processEagleTick = (eagle: Eagle, context: EagleContext) => {
             if (newX === eagle.target.x && newY === eagle.target.y) { // Hunt successful
                 nextActorState.delete(targetBird.id); // Eat the bird
                 nextActorState.delete(eagle.id);    // Eagle leaves after the hunt
-                if (params.toastsEnabled) {
-                    toasts.push({ message: '🦅 An eagle hunted a bird!', type: 'info' });
-                }
+                events.push({ message: '🦅 An eagle hunted a bird!', type: 'info', importance: 'high' });
 
             } else if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight) {
                 eagle.x = newX; 

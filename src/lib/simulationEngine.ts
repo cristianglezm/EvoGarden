@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, ToastMessage, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend } from '../types';
 import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
@@ -60,12 +60,12 @@ export class SimulationEngine {
         if (this.herbicideCooldown > 0) this.herbicideCooldown--;
     }
     
-    private _handlePopulationControl(currentActors: CellContent[], toasts: Omit<ToastMessage, 'id'>[]): void {
-        const { gridWidth, gridHeight, toastsEnabled } = this.params;
+    private _handlePopulationControl(currentActors: CellContent[], events: AppEvent[]): void {
+        const { gridWidth, gridHeight } = this.params;
         const insectTrend = calculatePopulationTrend(this.insectCountHistory, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT);
 
-        if (toastsEnabled && insectTrend !== this.lastInsectTrend) {
-            toasts.push({ message: `Insect population is now ${insectTrend}.`, type: 'info' });
+        if (insectTrend !== this.lastInsectTrend) {
+            events.push({ message: `Insect population is now ${insectTrend}.`, type: 'info', importance: 'low' });
             this.lastInsectTrend = insectTrend;
         }
 
@@ -74,9 +74,7 @@ export class SimulationEngine {
             if (spot) {
                 const birdId = `bird-dyn-${Date.now()}`;
                 currentActors.push({ id: birdId, type: 'bird', x: spot.x, y: spot.y, target: null, patrolTarget: null });
-                if (toastsEnabled) {
-                    toasts.push({ message: '🐦 A new bird has arrived to hunt!', type: 'info' });
-                }
+                events.push({ message: '🐦 A new bird has arrived to hunt!', type: 'info', importance: 'high' });
                 this.birdSpawnCooldown = BIRD_SPAWN_COOLDOWN;
             }
         } else if (insectTrend === 'declining') {
@@ -86,9 +84,7 @@ export class SimulationEngine {
                 if (spot) {
                     const eagleId = `eagle-dyn-${Date.now()}`;
                     currentActors.push({ id: eagleId, type: 'eagle', x: spot.x, y: spot.y, target: null });
-                     if (toastsEnabled) {
-                        toasts.push({ message: '🦅 An eagle has appeared in the skies!', type: 'info' });
-                    }
+                    events.push({ message: '🦅 An eagle has appeared in the skies!', type: 'info', importance: 'high' });
                     this.eagleSpawnCooldown = EAGLE_SPAWN_COOLDOWN;
                 }
             }
@@ -118,9 +114,7 @@ export class SimulationEngine {
             const planeId = `plane-${Date.now()}`;
             const newPlane: HerbicidePlane = { id: planeId, type: 'herbicidePlane', ...start, dx, dy, turnDx, turnDy, stride: STRIDE };
             currentActors.push(newPlane);
-            if (toastsEnabled) {
-                toasts.push({ message: '✈️ Herbicide plane deployed to control flower overgrowth!', type: 'info' });
-            }
+            events.push({ message: '✈️ Herbicide plane deployed to control flower overgrowth!', type: 'info', importance: 'high' });
             this.herbicideCooldown = this.params.herbicideCooldown;
         }
     }
@@ -150,7 +144,7 @@ export class SimulationEngine {
         nextActorState: Map<string, CellContent>,
         qtree: Quadtree<CellContent>,
         flowerQtree: Quadtree<CellContent>,
-        toasts: Omit<ToastMessage, 'id'>[]
+        events: AppEvent[]
     ): { newFlowerPromises: Promise<Flower | null>[], newFlowerPositions: Coord[] } {
         const newFlowerPromises: Promise<Flower | null>[] = [];
         const newFlowerPositions: Coord[] = [];
@@ -162,13 +156,13 @@ export class SimulationEngine {
 
             switch (actor.type) {
                 case 'bird':
-                    processBirdTick(actor as Bird, { grid: this.grid, params: this.params, qtree, flowerQtree, nextActorState, toasts,
+                    processBirdTick(actor as Bird, { grid: this.grid, params: this.params, qtree, flowerQtree, nextActorState, events,
                         incrementInsectsEaten: () => { this.insectsEatenThisTick++; this.totalInsectsEaten++; },
                         incrementEggsEaten: () => { this.eggsEatenThisTick++; }
                     });
                     break;
                 case 'eagle':
-                    processEagleTick(actor as Eagle, { grid: this.grid, params: this.params, qtree, nextActorState, toasts });
+                    processEagleTick(actor as Eagle, { grid: this.grid, params: this.params, qtree, nextActorState, events });
                     break;
                 case 'herbicidePlane':
                     processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState });
@@ -177,7 +171,7 @@ export class SimulationEngine {
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState });
                     break;
                 case 'insect':
-                    processInsectTick(actor as Insect, { grid: this.grid, params: this.params, nextActorState, createNewFlower: createFlowerCallback, flowerQtree, toasts,
+                    processInsectTick(actor as Insect, { grid: this.grid, params: this.params, nextActorState, createNewFlower: createFlowerCallback, flowerQtree, events,
                         incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; }
                     }, newFlowerPromises, newFlowerPositions);
                     break;
@@ -188,7 +182,7 @@ export class SimulationEngine {
                     break;
                 }
                 case 'egg':
-                    processEggTick(actor as Egg, { nextActorState, toasts, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params });
+                    processEggTick(actor as Egg, { nextActorState, events, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params });
                     break;
                 case 'nutrient':
                     processNutrientTick(actor as Nutrient, { nextActorState });
@@ -198,8 +192,8 @@ export class SimulationEngine {
         return { newFlowerPromises, newFlowerPositions };
     }
     
-    private _handleInsectReproduction(nextActorState: Map<string, CellContent>, toasts: Omit<ToastMessage, 'id'>[]): void {
-        const { gridWidth, gridHeight, toastsEnabled } = this.params;
+    private _handleInsectReproduction(nextActorState: Map<string, CellContent>, events: AppEvent[]): void {
+        const { gridWidth, gridHeight } = this.params;
         const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
         const insectQtree = new Quadtree<CellContent>(boundary, 4);
         const allInsects: Insect[] = [];
@@ -226,9 +220,7 @@ export class SimulationEngine {
                     nextActorState.set(eggId, { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji });
                     this.eggsLaidThisTick++;
                     reproducedInsects.add(insect.id).add(partners[0].id);
-                    if (toastsEnabled) {
-                        toasts.push({ message: `${insect.emoji} laid an egg!`, type: 'info' });
-                    }
+                    events.push({ message: `${insect.emoji} laid an egg!`, type: 'info', importance: 'low' });
                 }
             }
         }
@@ -308,13 +300,13 @@ export class SimulationEngine {
         this.grid = nextGrid;
     }
 
-    public async calculateNextTick(): Promise<{ toasts: Omit<ToastMessage, 'id'>[]; summary: TickSummary }> {
+    public async calculateNextTick(): Promise<{ events: AppEvent[]; summary: TickSummary }> {
         this._resetTickCounters();
-        const toasts: Omit<ToastMessage, 'id'>[] = [];
+        const events: AppEvent[] = [];
         const currentActors: CellContent[] = this.grid.flat(2);
 
         this._processCooldowns();
-        this._handlePopulationControl(currentActors, toasts);
+        this._handlePopulationControl(currentActors, events);
         
         const nextActorState = new Map<string, CellContent>(
             currentActors.map(actor => [actor.id, cloneActor(actor)])
@@ -325,10 +317,10 @@ export class SimulationEngine {
         this._processNutrientHealing(nextActorState, qtree);
 
         const { newFlowerPromises, newFlowerPositions } = this._processActorTicks(
-            currentActors, nextActorState, qtree, flowerQtree, toasts
+            currentActors, nextActorState, qtree, flowerQtree, events
         );
 
-        this._handleInsectReproduction(nextActorState, toasts);
+        this._handleInsectReproduction(nextActorState, events);
 
         const newFlowerCount = await this._finalizeNewFlowers(newFlowerPromises, newFlowerPositions, nextActorState);
         
@@ -338,7 +330,7 @@ export class SimulationEngine {
         
         this.tick++;
 
-        return { toasts, summary };
+        return { events, summary };
     }
 
     public getGridState() { return { grid: this.grid, tick: this.tick }; }

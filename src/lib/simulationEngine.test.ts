@@ -190,13 +190,13 @@ describe('SimulationEngine', () => {
 
             const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
-            const { toasts } = await engine.calculateNextTick();
+            const { events } = await engine.calculateNextTick();
 
             const finalGrid = engine.getGridState().grid;
             const egg = finalGrid.flat(2).find(c => c.type === 'egg');
 
             expect(egg).toBeDefined();
-            expect(toasts.some(t => t.message === `${insect1.emoji} laid an egg!`)).toBe(true);
+            expect(events.some(e => e.message === `${insect1.emoji} laid an egg!`)).toBe(true);
 
             randomSpy.mockRestore();
         });
@@ -223,13 +223,13 @@ describe('SimulationEngine', () => {
                 await engine.calculateNextTick();
             }
     
-            const { toasts } = await engine.calculateNextTick();
+            const { events } = await engine.calculateNextTick();
             const finalGrid = engine.getGridState().grid;
             const birds = finalGrid.flat(2).filter(c => c.type === 'bird');
     
             // Initial bird + new bird
             expect(birds.length).toBe(2);
-            expect(toasts.some(t => t.message === '🐦 A new bird has arrived to hunt!')).toBe(true);
+            expect(events.some(e => e.message === '🐦 A new bird has arrived to hunt!')).toBe(true);
             // Check cooldown is active
             expect((engine as any).birdSpawnCooldown).toBeGreaterThan(0);
         });
@@ -255,12 +255,12 @@ describe('SimulationEngine', () => {
                 await engine.calculateNextTick();
             }
     
-            const { toasts } = await engine.calculateNextTick();
+            const { events } = await engine.calculateNextTick();
             const finalGrid = engine.getGridState().grid;
             const eagles = finalGrid.flat(2).filter(c => c.type === 'eagle');
     
             expect(eagles.length).toBe(1);
-            expect(toasts.some(t => t.message === '🦅 An eagle has appeared in the skies!')).toBe(true);
+            expect(events.some(e => e.message === '🦅 An eagle has appeared in the skies!')).toBe(true);
             expect((engine as any).eagleSpawnCooldown).toBeGreaterThan(0);
         });
     
@@ -285,12 +285,12 @@ describe('SimulationEngine', () => {
                 await engine.calculateNextTick();
             }
     
-            const { toasts } = await engine.calculateNextTick();
+            const { events } = await engine.calculateNextTick();
             const finalGrid = engine.getGridState().grid;
             const eagles = finalGrid.flat(2).filter(c => c.type === 'eagle');
     
             expect(eagles.length).toBe(0);
-            expect(toasts.some(t => t.message === '🦅 An eagle has appeared in the skies!')).toBe(false);
+            expect(events.some(e => e.message === '🦅 An eagle has appeared in the skies!')).toBe(false);
         });
     });
 
@@ -307,13 +307,13 @@ describe('SimulationEngine', () => {
             engine.setParams(testParams);
             await engine.initializeGrid(); // This will create 50 flowers
 
-            const { toasts } = await engine.calculateNextTick();
+            const { events } = await engine.calculateNextTick();
             
             const finalActors = engine.getGridState().grid.flat(2);
             const plane = finalActors.find(c => c.type === 'herbicidePlane');
             
             expect(plane).toBeDefined();
-            expect(toasts.some(t => t.message.includes('Herbicide plane deployed'))).toBe(true);
+            expect(events.some(e => e.message.includes('Herbicide plane deployed'))).toBe(true);
             expect((engine as any).herbicideCooldown).toBeGreaterThan(0);
         });
 

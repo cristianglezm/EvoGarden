@@ -1,4 +1,4 @@
-import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, ToastMessage, Flower } from '../../types';
+import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, AppEvent, Flower } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 import { NUTRIENT_FROM_PREY_LIFESPAN, BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
 import { findCellForStationaryActor } from '../simulationUtils';
@@ -11,13 +11,13 @@ export interface BirdContext {
     qtree: Quadtree<CellContent>;
     flowerQtree: Quadtree<CellContent>;
     nextActorState: Map<string, CellContent>;
-    toasts: Omit<ToastMessage, 'id'>[];
+    events: AppEvent[];
     incrementInsectsEaten: () => void;
     incrementEggsEaten: () => void;
 }
 
 export const processBirdTick = (bird: Bird, context: BirdContext) => {
-    const { grid, params, qtree, flowerQtree, nextActorState, toasts, incrementInsectsEaten, incrementEggsEaten } = context;
+    const { grid, params, qtree, flowerQtree, nextActorState, events, incrementInsectsEaten, incrementEggsEaten } = context;
     const { gridWidth, gridHeight } = params;
     const { x, y } = bird;
     let moved = false;
@@ -88,14 +88,10 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                     const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;
                     const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: NUTRIENT_FROM_PREY_LIFESPAN };
                     nextActorState.set(nutrientId, nutrient);
-                    if (params.toastsEnabled) {
-                        toasts.push({ message: '🐦 An insect was eaten!', type: 'info' });
-                    }
+                    events.push({ message: '🐦 An insect was eaten!', type: 'info', importance: 'low' });
                     incrementInsectsEaten();
                 } else { // It's an egg
-                    if (params.toastsEnabled) {
-                        toasts.push({ message: '🐦 An egg was eaten!', type: 'info' });
-                    }
+                    events.push({ message: '🐦 An egg was eaten!', type: 'info', importance: 'low' });
                     incrementEggsEaten();
                     // Eating an egg provides no nutrient
                 }

@@ -45,7 +45,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const isFloat = name === 'humidity' || name === 'herbicideFlowerDensityThreshold';
-        const isString = name === 'windDirection';
+        const isString = name === 'windDirection' || name === 'notificationMode';
         
         setLocalParams(prev => {
             let processedValue: string | number | boolean = value;
@@ -185,16 +185,13 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                     </label>
                 </CollapsibleSection>
                 <CollapsibleSection title="UI Settings" defaultOpen={false}>
-                     <label className="flex items-center justify-between cursor-pointer">
-                        <span className="text-secondary text-sm">Enable Notifications</span>
-                        <input 
-                            type="checkbox" 
-                            name="toastsEnabled" 
-                            checked={localParams.toastsEnabled}
-                            onChange={handleParamChange} 
-                            className="sr-only peer"
-                        />
-                        <div className="relative w-11 h-6 bg-surface-hover peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent-blue rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-blue"></div>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Notification Mode</span>
+                        <select name="notificationMode" value={localParams.notificationMode} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
+                            <option value="log">Event Log Only</option>
+                            <option value="toasts">Toasts for Important Events</option>
+                            <option value="both">Log and All Toasts</option>
+                        </select>
                     </label>
                 </CollapsibleSection>
             </div>

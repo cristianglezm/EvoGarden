@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Grid, SimulationParams, ToastMessage } from '../types';
-import { useToastStore } from '../stores/toastStore';
+import type { Grid, SimulationParams, AppEvent } from '../types';
 import { useChallengeStore } from '../stores/challengeStore';
 import { useAnalyticsStore } from '../stores/analyticsStore';
+import { eventService } from '../services/eventService';
 
 interface UseSimulationProps {
     setIsLoading: (loading: boolean) => void;
@@ -31,10 +31,16 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                 case 'gridUpdate':
                     setGrid(payload.grid);
                     break;
-                case 'tick-summary':
-                    useChallengeStore.getState().processTick(payload);
-                    useAnalyticsStore.getState().addDataPoint(payload);
+                case 'events-batch': {
+                    const { events, summary } = payload;
+                    useChallengeStore.getState().processTick(summary);
+                    useAnalyticsStore.getState().addDataPoint(summary);
+                    for (const event of (events as AppEvent[])) {
+                        // Enrich event with the tick number from the summary
+                        eventService.dispatch({ ...event, tick: summary.tick });
+                    }
                     break;
+                }
                 case 'load-complete':
                     // This message now carries the grid state.
                     // We update the grid and signal that loading is finished
@@ -43,17 +49,6 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                         setGrid(payload.grid);
                     }
                     setIsLoading(false);
-                    break;
-                case 'toast-batch': {
-                    const toasts = payload as Omit<ToastMessage, 'id' | 'key' | 'count'>[];
-                    for (const toast of toasts) {
-                        useToastStore.getState().addToast(toast);
-                    }
-                    break;
-                }
-                case 'toast':
-                    // This handles single, important toasts (like worker errors)
-                    useToastStore.getState().addToast(payload);
                     break;
                 case 'initialized':
                     // This is a signal that the worker is ready and has sent its initial grid.

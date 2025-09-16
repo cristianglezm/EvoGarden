@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processInsectTick } from './insectBehavior';
-import type { Insect, Flower, Grid, CellContent, Coord, ToastMessage } from '../../types';
+import type { Insect, Flower, Grid, CellContent, Coord, AppEvent } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN } from '../../constants';
 
@@ -15,7 +15,7 @@ describe('insectBehavior', () => {
     let flowerQtree: Quadtree<CellContent>;
     let newFlowerPromises: Promise<Flower | null>[];
     let newFlowerPositions: Coord[];
-    let toasts: Omit<ToastMessage, 'id'>[];
+    let events: AppEvent[];
     let incrementInsectsDiedOfOldAge: Mock;
 
     const mockFlower: Flower = {
@@ -37,7 +37,7 @@ describe('insectBehavior', () => {
         flowerQtree = new Quadtree(new Rectangle(7.5, 7.5, 7.5, 7.5), 4);
         newFlowerPromises = [];
         newFlowerPositions = [];
-        toasts = [];
+        events = [];
         incrementInsectsDiedOfOldAge = vi.fn();
     });
     
@@ -47,7 +47,7 @@ describe('insectBehavior', () => {
         nextActorState,
         createNewFlower,
         flowerQtree,
-        toasts,
+        events,
         incrementInsectsDiedOfOldAge,
     });
 
@@ -176,8 +176,8 @@ describe('insectBehavior', () => {
         expect(nutrient?.y).toBe(insect.y);
         
         // Verify toast is sent
-        expect(toasts.length).toBe(1);
-        expect(toasts[0].message).toBe('💀 An insect died of old age.');
+        expect(events.length).toBe(1);
+        expect(events[0].message).toBe('💀 An insect died of old age.');
         
         // Verify analytics counter is incremented
         expect(incrementInsectsDiedOfOldAge).toHaveBeenCalledTimes(1);
