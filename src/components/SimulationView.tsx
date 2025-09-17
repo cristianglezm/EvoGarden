@@ -9,9 +9,10 @@ interface SimulationViewProps {
     onSelectFlower: (flower: Flower | null) => void;
     selectedFlowerId: string | null;
     actors: Map<string, CellContent>;
+    onFrameRendered: (renderTimeMs: number) => void;
 }
 
-export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelectFlower, selectedFlowerId, actors }) => {
+export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelectFlower, selectedFlowerId, actors, onFrameRendered }) => {
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const engineRef = useRef<RenderingEngine | null>(null);
@@ -40,9 +41,12 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelect
     // Main draw loop
     useEffect(() => {
         if (isEngineReady && engineRef.current) {
+            const renderStartTime = performance.now();
             engineRef.current.draw(actors, selectedFlowerId);
+            const renderEndTime = performance.now();
+            onFrameRendered(renderEndTime - renderStartTime);
         }
-    }, [actors, selectedFlowerId, isEngineReady]);
+    }, [actors, selectedFlowerId, isEngineReady, onFrameRendered]);
 
 
     const handleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {

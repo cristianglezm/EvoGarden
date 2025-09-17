@@ -8,7 +8,8 @@ export const useAnalyticsStore = create<AnalyticsState>()(
     persist(
         (set, get) => ({
             history: [],
-            addDataPoint: (summary: TickSummary) => {
+            addDataPoint: (data: { summary: TickSummary; renderTimeMs: number }) => {
+                const { summary, renderTimeMs } = data;
                 const newPoint: AnalyticsDataPoint = {
                     tick: summary.tick,
                     flowers: summary.flowerCount,
@@ -35,6 +36,8 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     avgStrength: summary.avgStrength,
                     avgIntelligence: summary.avgIntelligence,
                     avgLuck: summary.avgLuck,
+                    tickTimeMs: summary.tickTimeMs,
+                    renderTimeMs: renderTimeMs,
                 };
                 
                 const newHistory = [...get().history, newPoint];

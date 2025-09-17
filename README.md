@@ -13,7 +13,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
 -   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs, from a flower surviving for a certain number of ticks to achieving ecological milestones like total insects predated.
--   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics, key ecosystem events (including reproductions, predations, **eggs laid**, and **insects born**), and the average expression of genetic traits across your flower population.
+-   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics, key ecosystem events (including reproductions, predations, **eggs laid**, and **insects born**), the average expression of genetic traits across your flower population, and **application performance** (tick vs. render time).
 -   **Advanced Notification System**:
     -   **Real-time Event Log**: A retro, terminal-style log in the header provides a non-intrusive, real-time feed of all simulation events.
     -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history, including the tick number for each event. The simulation automatically pauses for focused review.
