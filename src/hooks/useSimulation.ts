@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { SimulationParams, AppEvent, CellContent, ActorDelta } from '../types';
+import type { SimulationParams, AppEvent, CellContent, ActorDelta, TickSummary } from '../types';
 import { useChallengeStore } from '../stores/challengeStore';
-import { useAnalyticsStore } from '../stores/analyticsStore';
 import { eventService } from '../services/eventService';
 
 interface UseSimulationProps {
@@ -14,6 +13,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const [isWorkerInitialized, setIsWorkerInitialized] = useState(false);
     const workerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
+    const latestSummaryRef = useRef<TickSummary | null>(null);
     
     // Effect to initialize and terminate the worker
     useEffect(() => {
@@ -38,6 +38,8 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                 }
                 case 'tick-update': {
                     const { deltas, events, summary } = payload;
+                    
+                    latestSummaryRef.current = summary;
 
                     setActors(currentActors => {
                         const newActors = new Map(currentActors);
@@ -62,7 +64,6 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                     });
                     
                     useChallengeStore.getState().processTick(summary);
-                    useAnalyticsStore.getState().addDataPoint(summary);
                     for (const event of (events as AppEvent[])) {
                         eventService.dispatch({ ...event, tick: summary.tick });
                     }
@@ -95,5 +96,5 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         }
     };
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized };
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef };
 };

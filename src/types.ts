@@ -232,11 +232,13 @@ export interface AnalyticsDataPoint {
     avgStrength: number;
     avgIntelligence: number;
     avgLuck: number;
+    tickTimeMs: number;
+    renderTimeMs: number;
 }
 
 export interface AnalyticsState {
     history: AnalyticsDataPoint[];
-    addDataPoint: (summary: TickSummary) => void;
+    addDataPoint: (data: { summary: TickSummary; renderTimeMs: number }) => void;
     reset: () => void;
 }
 
@@ -268,4 +270,5 @@ export interface TickSummary {
     avgStrength: number;
     avgIntelligence: number;
     avgLuck: number;
+    tickTimeMs: number;
 }

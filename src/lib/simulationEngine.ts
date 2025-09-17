@@ -266,7 +266,7 @@ export class SimulationEngine {
         return newFlowerCount;
     }
     
-    private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number): TickSummary {
+    private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
         let flowerCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
@@ -306,6 +306,7 @@ export class SimulationEngine {
             avgVitality: flowerCount > 0 ? totalVitality / flowerCount : 0, avgAgility: flowerCount > 0 ? totalAgility / flowerCount : 0,
             avgStrength: flowerCount > 0 ? totalStrength / flowerCount : 0, avgIntelligence: flowerCount > 0 ? totalIntelligence / flowerCount : 0,
             avgLuck: flowerCount > 0 ? totalLuck / flowerCount : 0,
+            tickTimeMs,
         };
     }
     
@@ -366,6 +367,7 @@ export class SimulationEngine {
     }
 
     public async calculateNextTick(): Promise<{ events: AppEvent[]; summary: TickSummary; deltas: ActorDelta[] }> {
+        const tickStartTime = performance.now();
         this._resetTickCounters();
         const events: AppEvent[] = [];
         
@@ -392,7 +394,9 @@ export class SimulationEngine {
 
         const newFlowerCount = await this._finalizeNewFlowers(newFlowerPromises, newFlowerPositions, nextActorState);
         
-        const summary = this._calculateTickSummary(nextActorState, newFlowerCount);
+        const tickEndTime = performance.now();
+        const tickTimeMs = tickEndTime - tickStartTime;
+        const summary = this._calculateTickSummary(nextActorState, newFlowerCount, tickTimeMs);
         
         // Deltas are calculated against the initial state and the final state.
         const deltas = this._calculateDeltas(actorsToProcess, nextActorState);

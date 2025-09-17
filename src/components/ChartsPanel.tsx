@@ -34,6 +34,21 @@ const baseChartOptions: EChartsOption = {
 export const ChartsPanel: React.FC = () => {
     const history = useAnalyticsStore(state => state.history);
 
+    const performanceOption = useMemo<EChartsOption>(() => {
+        const ticks = history.map(h => h.tick);
+        return {
+            ...baseChartOptions,
+            title: { text: 'Performance (ms)', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
+            legend: { data: ['Tick Time (Worker)', 'Render Time (UI)'], top: 35, textStyle: { color: '#bbf7d0' } },
+            xAxis: { ...baseChartOptions.xAxis, data: ticks },
+            yAxis: { ...baseChartOptions.yAxis, name: 'Milliseconds' },
+            series: [
+                { name: 'Tick Time (Worker)', type: 'line', data: history.map(h => h.tickTimeMs.toFixed(2)), color: '#38b2ac' },
+                { name: 'Render Time (UI)', type: 'line', data: history.map(h => h.renderTimeMs.toFixed(2)), color: '#ed8936' },
+            ],
+        };
+    }, [history]);
+
     const populationOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
         return {
@@ -137,6 +152,9 @@ export const ChartsPanel: React.FC = () => {
             </div>
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <Chart option={baseEffectsOption} />
+            </div>
+             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
+                <Chart option={performanceOption} />
             </div>
         </div>
     );

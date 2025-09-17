@@ -45,7 +45,7 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef } = useSimulation({ setIsLoading });
 
   // Initialize the main-thread event service
   useEffect(() => {
@@ -134,6 +134,17 @@ export default function App(): React.ReactNode {
     return actor?.type === 'flower' ? actor : null;
   }, [selectedFlowerId, actors]);
 
+  const handleFrameRendered = useCallback((renderTimeMs: number) => {
+      if (latestSummaryRef.current) {
+          useAnalyticsStore.getState().addDataPoint({
+              summary: latestSummaryRef.current,
+              renderTimeMs,
+          });
+          // Consume the summary to prevent processing it multiple times if renders happen faster than ticks
+          latestSummaryRef.current = null;
+      }
+  }, [latestSummaryRef]);
+
   const handleParamsChange = (newParams: SimulationParams) => {
     setIsRunning(false); // Stop the simulation on reset
     setParams(newParams);
@@ -142,6 +153,7 @@ export default function App(): React.ReactNode {
     setIsControlsOpen(false); // Close panel on apply
     useAnalyticsStore.getState().reset(); // Reset analytics data
     useEventLogStore.getState().reset(); // Reset event log
+    latestSummaryRef.current = null; // Also clear summary on reset
   };
   
   const handleSelectFlower = useCallback((flower: Flower | null) => {
@@ -367,6 +379,7 @@ export default function App(): React.ReactNode {
             actors={actors}
             onSelectFlower={handleSelectFlower}
             selectedFlowerId={selectedFlowerId}
+            onFrameRendered={handleFrameRendered}
           />
         </div>
       </main>
