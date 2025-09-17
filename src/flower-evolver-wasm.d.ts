@@ -1,5 +1,9 @@
 declare module '@cristianglezm/flower-evolver-wasm' {
   export class FEParams {
+    radius: number;
+    numLayers: number;
+    P: number;
+    bias: number;
     constructor(radius: number, numLayers: number, P: number, bias: number);
   }
 
@@ -10,7 +14,11 @@ declare module '@cristianglezm/flower-evolver-wasm' {
     constructor();
     init(): Promise<void>;
     setParams(params: FEParams): void;
+    getParams(): FEParams;
     makeFlower(): Promise<{ genome: string; image: string }>;
+    makePetals(): Promise<{ genome: string; image: string }>;
+    makePetalLayer(layer: number): Promise<{ genome: string; image: string }>;
+    makeStem(): Promise<{ genome: string; image: string }>;
     reproduce(father: string, mother: string): Promise<{ genome: string; image: string }>;
     mutate(
       original: string,
@@ -29,7 +37,14 @@ declare module '@cristianglezm/flower-evolver-wasm' {
       altitude?: number,
       terrainType?: number
     ): Promise<any>;
-    draw3DFlower(genome: string, flowerId: string, format: "both" | "gltf" | "glb"): Promise<string>;
     drawFlower(genome: string): Promise<{ genome: string; image: string }>;
+    drawPetals(genome: string): Promise<{ genome: string; image: string }>;
+    drawPetalLayer(genome: string, layer: number): Promise<{ genome: string; image: string }>;
+    // Renders using current params
+    make3DFlower(genome: string, flowerId: string, sex: 'male' | 'female' | 'both'): Promise<string>;
+    makeEmissive3DFlower(genome: string, flowerId: string, sex: 'male' | 'female' | 'both'): Promise<string>;
+    // Renders using params from genome
+    draw3DFlower(genome: string, flowerId: string, sex: 'male' | 'female' | 'both'): Promise<string>;
+    drawEmissive3DFlower(genome: string, flowerId: string, sex: 'male' | 'female' | 'both'): Promise<string>;
   }
 }

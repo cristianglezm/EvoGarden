@@ -6,12 +6,19 @@ import { DEFAULT_SIM_PARAMS } from '../constants';
 const mockFlowerService: FEService = {
     initialize: vi.fn().mockResolvedValue(undefined),
     setParams: vi.fn(),
+    getParams: vi.fn(),
     makeFlower: vi.fn(),
+    makePetals: vi.fn(),
+    makePetalLayer: vi.fn(),
+    makeStem: vi.fn(),
     reproduce: vi.fn(),
     mutate: vi.fn(),
     getFlowerStats: vi.fn(),
-    draw3DFlower: vi.fn(),
     drawFlower: vi.fn(),
+    drawPetals: vi.fn(),
+    drawPetalLayer: vi.fn(),
+    draw3DFlower: vi.fn(),
+    drawEmissive3DFlower: vi.fn(),
 };
 
 const mockFlowerData = { genome: 'test-genome', image: 'test-image-data' };
