@@ -28,6 +28,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
     const [is3DViewerOpen, setIs3DViewerOpen] = useState(false);
     const [gltfString, setGltfString] = useState<string | null>(null);
     const [isLoading3D, setIsLoading3D] = useState(false);
+    const [useEmissive, setUseEmissive] = useState(false);
     const wasRunningRef = useRef(false);
 
     const handleCopyGenome = useCallback(() => {
@@ -58,7 +59,10 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
         setIs3DViewerOpen(true);
         
         try {
-            const gltf = await flowerService.draw3DFlower(flower.genome);
+            const gltf = useEmissive
+                ? await flowerService.drawEmissive3DFlower(flower.genome, flower.sex)
+                : await flowerService.draw3DFlower(flower.genome, flower.sex);
+
             setGltfString(gltf);
         } catch (error) {
             console.error("Failed to generate 3D model:", error);
@@ -139,7 +143,17 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                     </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
+                    <label className="flex items-center space-x-2 cursor-pointer p-2 bg-surface-hover/50 rounded-md hover:bg-surface-hover">
+                        <input
+                            type="checkbox"
+                            checked={useEmissive}
+                            onChange={(e) => setUseEmissive(e.target.checked)}
+                            className="h-4 w-4 rounded bg-surface border-border text-accent-green focus:ring-accent-green"
+                        />
+                        <span className="text-sm text-secondary">Use Emissive Material</span>
+                    </label>
+
                     <button
                         onClick={handleView3D}
                         disabled={isLoading3D}

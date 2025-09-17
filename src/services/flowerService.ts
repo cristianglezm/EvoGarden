@@ -42,9 +42,29 @@ class FlowerService implements FEService {
         this.service.setParams(new FEParamsPackage(params.radius, params.numLayers, params.P, params.bias));
     }
 
+    getParams(): FEParams {
+        this.ensureInitialized();
+        return this.service.getParams();
+    }
+
     async makeFlower(): Promise<{genome: string, image: string}> {
         this.ensureInitialized();
         return await this.service.makeFlower();
+    }
+
+    async makePetals(): Promise<{ genome: string; image: string; }> {
+        this.ensureInitialized();
+        return await this.service.makePetals();
+    }
+
+    async makePetalLayer(layer: number): Promise<{ genome: string; image: string; }> {
+        this.ensureInitialized();
+        return await this.service.makePetalLayer(layer);
+    }
+
+    async makeStem(): Promise<{ genome: string; image: string; }> {
+        this.ensureInitialized();
+        return await this.service.makeStem();
     }
 
     async reproduce(father: string, mother: string): Promise<{genome: string, image: string}> {
@@ -63,16 +83,32 @@ class FlowerService implements FEService {
         return stats;
     }
 
-    async draw3DFlower(genome: string): Promise<string> {
+    async draw3DFlower(genome: string, sex: 'male' | 'female' | 'both'): Promise<string> {
         this.ensureInitialized();
         const flowerId = `flower-${Math.random().toString(36).substring(2, 9)}`;
-        const gltfString = await this.service.draw3DFlower(genome, flowerId, "both");
+        const gltfString = await this.service.draw3DFlower(genome, flowerId, sex);
         return gltfString;
+    }
+
+    async drawEmissive3DFlower(genome: string, sex: 'male' | 'female' | 'both'): Promise<string> {
+        this.ensureInitialized();
+        const flowerId = `flower-${Math.random().toString(36).substring(2, 9)}`;
+        return await this.service.drawEmissive3DFlower(genome, flowerId, sex);
     }
 
     async drawFlower(genome: string): Promise<{genome: string, image: string}> {
         this.ensureInitialized();
         return await this.service.drawFlower(genome);
+    }
+
+    async drawPetals(genome: string): Promise<{ genome: string; image: string; }> {
+        this.ensureInitialized();
+        return await this.service.drawPetals(genome);
+    }
+
+    async drawPetalLayer(genome: string, layer: number): Promise<{ genome: string; image: string; }> {
+        this.ensureInitialized();
+        return await this.service.drawPetalLayer(genome, layer);
     }
 }
 

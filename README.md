@@ -30,7 +30,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **WASM-Powered Genetics**: A high-performance WebAssembly module handles complex genetic operations like mutation, reproduction, and stat calculation.
 -   **Interactive Simulation**: Control world parameters like climate and population, pause/play the world, and reset with new initial conditions.
 -   **Inspect Individuals**: Click on any flower to view its detailed real-time stats, including health, age, genetic traits, and its raw genome, which can be copied or downloaded as a JSON file.
--   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer with camera controls. The simulation automatically pauses while viewing.
+-   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer with camera controls and an option for emissive materials for a glowing effect. The simulation automatically pauses while viewing.
 -   **Intuitive Interaction**: Click on an empty cell or outside the details panel to close it and seamlessly resume the simulation, providing a fluid user experience.
 
 ## 🛠️ Tech Stack
