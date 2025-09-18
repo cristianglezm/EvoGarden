@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processInsectTick } from './insectBehavior';
-import type { Insect, Flower, Grid, CellContent, Coord, AppEvent } from '../../types';
+import type { Insect, Flower, Grid, CellContent, AppEvent, FlowerSeed } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN, SEED_HEALTH } from '../../constants';
 
-// The wander chance from the behavior file
-const INSECT_WANDER_CHANCE = 0.2;
+const INSECT_WANDER_CHANCE = 0.2; // 20% chance to wander even if a target is found
 
 describe('insectBehavior', () => {
     let insect: Insect;
     let grid: Grid;
     let nextActorState: Map<string, CellContent>;
-    let createNewFlower: Mock;
+    let requestNewFlower: Mock<(x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null>;
     let flowerQtree: Quadtree<CellContent>;
-    let newFlowerPromises: Promise<Flower | null>[];
-    let newFlowerPositions: Coord[];
+    let newActorQueue: CellContent[];
     let events: AppEvent[];
     let incrementInsectsDiedOfOldAge: Mock;
 
@@ -26,6 +24,8 @@ describe('insectBehavior', () => {
         minTemperature: 10, maxTemperature: 30, toxicityRate: 0.1,
         effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
     };
+    
+    const mockSeed: FlowerSeed = { id: 'seed-1', type: 'flowerSeed', x: 0, y: 0, imageData: 'stem-image', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 0 };
 
     beforeEach(() => {
         insect = { id: 'insect1', type: 'insect', x: 5, y: 5, pollen: null, emoji: '🦋', lifespan: INSECT_LIFESPAN };
@@ -33,10 +33,9 @@ describe('insectBehavior', () => {
         grid[5][5].push(insect);
         nextActorState = new Map();
         nextActorState.set(insect.id, insect);
-        createNewFlower = vi.fn().mockResolvedValue(null);
+        requestNewFlower = vi.fn().mockReturnValue(mockSeed);
         flowerQtree = new Quadtree(new Rectangle(7.5, 7.5, 7.5, 7.5), 4);
-        newFlowerPromises = [];
-        newFlowerPositions = [];
+        newActorQueue = [];
         events = [];
         incrementInsectsDiedOfOldAge = vi.fn();
     });
@@ -45,7 +44,7 @@ describe('insectBehavior', () => {
         grid,
         params: DEFAULT_SIM_PARAMS,
         nextActorState,
-        createNewFlower,
+        requestNewFlower,
         flowerQtree,
         events,
         incrementInsectsDiedOfOldAge,
@@ -55,10 +54,9 @@ describe('insectBehavior', () => {
         grid[8][8].push(mockFlower);
         flowerQtree.insert({ x: mockFlower.x, y: mockFlower.y, data: mockFlower });
         
-        // Mock random to ensure it does NOT wander
         vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
         
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
         
         expect(insect.x).toBe(6);
         expect(insect.y).toBe(6);
@@ -71,14 +69,11 @@ describe('insectBehavior', () => {
         grid[8][8].push(mockFlower);
         flowerQtree.insert({ x: mockFlower.x, y: mockFlower.y, data: mockFlower });
 
-        // Mock random to ensure it DOES wander
         vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE - 0.1);
 
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
 
-        // Position should have changed, but not necessarily to (6,6)
         expect(insect.x !== initialX || insect.y !== initialY).toBe(true);
-        // It's possible but very unlikely for the random move to be the same as the target move
         expect(`${insect.x},${insect.y}`).not.toBe('6,6'); 
         vi.spyOn(Math, 'random').mockRestore();
     });
@@ -86,7 +81,7 @@ describe('insectBehavior', () => {
     it('should move randomly if no flower is in vision', () => {
         const initialX = insect.x;
         const initialY = insect.y;
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
         expect(insect.x !== initialX || insect.y !== initialY).toBe(true);
     });
 
@@ -97,7 +92,7 @@ describe('insectBehavior', () => {
         flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
         
         vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
         
         const flowerState = nextActorState.get(flower.id) as Flower;
         expect(insect.x).toBe(6);
@@ -107,22 +102,22 @@ describe('insectBehavior', () => {
         vi.spyOn(Math, 'random').mockRestore();
     });
 
-    it('should pollinate a different mature flower', () => {
-        // Mock random to ensure pollination happens
+    it('should pollinate a different mature flower and queue a FlowerSeed', () => {
         vi.spyOn(Math, 'random').mockReturnValue(INSECT_POLLINATION_CHANCE / 2);
 
         const targetFlower: Flower = { ...mockFlower, id: 'flower2', x: 6, y: 6, genome: 'g2', isMature: true };
         grid[6][6].push(targetFlower);
         nextActorState.set(targetFlower.id, targetFlower);
-        // Insect is at 5,5, it will move to 6,6
         flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
         
-        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' }; // Has pollen from another flower
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
         
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
         
-        expect(createNewFlower).toHaveBeenCalledTimes(1);
-        expect(createNewFlower).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'g2', 'g1');
+        expect(requestNewFlower).toHaveBeenCalledTimes(1);
+        expect(requestNewFlower).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'g2', 'g1');
+        expect(newActorQueue.length).toBe(1);
+        expect(newActorQueue[0]).toEqual(mockSeed);
 
         vi.spyOn(Math, 'random').mockRestore();
     });
@@ -135,11 +130,11 @@ describe('insectBehavior', () => {
         nextActorState.set(targetFlower.id, targetFlower);
         flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
         
-        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' }; // Has pollen from the SAME flower
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
         
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
         
-        expect(createNewFlower).not.toHaveBeenCalled();
+        expect(requestNewFlower).not.toHaveBeenCalled();
 
         vi.spyOn(Math, 'random').mockRestore();
     });
@@ -147,39 +142,35 @@ describe('insectBehavior', () => {
     it('should not pollinate an immature flower', () => {
         vi.spyOn(Math, 'random').mockReturnValue(INSECT_POLLINATION_CHANCE / 2);
         
-        const targetFlower: Flower = { ...mockFlower, id: 'flower2', x: 6, y: 6, genome: 'g2', isMature: false }; // Immature
+        const targetFlower: Flower = { ...mockFlower, id: 'flower2', x: 6, y: 6, genome: 'g2', isMature: false };
         grid[6][6].push(targetFlower);
         nextActorState.set(targetFlower.id, targetFlower);
         flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
 
         insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
 
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
 
-        expect(createNewFlower).not.toHaveBeenCalled();
+        expect(requestNewFlower).not.toHaveBeenCalled();
 
         vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('should die of old age, create a nutrient, and send a toast', () => {
-        insect.lifespan = 1; // Set lifespan to 1 so it dies on the next tick
+        insect.lifespan = 1;
         
-        processInsectTick(insect, setupContext(), newFlowerPromises, newFlowerPositions);
+        processInsectTick(insect, setupContext(), newActorQueue);
         
-        // Verify insect is removed
         expect(nextActorState.has(insect.id)).toBe(false);
         
-        // Verify nutrient is created
         const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
         expect(nutrient).toBeDefined();
         expect(nutrient?.x).toBe(insect.x);
         expect(nutrient?.y).toBe(insect.y);
         
-        // Verify toast is sent
         expect(events.length).toBe(1);
         expect(events[0].message).toBe('💀 An insect died of old age.');
         
-        // Verify analytics counter is incremented
         expect(incrementInsectsDiedOfOldAge).toHaveBeenCalledTimes(1);
     });
 });

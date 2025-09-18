@@ -1,8 +1,7 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend, ActorDelta } from '../types';
-import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS } from '../constants';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend, ActorDelta, FlowerSeed } from '../types';
+import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS, SEED_HEALTH } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
-import { initializeGridState, createNewFlower } from './simulationInitializer';
 import { findCellForStationaryActor, cloneActor, calculatePopulationTrend, buildQuadtrees } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
@@ -32,12 +31,21 @@ const shallowObjectEquals = (o1: any, o2: any): boolean => {
     return true;
 };
 
+interface CompletedFlowerPayload {
+    requestId: string;
+    flower: Flower;
+}
+
 export class SimulationEngine {
     private tick = 0;
     private grid: Grid = [];
     private params: SimulationParams;
     private flowerService: FEService;
     private totalInsectsEaten = 0;
+    
+    private flowerWorkerPort: MessagePort | null = null;
+    private completedFlowersQueue: CompletedFlowerPayload[] = [];
+    private stemImageData: string | null = null;
     
     // Properties for population control
     private insectCountHistory: number[] = [];
@@ -57,11 +65,69 @@ export class SimulationEngine {
     constructor(params: SimulationParams, flowerService: FEService) {
         this.params = params;
         this.flowerService = flowerService;
-        this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+    }
+    
+    public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
+        this.flowerWorkerPort = port;
+        this.flowerWorkerPort.onmessage = (e: MessageEvent) => {
+            this.handleFlowerWorkerMessage(e.data);
+        };
+        this.flowerWorkerPort.postMessage({ type: 'update-params', payload: params });
     }
 
-    public async initializeGrid() {
-        this.grid = await initializeGridState(this.params, this.flowerService);
+    public setStemImage(imageData: string) {
+        this.stemImageData = imageData;
+    }
+
+    public handleFlowerWorkerMessage(data: { type: string, payload: any }) {
+        const { type, payload } = data;
+        if (type === 'flower-created' || type === 'flower-creation-failed') {
+            this.completedFlowersQueue.push(payload);
+        }
+    }
+
+    public initializeGridWithActors(actors: CellContent[]) {
+        const { gridWidth, gridHeight } = this.params;
+        this.grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
+
+        for (const actor of actors) {
+            // Use the actor's own coordinates. This is crucial for predictable test setups.
+            const { x, y } = actor;
+
+            if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+                this.grid[y][x].push(actor);
+            } else {
+                console.warn(`Actor with ID ${actor.id} has out-of-bounds coordinates (${x}, ${y}) and was not placed.`);
+            }
+        }
+    }
+
+
+    private _requestNewFlower(nextActorState: Map<string, CellContent>, x: number, y: number, parentGenome1?: string, parentGenome2?: string): FlowerSeed | null {
+        if (!this.flowerWorkerPort || !this.stemImageData) {
+            console.error("Flower worker port or stem image not available to request a new flower.");
+            return null;
+        }
+        
+        // Calculate average flower health from the current tick's state
+        let totalHealth = 0;
+        let flowerCount = 0;
+        for (const actor of nextActorState.values()) {
+            if (actor.type === 'flower') {
+                totalHealth += (actor as Flower).health;
+                flowerCount++;
+            }
+        }
+        
+        const avgHealth = flowerCount > 0 ? totalHealth / flowerCount : SEED_HEALTH;
+        const seedHealth = Math.max(1, Math.round(avgHealth)); // Ensure seed has at least 1 health
+
+        const requestId = `seed-${x}-${y}-${Date.now()}-${Math.random()}`;
+        this.flowerWorkerPort.postMessage({
+            type: 'request-flower',
+            payload: { requestId, x, y, parentGenome1, parentGenome2 }
+        });
+        return { id: requestId, type: 'flowerSeed', x, y, imageData: this.stemImageData, health: seedHealth, maxHealth: seedHealth, age: 0 };
     }
 
     private _resetTickCounters() {
@@ -110,7 +176,7 @@ export class SimulationEngine {
             }
         }
         
-        const flowerCountForDensity = Array.from(nextActorState.values()).filter(a => a.type === 'flower').length;
+        const flowerCountForDensity = Array.from(nextActorState.values()).filter(a => a.type === 'flower' || a.type === 'flowerSeed').length;
         const totalCells = gridWidth * gridHeight;
         const flowerDensityThresholdCount = totalCells * this.params.herbicideFlowerDensityThreshold;
         const hasPlane = Array.from(nextActorState.values()).some(a => a.type === 'herbicidePlane');
@@ -164,11 +230,10 @@ export class SimulationEngine {
         nextActorState: Map<string, CellContent>,
         qtree: Quadtree<CellContent>,
         flowerQtree: Quadtree<CellContent>,
-        events: AppEvent[]
-    ): { newFlowerPromises: Promise<Flower | null>[], newFlowerPositions: Coord[] } {
-        const newFlowerPromises: Promise<Flower | null>[] = [];
-        const newFlowerPositions: Coord[] = [];
-        const createFlowerCallback = (x: number, y: number, g1?: string, g2?: string) => createNewFlower(this.flowerService, this.params, x, y, g1, g2);
+        events: AppEvent[],
+        newActorQueue: CellContent[]
+    ): void {
+        const requestFlowerCallback = this._requestNewFlower.bind(this, nextActorState);
         
         for (const currentActor of actorsToProcess) {
             if (!nextActorState.has(currentActor.id)) continue;
@@ -191,14 +256,19 @@ export class SimulationEngine {
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState });
                     break;
                 case 'insect':
-                    processInsectTick(actor as Insect, { grid: this.grid, params: this.params, nextActorState, createNewFlower: createFlowerCallback, flowerQtree, events,
+                    processInsectTick(actor as Insect, { grid: this.grid, params: this.params, nextActorState, requestNewFlower: requestFlowerCallback, flowerQtree, events,
                         incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; }
-                    }, newFlowerPromises, newFlowerPositions);
+                    }, newActorQueue);
                     break;
                 case 'flower': {
                     const flower = actor as Flower;
-                    processFlowerTick(flower, { grid: this.grid, params: this.params, createNewFlower: createFlowerCallback }, newFlowerPromises, newFlowerPositions);
+                    processFlowerTick(flower, { grid: this.grid, params: this.params, requestNewFlower: requestFlowerCallback }, newActorQueue);
                     if (flower.health <= 0) nextActorState.delete(flower.id);
+                    break;
+                }
+                case 'flowerSeed': {
+                    const seed = actor as FlowerSeed;
+                    seed.age++;
                     break;
                 }
                 case 'egg':
@@ -209,11 +279,19 @@ export class SimulationEngine {
                     break;
             }
         }
-        return { newFlowerPromises, newFlowerPositions };
     }
     
     private _handleInsectReproduction(nextActorState: Map<string, CellContent>, events: AppEvent[]): void {
         const { gridWidth, gridHeight } = this.params;
+
+        // Create a temporary grid based on the current state of this tick's actors
+        const currentTickGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
+        for (const actor of nextActorState.values()) {
+            if (actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
+                currentTickGrid[actor.y][actor.x].push(actor);
+            }
+        }
+
         const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
         const insectQtree = new Quadtree<CellContent>(boundary, 4);
         const allInsects: Insect[] = [];
@@ -234,7 +312,8 @@ export class SimulationEngine {
             const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id));
 
             if (partners.length > 0 && Math.random() < INSECT_REPRODUCTION_CHANCE) {
-                const spot = findCellForStationaryActor(this.grid, this.params, 'egg', { x: insect.x, y: insect.y });
+                // Use the temporary, up-to-date grid for placement checks
+                const spot = findCellForStationaryActor(currentTickGrid, this.params, 'egg', { x: insect.x, y: insect.y });
                 if (spot) {
                     const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
                     nextActorState.set(eggId, { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji });
@@ -246,28 +325,31 @@ export class SimulationEngine {
         }
     }
     
-    private async _finalizeNewFlowers(
-        newFlowerPromises: Promise<Flower | null>[], 
-        newFlowerPositions: Coord[], 
-        nextActorState: Map<string, CellContent>
-    ): Promise<number> {
-        const newFlowers = await Promise.all(newFlowerPromises);
+    private _processCompletedFlowers(nextActorState: Map<string, CellContent>, events: AppEvent[]): number {
         let newFlowerCount = 0;
-        newFlowers.forEach((flower, i) => {
-            if (flower) {
-                const pos = newFlowerPositions[i];
-                const isOccupied = Array.from(nextActorState.values()).some(a => a.x === pos.x && a.y === pos.y && a.type === 'flower');
-                if (!isOccupied) {
-                    nextActorState.set(flower.id, flower);
-                    newFlowerCount++;
+        if (this.completedFlowersQueue.length > 0) {
+            for (const { requestId, flower } of this.completedFlowersQueue) {
+                const seed = nextActorState.get(requestId);
+                if (seed && seed.type === 'flowerSeed') {
+                    nextActorState.delete(requestId);
+                    if (flower) { // flower is null on creation failure
+                        flower.age += seed.age;
+                        if (flower.age >= flower.maturationPeriod) {
+                            flower.isMature = true;
+                        }
+                        nextActorState.set(flower.id, flower);
+                        newFlowerCount++;
+                        events.push({ message: '🌸 A new flower has bloomed!', type: 'success', importance: 'low' });
+                    }
                 }
             }
-        });
+            this.completedFlowersQueue = [];
+        }
         return newFlowerCount;
     }
     
     private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
-        let flowerCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0;
+        let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
@@ -275,17 +357,25 @@ export class SimulationEngine {
         for (const actor of nextActorState.values()) {
             if (actor.type === 'flower') {
                 const f = actor as Flower;
-                flowerCount++; maxFlowerAge = Math.max(maxFlowerAge, f.age); totalHealth += f.health; totalStamina += f.stamina;
+                flowerCountForStats++; maxFlowerAge = Math.max(maxFlowerAge, f.age); totalHealth += f.health; totalStamina += f.stamina;
                 totalNutrientEfficiency += f.nutrientEfficiency; totalMaturationPeriod += f.maturationPeriod;
                 maxHealthSoFar = Math.max(maxHealthSoFar, f.maxHealth); maxStaminaSoFar = Math.max(maxStaminaSoFar, f.maxStamina);
                 maxToxicitySoFar = Math.max(maxToxicitySoFar, f.toxicityRate);
                 totalVitality += f.effects.vitality; totalAgility += f.effects.agility; totalStrength += f.effects.strength;
                 totalIntelligence += f.effects.intelligence; totalLuck += f.effects.luck;
-            } else if (actor.type === 'insect') insectCount++;
-            else if (actor.type === 'bird') birdCount++;
-            else if (actor.type === 'eagle') eagleCount++;
-            else if (actor.type === 'herbicidePlane') herbicidePlaneCount++;
-            else if (actor.type === 'herbicideSmoke') herbicideSmokeCount++;
+            } else if (actor.type === 'flowerSeed') {
+                seedCount++;
+            } else if (actor.type === 'insect') {
+                insectCount++;
+            } else if (actor.type === 'bird') {
+                birdCount++;
+            } else if (actor.type === 'eagle') {
+                eagleCount++;
+            } else if (actor.type === 'herbicidePlane') {
+                herbicidePlaneCount++;
+            } else if (actor.type === 'herbicideSmoke') {
+                herbicideSmokeCount++;
+            }
         }
 
         this.insectCountHistory.push(insectCount);
@@ -294,18 +384,23 @@ export class SimulationEngine {
         if (this.birdCountHistory.length > POPULATION_TREND_WINDOW) this.birdCountHistory.shift();
 
         return {
-            tick: this.tick, flowerCount, insectCount, birdCount, eagleCount, herbicidePlaneCount, herbicideSmokeCount,
+            tick: this.tick,
+            flowerCount: flowerCountForStats + seedCount,
+            insectCount, birdCount, eagleCount, herbicidePlaneCount, herbicideSmokeCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             eggsLaid: this.eggsLaidThisTick, insectsBorn: this.insectsBornThisTick, eggsEaten: this.eggsEatenThisTick,
             insectsDiedOfOldAge: this.insectsDiedOfOldAgeThisTick,
-            avgHealth: flowerCount > 0 ? totalHealth / flowerCount : 0, avgStamina: flowerCount > 0 ? totalStamina / flowerCount : 0,
+            avgHealth: flowerCountForStats > 0 ? totalHealth / flowerCountForStats : 0,
+            avgStamina: flowerCountForStats > 0 ? totalStamina / flowerCountForStats : 0,
             maxHealth: maxHealthSoFar, maxStamina: maxStaminaSoFar, maxToxicity: maxToxicitySoFar,
-            avgNutrientEfficiency: flowerCount > 0 ? totalNutrientEfficiency / flowerCount : 0,
-            avgMaturationPeriod: flowerCount > 0 ? totalMaturationPeriod / flowerCount : 0,
-            avgVitality: flowerCount > 0 ? totalVitality / flowerCount : 0, avgAgility: flowerCount > 0 ? totalAgility / flowerCount : 0,
-            avgStrength: flowerCount > 0 ? totalStrength / flowerCount : 0, avgIntelligence: flowerCount > 0 ? totalIntelligence / flowerCount : 0,
-            avgLuck: flowerCount > 0 ? totalLuck / flowerCount : 0,
+            avgNutrientEfficiency: flowerCountForStats > 0 ? totalNutrientEfficiency / flowerCountForStats : 0,
+            avgMaturationPeriod: flowerCountForStats > 0 ? totalMaturationPeriod / flowerCountForStats : 0,
+            avgVitality: flowerCountForStats > 0 ? totalVitality / flowerCountForStats : 0,
+            avgAgility: flowerCountForStats > 0 ? totalAgility / flowerCountForStats : 0,
+            avgStrength: flowerCountForStats > 0 ? totalStrength / flowerCountForStats : 0,
+            avgIntelligence: flowerCountForStats > 0 ? totalIntelligence / flowerCountForStats : 0,
+            avgLuck: flowerCountForStats > 0 ? totalLuck / flowerCountForStats : 0,
             tickTimeMs,
         };
     }
@@ -365,41 +460,67 @@ export class SimulationEngine {
         
         return deltas;
     }
+    
+    /**
+     * Enforces the rule that only one flower or seed can exist per cell.
+     * Iterates through the actor state and removes duplicates, keeping the first one encountered.
+     */
+    private _resolveFlowerAndSeedConflicts(nextActorState: Map<string, CellContent>): void {
+        const occupiedCells = new Set<string>(); // Stores "x,y" coordinates
+        const actorIds = [...nextActorState.keys()]; // Use a copy of keys for safe iteration
+
+        for (const actorId of actorIds) {
+            const actor = nextActorState.get(actorId);
+            if (actor && (actor.type === 'flower' || actor.type === 'flowerSeed')) {
+                const coordKey = `${actor.x},${actor.y}`;
+                if (occupiedCells.has(coordKey)) {
+                    // This cell is already claimed by another flower or seed this tick.
+                    // The first one encountered wins, this one is removed.
+                    nextActorState.delete(actorId);
+                } else {
+                    // This is the first flower/seed in this cell, claim it.
+                    occupiedCells.add(coordKey);
+                }
+            }
+        }
+    }
 
     public async calculateNextTick(): Promise<{ events: AppEvent[]; summary: TickSummary; deltas: ActorDelta[] }> {
         const tickStartTime = performance.now();
         this._resetTickCounters();
         const events: AppEvent[] = [];
         
-        // Create a definitive list of actors that exist at the start of this tick.
-        const actorsToProcess = this.grid.flat(2).map(cloneActor);
-        const nextActorState = new Map<string, CellContent>(actorsToProcess.map(actor => [actor.id, cloneActor(actor)]));
+        const initialActors = this.grid.flat(2).map(cloneActor);
+        const nextActorState = new Map<string, CellContent>(initialActors.map(actor => [actor.id, cloneActor(actor)]));
+
+        // Process flowers that were created in the background
+        const newFlowerCount = this._processCompletedFlowers(nextActorState, events);
 
         this._processCooldowns();
-
-        // Population control now adds new actors directly to the state for the *next* tick.
-        // These new actors will NOT be processed in the current tick loop.
         this._handlePopulationControl(nextActorState, events);
         
         const { qtree, flowerQtree } = buildQuadtrees(Array.from(nextActorState.values()), this.params);
         
         this._processNutrientHealing(nextActorState, qtree);
 
-        // CRITICAL: Iterate over the original list of actors, not the potentially modified state.
-        const { newFlowerPromises, newFlowerPositions } = this._processActorTicks(
-            actorsToProcess, nextActorState, qtree, flowerQtree, events
-        );
+        const newActorQueue: CellContent[] = [];
+        this._processActorTicks(initialActors, nextActorState, qtree, flowerQtree, events, newActorQueue);
+
+        // Add newly requested actors (e.g., seeds from behaviors) to the state
+        for (const actor of newActorQueue) {
+            nextActorState.set(actor.id, actor);
+        }
 
         this._handleInsectReproduction(nextActorState, events);
-
-        const newFlowerCount = await this._finalizeNewFlowers(newFlowerPromises, newFlowerPositions, nextActorState);
+        
+        // Enforce one flower/seed per cell rule before summarizing and creating deltas
+        this._resolveFlowerAndSeedConflicts(nextActorState);
         
         const tickEndTime = performance.now();
         const tickTimeMs = tickEndTime - tickStartTime;
         const summary = this._calculateTickSummary(nextActorState, newFlowerCount, tickTimeMs);
         
-        // Deltas are calculated against the initial state and the final state.
-        const deltas = this._calculateDeltas(actorsToProcess, nextActorState);
+        const deltas = this._calculateDeltas(initialActors, nextActorState);
         
         this._updateGrid(nextActorState);
         
@@ -416,6 +537,7 @@ export class SimulationEngine {
         }));
         stateToSave.grid.flat(2).forEach((entity: CellContent) => {
             if (entity.type === 'flower') (entity as Flower).imageData = '';
+            else if (entity.type === 'flowerSeed') { /* Seeds have no image data to strip */ }
         });
         return stateToSave;
     }
@@ -431,7 +553,7 @@ export class SimulationEngine {
         this.tick = loadedTick; 
         this.totalInsectsEaten = loadedTotalInsectsEaten || 0;
         this.grid = loadedGrid;
-        this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+        this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: this.params });
         
         // Reset transient state
         this.insectCountHistory = [];
@@ -440,6 +562,7 @@ export class SimulationEngine {
         this.eagleSpawnCooldown = 0;
         this.herbicideCooldown = 0;
         this.lastInsectTrend = 'stable';
+        this.completedFlowersQueue = [];
 
         const regenerationPromises = this.grid.flat(2).map(entity => {
             if (entity.type === 'flower' && entity.genome) {
@@ -466,6 +589,7 @@ export class SimulationEngine {
         this.eagleSpawnCooldown = 0;
         this.herbicideCooldown = 0;
         this.lastInsectTrend = 'stable';
-        this.flowerService.setParams({ radius: this.params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+        this.completedFlowersQueue = [];
+        this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: this.params });
     }
 }

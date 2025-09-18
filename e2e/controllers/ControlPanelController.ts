@@ -71,9 +71,9 @@ export class ControlPanelController {
   }
 
   async setMaxCapacities() {
-    await this.getFlowersInput().fill('50');
-    await this.getBirdsInput().fill('20');
-    await this.getInsectsInput().fill('20');
+    await this.getFlowersInput().fill('40');
+    await this.getBirdsInput().fill('15');
+    await this.getInsectsInput().fill('15');
     await this.getApplyAndReset().click();
   }
 

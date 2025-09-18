@@ -1,4 +1,4 @@
-import type { Insect, SimulationParams, Grid, Flower, CellContent, Coord, Nutrient, AppEvent } from '../../types';
+import type { Insect, SimulationParams, Grid, Flower, CellContent, Nutrient, AppEvent, FlowerSeed } from '../../types';
 import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN } from '../../constants';
 import { findCellForFlowerSpawn } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
@@ -10,7 +10,7 @@ export interface InsectContext {
     params: SimulationParams;
     grid: Grid; // The original grid from the start of the tick
     nextActorState: Map<string, CellContent>;
-    createNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => Promise<Flower | null>;
+    requestNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null;
     flowerQtree: Quadtree<CellContent>;
     events: AppEvent[];
     incrementInsectsDiedOfOldAge: () => void;
@@ -19,10 +19,9 @@ export interface InsectContext {
 export const processInsectTick = (
     insect: Insect,
     context: InsectContext,
-    newFlowerPromises: Promise<Flower | null>[],
-    newFlowerPositions: Coord[]
+    newActorQueue: CellContent[]
 ) => {
-    const { params, grid, nextActorState, createNewFlower, flowerQtree, events, incrementInsectsDiedOfOldAge } = context;
+    const { params, grid, nextActorState, requestNewFlower, flowerQtree, events, incrementInsectsDiedOfOldAge } = context;
     const { gridWidth, gridHeight } = params;
     
     // 1. Lifecycle: Check for death from old age
@@ -38,7 +37,7 @@ export const processInsectTick = (
     }
 
     const { x, y } = insect;
-    let target: Coord | null = null;
+    let target: { x: number, y: number } | null = null;
     let newX = x;
     let newY = y;
     let movedDeterministically = false;
@@ -100,8 +99,8 @@ export const processInsectTick = (
          if (insect.pollen && insect.pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
              const spawnSpot = findCellForFlowerSpawn(grid, params, {x: newX, y: newY});
              if (spawnSpot) {
-                 newFlowerPromises.push(createNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, insect.pollen.genome));
-                 newFlowerPositions.push(spawnSpot);
+                 const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, insect.pollen.genome);
+                 if(seed) newActorQueue.push(seed);
              }
          }
          insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id };

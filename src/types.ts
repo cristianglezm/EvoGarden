@@ -73,6 +73,14 @@ export interface Flower extends Actor, FlowerStats {
     isMature: boolean;
 }
 
+export interface FlowerSeed extends Actor {
+    type: 'flowerSeed';
+    imageData: string;
+    health: number;
+    maxHealth: number;
+    age: number;
+}
+
 export interface Insect extends Actor {
     type: 'insect';
     pollen: {
@@ -120,7 +128,7 @@ export interface HerbicideSmoke extends Actor {
     canBeExpanded: number;
 }
 
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
 
 export type Grid = (CellContent[])[][];
 

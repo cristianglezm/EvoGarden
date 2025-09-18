@@ -123,6 +123,8 @@ describe('birdBehavior', () => {
     });
 
     it('should prey on an egg and not create a nutrient', () => {
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(1.0); // Ensure random nutrient drop doesn't happen
+        
         const targetEgg: Egg = { id: 'egg1', type: 'egg', x: 6, y: 6, hatchTimer: 10, insectEmoji: '🐛' };
         bird.x = 5; bird.y = 5;
         bird.target = { x: 6, y: 6 };
@@ -140,5 +142,7 @@ describe('birdBehavior', () => {
         const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
         expect(nutrient).toBeUndefined();
         expect(bird.target).toBeNull();
+
+        randomSpy.mockRestore();
     });
 });

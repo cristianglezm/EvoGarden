@@ -30,6 +30,7 @@ Define the core data structures for the simulation state.
 -   **`SimulationParams`**: A comprehensive interface for all simulation settings. This includes grid dimensions, initial actor counts, environmental factors (`humidity`, `temperature`, `wind`), and **core simulation constants** (`tickCostMultiplier`, `eggHatchTime`, etc.) to allow for easy tweaking and saving. It also includes the `notificationMode` to control the event system.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, etc.), and its position.
+    -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
     -   `Insect`: Includes `emoji`, position, `lifespan`, and `pollen` (tracking the genome and source ID of the last flower visited).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
@@ -60,9 +61,24 @@ To promote flexibility and ensure saved states are perfectly reproducible, core 
 
 The application's architecture is designed to separate the computationally intensive simulation from the UI, ensuring the user experience remains fluid and responsive.
 
-### 5.1. Web Worker for Performance (`src/simulation.worker.ts`)
--   **Role**: The worker acts as a simple, robust **host** for the `SimulationEngine`. Its primary responsibility is to run on a separate thread, isolating all heavy computation from the UI.
--   **Message Broker**: It functions as a message broker, receiving commands from the UI (via the `useSimulation` hook) and forwarding them to the `SimulationEngine` instance. It then relays results from the engine (an array of state changes called deltas, a batch of events, and a tick summary) back to the UI thread. This keeps the worker's own logic minimal.
+### 5.1. Dual-Worker Architecture for Performance
+The simulation is split across two Web Workers to ensure the UI remains responsive and the simulation tick rate is consistent, even during heavy computation.
+-   **`simulation.worker.ts` (The Simulation Host)**: This worker is the primary owner of the simulation state.
+    -   **Role**: It hosts the `SimulationEngine` and runs the main game loop (`setInterval`). Its sole responsibility is to manage the simulation's state progression, tick by tick.
+    -   **Communication**: It communicates with the UI thread via `postMessage`, sending batches of state changes (deltas), events, and tick summaries. It communicates with the `flower.worker.ts` via a dedicated `MessageChannel`.
+
+-   **`flower.worker.ts` (The Genetics Worker)**: This worker is a specialized offload thread for expensive WASM operations.
+    -   **Role**: It owns the instance of the `FEService` (the WASM wrapper). Its only job is to receive requests for new flower creation (initial, mutation, or reproduction), execute the slow, asynchronous WASM functions, and send the completed flower data back.
+    -   **Benefit**: By isolating WASM calls here, the main simulation loop in the `simulation.worker.ts` is **never blocked**. It can continue ticking at a consistent rate while new flowers are being generated in the background.
+
+-   **Asynchronous Flower Creation Pipeline**:
+    1.  When the `SimulationEngine` determines a new flower should be created, it doesn't call the WASM service directly. Instead, it creates a lightweight `FlowerSeed` placeholder actor.
+    2.  It sends a `request-flower` message to the `flower.worker.ts` via the `MessageChannel`. This message includes the necessary data (parent genomes, coordinates) and a unique `requestId` (which is the ID of the `FlowerSeed` placeholder).
+    3.  The `simulation.worker.ts` continues its tick without waiting.
+    4.  The `flower.worker.ts` receives the request, performs the expensive `reproduce()` or `makeFlower()` call, and waits for the WASM module to complete.
+    5.  Once the new flower's data (genome, stats, image) is ready, the `flower.worker.ts` sends a `flower-created` message back to the `simulation.worker.ts`, including the original `requestId`.
+    6.  The `simulation.worker.ts` receives this message and places the completed flower data into a `completedFlowersQueue`.
+    7.  At the beginning of the next tick, the `SimulationEngine` processes this queue, finds the `FlowerSeed` with the matching ID, removes it, and adds the new, fully-formed `Flower` in its place.
 
 ### 5.2. The Simulation Engine & Behavior System (`src/lib/`)
 -   **`SimulationEngine` (`simulationEngine.ts`)**: This class is the **orchestrator** of the simulation. Its main game loop (`calculateNextTick`) manages the simulation's state and sequence of events. Instead of returning the entire grid state, it now calculates a minimal set of "delta" updates (e.g., actor added, removed, or properties changed) which are sent to the UI for efficient state synchronization. It does not contain actor-specific logic itself; instead, it delegates that to the Behavior System. Its responsibilities include:
@@ -70,6 +86,8 @@ The application's architecture is designed to separate the computationally inten
     -   Creating and populating the Quadtrees each tick.
     -   Iterating through actors and calling the appropriate behavior module.
     -   Handling global events like insect reproduction and nutrient healing.
+    -   **Requesting new flowers** via the asynchronous worker pipeline.
+    -   **Processing the `completedFlowersQueue`** at the start of each tick to replace seeds with full flowers.
     -   Collecting all `AppEvent` objects generated by behaviors during a tick.
     -   Compiling the `TickSummary` at the end of each tick.
     -   Measuring the execution time of each tick for performance monitoring.
@@ -141,7 +159,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 
 ### 5.4. UI/Worker Communication (`src/hooks/useSimulation.ts`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
-    -   **Responsibilities**: Manages the worker's lifecycle, sends commands (start, pause, reset), and listens for incoming messages.
+    -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset) to the simulation worker, and listens for incoming messages.
     -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas. It maintains a local Map of actors and applies these changes (add, update, remove) to reconstruct the new grid state. This avoids the expensive process of deserializing the entire grid on every tick. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
 
 ### 5.5. Centralized Event & Notification System
@@ -183,3 +201,36 @@ To decouple the simulation from the UI and improve performance, a centralized ev
 -   **Unit & Component Testing**: Use Vitest and React Testing Library. Isolate logic in hooks and behavior modules for easier testing. Mock dependencies like the `flowerService` and the Web Worker itself in tests.
 -   **E2E Testing**: Use Playwright to test full user flows, including starting/pausing the simulation, changing parameters, and interacting with panels.
 -   **Automatic React DevTools**: A custom Vite plugin will be used to automatically launch the standalone React DevTools application and inject its connection script, providing a zero-config debugging experience for developers.
+
+## 10. Project Structure
+-   `index.html`: The single-page entry point. It contains the `<div id="root">` where the React app is mounted.
+-   `package.json`: Defines project metadata, scripts (`dev`, `build`), and dependencies.
+-   `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`: Configuration files for the Vite build tool and the Tailwind CSS styling pipeline.
+-   `src/`: Contains all the application source code.
+    -   `src/index.tsx`: The main entry point for the React application.
+    -   `src/App.tsx`: The root React component. Manages global state and layout.
+    -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
+    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
+    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
+    -   `src/lib/simulationEngine.ts`: **The heart of the simulation.** This class contains the main simulation loop (`calculateNextTick`), all state management (the grid, actors), and orchestrates actor logic. It is instantiated and run exclusively within the web worker.
+    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
+    -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
+    -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
+    -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
+    -   `src/components/Controls.tsx`: UI for changing simulation parameters.
+    -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
+    -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
+    -   `src/components/Modal.tsx`: A generic modal component.
+    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges and analytics, with a tabbed interface.
+    -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress from the `challengeStore`.
+    -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
+    -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
+    -   `src/components/Toast.tsx`: Renders a single toast notification with a message and icon.
+    -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
+    -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
+    -   `src/stores/toastStore.ts`: A global Zustand store for managing toast notifications.
+    -   `src/stores/challengeStore.ts`: A Zustand store with `persist` middleware for tracking challenge progress across sessions.
+    -   `src/stores/analyticsStore.ts`: A Zustand store with `persist` middleware for storing historical simulation data for the charts.
+    -   `src/utils.ts`: A module for shared utility functions.
+    -   `src/constants.ts`: Global constants for the simulation (tick rate, damage values, etc.).
+    -   `src/types.ts`: Shared TypeScript types for the simulation.

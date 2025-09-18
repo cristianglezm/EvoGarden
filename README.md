@@ -45,6 +45,11 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 ## 🔬 Simulation Deep Dive
 
 ### Performance & Architecture
+-   **Dual-Worker Architecture**: To achieve a completely non-blocking simulation, the application uses two separate Web Workers.
+    -   **Simulation Worker**: Hosts the `SimulationEngine` and runs the main game loop. It manages all actor behaviors and state changes.
+    -   **Flower Worker**: Dedicated to handling computationally expensive, asynchronous calls to the WASM genetics module (creating, mutating, and reproducing flowers).
+    -   This separation ensures that the main simulation tick is never delayed, even while multiple new flowers are being "grown" in the background.
+-   **Asynchronous Flower Creation**: When a new flower needs to be created, the simulation engine places a lightweight `FlowerSeed` placeholder on the grid. It then sends an asynchronous request to the Flower Worker. Once the WASM module finishes generating the new flower's data, it's sent back to the engine, which seamlessly replaces the seed with the fully grown flower in the next tick.
 -   **Delta-Based State Updates**: To ensure a fluid UI, the simulation worker doesn't send the entire world state every tick. Instead, it computes and sends only a small list of "deltas"—the specific changes (additions, updates, removals) that occurred. This minimizes data transfer and allows the UI to update its state efficiently without expensive processing.
 -   **Layered Canvas & Change Detection**: To eliminate the bottleneck of re-drawing hundreds of complex SVGs every frame, the simulation is rendered across two stacked canvas layers.
     -   **Static Background Layer**: This canvas is responsible for drawing the grid and all the flowers. It is only redrawn when a change to the static environment occurs (e.g., a flower is added/removed or the user selection changes). This avoids expensive redraws on every tick.
@@ -121,6 +126,7 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/App.tsx`: The root React component. Manages global state and layout.
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
+    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
     -   `src/lib/simulationEngine.ts`: **The heart of the simulation.** This class contains the main simulation loop (`calculateNextTick`), all state management (the grid, actors), and orchestrates actor logic. It is instantiated and run exclusively within the web worker.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.

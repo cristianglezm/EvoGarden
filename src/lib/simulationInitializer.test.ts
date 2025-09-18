@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { initializeGridState } from './simulationInitializer';
+import { createInitialMobileActors, createNewFlower } from './simulationInitializer';
 import type { FEService, FlowerGenomeStats } from '../types';
 import { DEFAULT_SIM_PARAMS } from '../constants';
 
@@ -33,28 +33,69 @@ describe('simulationInitializer', () => {
         vi.clearAllMocks();
         vi.mocked(mockFlowerService.makeFlower).mockResolvedValue(mockFlowerData);
         vi.mocked(mockFlowerService.getFlowerStats).mockResolvedValue(mockFlowerStats);
+        vi.mocked(mockFlowerService.reproduce).mockResolvedValue({ genome: 'child-genome', image: 'child-image' });
+        vi.mocked(mockFlowerService.mutate).mockResolvedValue({ genome: 'mutated-genome', image: 'mutated-image' });
     });
 
-    it('initializeGridState should create a grid with correct dimensions', async () => {
-        const params = { ...DEFAULT_SIM_PARAMS, gridWidth: 10, gridHeight: 12 };
-        const grid = await initializeGridState(params, mockFlowerService);
-        expect(grid.length).toBe(12);
-        expect(grid[0].length).toBe(10);
+    describe('createNewFlower', () => {
+        it('should call makeFlower when no genomes are provided', async () => {
+            await createNewFlower(mockFlowerService, DEFAULT_SIM_PARAMS, 1, 1);
+            expect(mockFlowerService.makeFlower).toHaveBeenCalledTimes(1);
+            expect(mockFlowerService.reproduce).not.toHaveBeenCalled();
+            expect(mockFlowerService.mutate).not.toHaveBeenCalled();
+        });
+
+        it('should call reproduce when two genomes are provided', async () => {
+            await createNewFlower(mockFlowerService, DEFAULT_SIM_PARAMS, 1, 1, 'g1', 'g2');
+            expect(mockFlowerService.reproduce).toHaveBeenCalledWith('g1', 'g2');
+            expect(mockFlowerService.makeFlower).not.toHaveBeenCalled();
+        });
+
+        it('should call mutate when one genome is provided', async () => {
+            await createNewFlower(mockFlowerService, DEFAULT_SIM_PARAMS, 1, 1, 'g1');
+            expect(mockFlowerService.mutate).toHaveBeenCalledWith('g1');
+            expect(mockFlowerService.makeFlower).not.toHaveBeenCalled();
+        });
+
+        it('should return a fully formed Flower object', async () => {
+            const flower = await createNewFlower(mockFlowerService, DEFAULT_SIM_PARAMS, 5, 10);
+            expect(flower).not.toBeNull();
+            expect(flower).toMatchObject({
+                type: 'flower',
+                x: 5,
+                y: 10,
+                genome: mockFlowerData.genome,
+                imageData: mockFlowerData.image,
+                health: mockFlowerStats.health,
+                stamina: mockFlowerStats.stamina,
+                maxHealth: mockFlowerStats.health,
+                maxStamina: mockFlowerStats.stamina,
+                isMature: false,
+                age: 0,
+            });
+        });
     });
 
-    it('initializeGridState should populate with correct number of actors', async () => {
-        const params = { ...DEFAULT_SIM_PARAMS, initialFlowers: 5, initialInsects: 3, initialBirds: 2 };
-        const grid = await initializeGridState(params, mockFlowerService);
+    describe('createInitialMobileActors', () => {
+        it('should create the correct number of insects and birds', () => {
+            const params = { ...DEFAULT_SIM_PARAMS, initialInsects: 3, initialBirds: 2 };
+            const actors = createInitialMobileActors(params);
 
-        const flowers = grid.flat(2).filter(c => c.type === 'flower');
-        const insects = grid.flat(2).filter(c => c.type === 'insect');
-        const birds = grid.flat(2).filter(c => c.type === 'bird');
+            const insects = actors.filter(c => c.type === 'insect');
+            const birds = actors.filter(c => c.type === 'bird');
+            
+            expect(actors.length).toBe(5);
+            expect(insects.length).toBe(3);
+            expect(birds.length).toBe(2);
+        });
 
-        expect(flowers.length).toBe(5);
-        expect(insects.length).toBe(3);
-        expect(birds.length).toBe(2);
-
-        expect(mockFlowerService.makeFlower).toHaveBeenCalledTimes(5);
-        expect(mockFlowerService.getFlowerStats).toHaveBeenCalledTimes(5);
+        it('should return actors with placeholder coordinates', () => {
+            const params = { ...DEFAULT_SIM_PARAMS, initialInsects: 1, initialBirds: 1 };
+            const actors = createInitialMobileActors(params);
+            expect(actors[0].x).toBe(-1);
+            expect(actors[0].y).toBe(-1);
+            expect(actors[1].x).toBe(-1);
+            expect(actors[1].y).toBe(-1);
+        });
     });
 });

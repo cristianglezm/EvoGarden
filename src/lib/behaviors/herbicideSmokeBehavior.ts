@@ -1,4 +1,4 @@
-import type { HerbicideSmoke, CellContent, Grid, SimulationParams, Flower } from '../../types';
+import type { HerbicideSmoke, CellContent, Grid, SimulationParams, Flower, FlowerSeed } from '../../types';
 import { neighborVectors } from '../simulationUtils';
 
 export interface HerbicideSmokeContext {
@@ -11,12 +11,15 @@ export const processHerbicideSmokeTick = (smoke: HerbicideSmoke, context: Herbic
     const { nextActorState, params } = context;
     const { gridWidth, gridHeight, herbicideDamage, herbicideSmokeLifespan } = params;
 
-    // 1. Apply damage to flowers in the same cell
-    const flowersInCell = Array.from(nextActorState.values())
-        .filter(a => a.x === smoke.x && a.y === smoke.y && a.type === 'flower') as Flower[];
+    // 1. Apply damage to flowers and seeds in the same cell
+    const vulnerableInCell = Array.from(nextActorState.values())
+        .filter(a => a.x === smoke.x && a.y === smoke.y && (a.type === 'flower' || a.type === 'flowerSeed')) as (Flower | FlowerSeed)[];
     
-    for (const flower of flowersInCell) {
-        flower.health = Math.max(0, flower.health - herbicideDamage);
+    for (const target of vulnerableInCell) {
+        target.health = Math.max(0, target.health - herbicideDamage);
+        if (target.health <= 0) {
+            nextActorState.delete(target.id); // Remove if destroyed
+        }
     }
 
     // 2. Expand to neighbors if it hasn't already

@@ -11,19 +11,39 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const [actors, setActors] = useState<Map<string, CellContent>>(new Map());
     const [isRunning, _setIsRunning] = useState(false);
     const [isWorkerInitialized, setIsWorkerInitialized] = useState(false);
+    const [workerError, setWorkerError] = useState<Error | null>(null);
     const workerRef = useRef<Worker | null>(null);
+    const flowerWorkerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
     const latestSummaryRef = useRef<TickSummary | null>(null);
     
-    // Effect to initialize and terminate the worker
+    // Effect to initialize and terminate the workers
     useEffect(() => {
-        const worker = new Worker(new URL('../simulation.worker.ts', import.meta.url), {
+        const simWorker = new Worker(new URL('../simulation.worker.ts', import.meta.url), {
             type: 'module',
         });
-        workerRef.current = worker;
+        workerRef.current = simWorker;
+
+        const flowerWorker = new Worker(new URL('../flower.worker.ts', import.meta.url), {
+            type: 'module',
+        });
+        flowerWorkerRef.current = flowerWorker;
+
+        const errorHandler = (event: ErrorEvent) => {
+            console.error("A worker encountered an error:", event.message, event);
+            setWorkerError(new Error(`A critical simulation component failed. Please refresh the page. Error: ${event.message}`));
+            setIsLoading(false); // Stop loading on error
+        };
+        simWorker.onerror = errorHandler;
+        flowerWorker.onerror = errorHandler;
+
+        const channel = new MessageChannel();
+        simWorker.postMessage({ type: 'init-ports', payload: { flowerWorkerPort: channel.port1 } }, [channel.port1]);
+        flowerWorker.postMessage({ type: 'init-ports', payload: { simWorkerPort: channel.port2 } }, [channel.port2]);
+        
         setIsWorkerInitialized(true);
         
-        worker.onmessage = (e: MessageEvent) => {
+        simWorker.onmessage = (e: MessageEvent) => {
             const { type, payload } = e.data;
             switch (type) {
                 case 'init-complete':
@@ -73,14 +93,17 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         };
 
         return () => {
-            worker.terminate();
+            simWorker.terminate();
+            flowerWorker.terminate();
             workerRef.current = null;
+            flowerWorkerRef.current = null;
             setIsWorkerInitialized(false);
         };
     }, [setIsLoading]);
 
     const resetWithNewParams = useCallback((params: SimulationParams) => {
         workerRef.current?.postMessage({ type: 'update-params', payload: params });
+        latestSummaryRef.current = null;
     }, []);
 
 
@@ -96,5 +119,5 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         }
     };
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef };
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError };
 };
