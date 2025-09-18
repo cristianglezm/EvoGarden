@@ -131,6 +131,7 @@ export interface AppEvent {
   type: 'info' | 'success' | 'error';
   importance: 'low' | 'high';
   tick?: number;
+  timestamp?: number;
 }
 
 export interface LogEntry extends AppEvent {

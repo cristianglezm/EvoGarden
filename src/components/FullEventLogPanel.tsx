@@ -46,12 +46,16 @@ export const FullEventLogPanel: React.FC<FullEventLogPanelProps> = ({ isOpen, on
                             </div>
                         )}
                         <div className="flex flex-col-reverse space-y-1 space-y-reverse">
-                             {logEntries.map(entry => (
-                                <p key={entry.id} className={`${importanceToColorClass[entry.importance] || 'text-tertiary'}`}>
-                                    <span className="text-secondary/60 mr-2">[Tick {(entry.tick ?? 0).toString().padStart(4, '0')}]</span>
-                                    {entry.message}
-                                </p>
-                            ))}
+                             {logEntries.map(entry => {
+                                const timeString = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : null;
+                                return (
+                                    <p key={entry.id} className={`${importanceToColorClass[entry.importance] || 'text-tertiary'}`}>
+                                        {timeString && <span className="text-secondary/60 mr-2">[{timeString}]</span>}
+                                        <span className="text-secondary/60 mr-2">[Tick {(entry.tick ?? 0).toString().padStart(4, '0')}]</span>
+                                        {entry.message}
+                                    </p>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

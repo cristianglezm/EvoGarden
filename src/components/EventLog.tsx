@@ -39,9 +39,10 @@ export const EventLog: React.FC<EventLogProps> = ({ onClick }) => {
                         <p>No events yet...</p>
                     </div>
                 )}
-                <div className="flex flex-col-reverse items-center justify-center">
+                <div className="flex flex-col-reverse items-start">
                     {logEntries.map(entry => (
                         <p key={entry.id} className={`whitespace-nowrap ${importanceToColorClass[entry.importance] || 'text-tertiary'}`}>
+                            <span className="text-secondary/60 mr-2">[T:{(entry.tick ?? 0).toString().padStart(4, '0')}]</span>
                             {entry.message}
                         </p>
                     ))}
