@@ -45,7 +45,7 @@ Define the core data structures for the simulation state.
     -   `Challenge`, `ChallengeState`: Interfaces for defining user challenges and managing their persistent state in a Zustand store.
     -   `AnalyticsDataPoint`, `AnalyticsState`: Interfaces for storing a history of `TickSummary` data for visualization, also managed in a persistent Zustand store. Includes performance metrics like `tickTimeMs` and `renderTimeMs`.
 -   **Events & Notifications**:
-    -   `AppEvent`: A structured object for all events within the simulation, containing a `message`, `type`, and `importance`.
+    -   `AppEvent`: A structured object for all events within the simulation, containing a `message`, `type`, `importance`, and optionally the `tick` it occurred on and a `timestamp`.
     -   `LogEntry`: The object stored in the `eventLogStore`, extending `AppEvent` with a unique ID.
 
 ## 4. Configuration Management
@@ -162,7 +162,7 @@ To decouple the simulation from the UI and improve performance, a centralized ev
 -   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations of the simulation's history, including a Performance chart showing worker tick time vs. main thread render time.
 -   **Notification Components**:
     -   `EventLog.tsx`: A non-intrusive, terminal-style log in the header that displays a real-time feed of events from the `eventLogStore`. It is clickable to open the full panel.
-    -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events, pausing the simulation for review.
+    -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events, including timestamp and tick number, pausing the simulation for review.
     -   `Toast.tsx` & `ToastContainer.tsx`: Render pop-up notifications based on state from the `toastStore`.
 -   **Global State (Zustand Stores)**:
     -   `eventLogStore`: Manages the state for the `EventLog`, holding a capped-size array of recent events.

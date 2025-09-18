@@ -16,7 +16,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics, key ecosystem events (including reproductions, predations, **eggs laid**, and **insects born**), the average expression of genetic traits across your flower population, and **application performance** (tick vs. render time).
 -   **Advanced Notification System**:
     -   **Real-time Event Log**: A retro, terminal-style log in the header provides a non-intrusive, real-time feed of all simulation events.
-    -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history, including the tick number for each event. The simulation automatically pauses for focused review.
+    -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history, including the local timestamp and tick number for each event. The simulation automatically pauses for focused review.
     -   **Configurable Notifications**: Take control of the UI with three notification modes: see events only in the log, get pop-up toasts for important events, or enable all toasts for maximum feedback.
 -   **Dynamic Insect Lifecycle**: Insects reproduce by laying eggs of their species. These eggs have a gestation period to hatch, creating a more realistic and engaging population model.
 -   **Layered Actor System**: Actors like insects and birds can occupy the same grid cell as flowers, allowing for more realistic interactions like pollination and predation.
