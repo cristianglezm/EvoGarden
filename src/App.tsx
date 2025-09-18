@@ -26,6 +26,7 @@ export default function App(): React.ReactNode {
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
   const [isFullLogOpen, setIsFullLogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Initializing EvoGarden...');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSavedState, setHasSavedState] = useState(false);
@@ -73,6 +74,7 @@ export default function App(): React.ReactNode {
             
             const metadataJSON = localStorage.getItem(META_SAVE_KEY);
             if (metadataJSON) {
+                setLoadingMessage('Loading saved garden...');
                 const metadata = JSON.parse(metadataJSON);
                 const flowers = await db.savedFlowers.toArray();
                 
@@ -103,6 +105,7 @@ export default function App(): React.ReactNode {
                 eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
             } else {
                 // Initialize with default params
+                setLoadingMessage('Creating a new garden...');
                 workerRef.current!.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
                 setParams(DEFAULT_SIM_PARAMS);
             }
@@ -146,6 +149,8 @@ export default function App(): React.ReactNode {
   }, [latestSummaryRef]);
 
   const handleParamsChange = (newParams: SimulationParams) => {
+    setLoadingMessage('Resetting simulation...');
+    setIsLoading(true);
     setIsRunning(false); // Stop the simulation on reset
     setParams(newParams);
     resetWithNewParams(newParams); // Explicitly tell the worker to reset
@@ -268,7 +273,8 @@ export default function App(): React.ReactNode {
         eventService.dispatch({ message: 'No saved state found.', type: 'error', importance: 'high' });
         return;
     }
-
+    
+    setLoadingMessage('Loading saved garden...');
     setIsLoading(true);
 
     try {
@@ -309,7 +315,7 @@ export default function App(): React.ReactNode {
         await db.savedFlowers.clear();
         setHasSavedState(false);
     }
-  }, [workerRef, setIsRunning, setIsLoading]);
+  }, [workerRef, setIsRunning]);
 
   const handleOpenFullLog = useCallback(() => {
     wasRunningBeforeLogRef.current = isRunning;
@@ -335,7 +341,7 @@ export default function App(): React.ReactNode {
     return (
       <div className="min-h-screen bg-background text-primary flex flex-col items-center justify-center">
         <LoaderIcon className="w-16 h-16 text-tertiary animate-spin" />
-        <p className="mt-4 text-xl">Initializing EvoGarden...</p>
+        <p className="mt-4 text-xl">{loadingMessage}</p>
       </div>
     );
   }
