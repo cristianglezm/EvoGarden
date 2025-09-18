@@ -1,4 +1,4 @@
-import type { Flower, SimulationParams, Grid, Coord } from '../../types';
+import type { Flower, SimulationParams, Grid, FlowerSeed, CellContent } from '../../types';
 import { 
     FLOWER_TICK_COST_MULTIPLIER, 
     FLOWER_STAMINA_COST_PER_TICK, 
@@ -12,16 +12,15 @@ import { findCellForFlowerSpawn, neighborVectors, windVectors } from '../simulat
 export interface FlowerContext {
     params: SimulationParams;
     grid: Grid; // The original grid from the start of the tick
-    createNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => Promise<Flower | null>;
+    requestNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null;
 }
 
 export const processFlowerTick = (
     flower: Flower,
     context: FlowerContext,
-    newFlowerPromises: Promise<Flower | null>[],
-    newFlowerPositions: Coord[]
+    newActorQueue: CellContent[]
 ) => {
-    const { params, grid, createNewFlower } = context;
+    const { params, grid, requestNewFlower } = context;
     const { gridWidth, gridHeight, windDirection, windStrength } = params;
 
     flower.age++;
@@ -45,29 +44,41 @@ export const processFlowerTick = (
     
     // Reproduction and expansion
     if (flower.isMature) {
+        let hasReproducedThisTick = false;
+        
         // 1. Proximity & Expansion
-        neighborVectors
+        const neighbors = neighborVectors
             .map(([dx, dy]) => ({ x: flower.x + dx, y: flower.y + dy }))
             .filter(p => p.x >= 0 && p.x < gridWidth && p.y >= 0 && p.y < gridHeight)
-            .forEach(n => {
-                const neighborCell = grid[n.y][n.x];
-                const neighborFlower = neighborCell.find(c => c.type === 'flower') as Flower | undefined;
-                const isSuitableForSpawn = neighborCell.length === 0 || neighborCell.every(c => c.type === 'egg' || c.type === 'nutrient');
+            .sort(() => 0.5 - Math.random()); // Shuffle to give all neighbors a fair chance
 
-                if (isSuitableForSpawn && Math.random() < FLOWER_EXPANSION_CHANCE) {
-                    newFlowerPromises.push(createNewFlower(n.x, n.y, flower.genome));
-                    newFlowerPositions.push(n);
-                } else if (neighborFlower?.isMature && Math.random() < PROXIMITY_POLLINATION_CHANCE) {
-                    const spawnSpot = findCellForFlowerSpawn(grid, params, n);
-                    if (spawnSpot) {
-                        newFlowerPromises.push(createNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, neighborFlower.genome));
-                        newFlowerPositions.push(spawnSpot);
+        for (const n of neighbors) {
+            if (hasReproducedThisTick) break;
+
+            const neighborCell = grid[n.y][n.x];
+            const neighborFlower = neighborCell.find(c => c.type === 'flower') as Flower | undefined;
+            const isSuitableForSpawn = neighborCell.length === 0 || neighborCell.every(c => c.type === 'egg' || c.type === 'nutrient' || c.type === 'flowerSeed');
+
+            if (isSuitableForSpawn && Math.random() < FLOWER_EXPANSION_CHANCE) {
+                const seed = requestNewFlower(n.x, n.y, flower.genome);
+                if (seed) {
+                    newActorQueue.push(seed);
+                    hasReproducedThisTick = true;
+                }
+            } else if (neighborFlower?.isMature && Math.random() < PROXIMITY_POLLINATION_CHANCE) {
+                const spawnSpot = findCellForFlowerSpawn(grid, params, n);
+                if (spawnSpot) {
+                    const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, neighborFlower.genome);
+                    if (seed) {
+                        newActorQueue.push(seed);
+                        hasReproducedThisTick = true;
                     }
                 }
-            });
+            }
+        }
 
         // 2. Wind Pollination
-        if (Math.random() < WIND_POLLINATION_CHANCE) {
+        if (!hasReproducedThisTick && Math.random() < WIND_POLLINATION_CHANCE) {
             const { dx, dy } = windVectors[windDirection];
             for (let i = 1; i <= windStrength; i++) {
                 const targetX = flower.x + i * dx;
@@ -78,8 +89,11 @@ export const processFlowerTick = (
                 if (targetFlower?.isMature) {
                     const spawnSpot = findCellForFlowerSpawn(grid, params, {x: targetX, y: targetY});
                     if (spawnSpot) {
-                         newFlowerPromises.push(createNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome));
-                         newFlowerPositions.push(spawnSpot);
+                         const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome);
+                         if(seed) {
+                            newActorQueue.push(seed);
+                            // hasReproducedThisTick = true; // Not strictly needed as it's the last check
+                         }
                     }
                     break;
                 }

@@ -11,14 +11,14 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     humidity: 0.7, // 70%
     temperature: 20, // 20°C
     windDirection: 'S',
-    windStrength: 2,
+    windStrength: 3,
     flowerDetailRadius: 8,
     herbicideFlowerDensityThreshold: 0.65,
     herbicideDamage: 25,
     herbicideSmokeLifespan: 2,
     herbicideCooldown: 90,
     herbicideSmokeExpansionCount: 2,
-    notificationMode: 'toasts',
+    notificationMode: 'both',
 };
 
 // Fallback values are defined in src/lib/simulationEngine.ts.
@@ -27,6 +27,7 @@ export const FLOWER_TICK_COST_MULTIPLIER = 0.8;
 export const FLOWER_STAMINA_COST_PER_TICK = 1;
 export const FLOWER_HEALTH_COST_PER_TICK = 2; // when stamina is 0
 export const FLOWER_NUTRIENT_HEAL = 4;
+export const SEED_HEALTH = 10;
 
 export const NUTRIENT_LIFESPAN = 2; // ticks
 export const NUTRIENT_FROM_PREY_LIFESPAN = 4;

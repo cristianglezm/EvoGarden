@@ -46,7 +46,13 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError } = useSimulation({ setIsLoading });
+
+  useEffect(() => {
+    if (workerError) {
+        setError(workerError.message);
+    }
+  }, [workerError]);
 
   // Initialize the main-thread event service
   useEffect(() => {

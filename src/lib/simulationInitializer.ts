@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Coord } from '../types';
+import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats } from '../types';
 import { getInsectEmoji } from '../utils';
 import { INSECT_LIFESPAN } from '../constants';
 
@@ -8,6 +8,10 @@ const FALLBACK_MAX_STAMINA = 100;
 const FALLBACK_MATURATION_AGE = 50;
 const FALLBACK_NUTRIENT_EFFICIENCY = 1.0;
 
+/**
+ * This function encapsulates the logic for creating a new flower actor.
+ * It is now executed exclusively within the flower.worker.ts context.
+ */
 export const createNewFlower = async (
     flowerService: FEService, 
     params: SimulationParams, 
@@ -36,62 +40,27 @@ export const createNewFlower = async (
             health: maxHealth, stamina: maxStamina, age: 0, isMature: false,
         };
     } catch (error) {
-        console.error("Engine: Failed to create flower:", error);
+        console.error("Flower Worker: Failed to create flower:", error);
         return null;
     }
 };
 
-
-export const initializeGridState = async (params: SimulationParams, flowerService: FEService): Promise<Grid> => {
-    const { gridHeight, gridWidth, initialFlowers, initialInsects, initialBirds } = params;
-    const grid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
-
-    const flowerCells: Coord[] = [];
-    for (let y = 0; y < gridHeight; y++) {
-        for (let x = 0; x < gridWidth; x++) {
-            flowerCells.push({ x, y });
-        }
-    }
-    flowerCells.sort(() => Math.random() - 0.5);
-
-    const flowerPromises = [];
-    for (let i = 0; i < initialFlowers; i++) {
-        const pos = flowerCells.pop();
-        if (pos) {
-            flowerPromises.push(createNewFlower(flowerService, params, pos.x, pos.y));
-        }
-    }
-    const flowers = await Promise.all(flowerPromises);
-    flowers.forEach(flower => {
-        if (flower) {
-            grid[flower.y][flower.x].push(flower);
-        }
-    });
-
-    const placeMobileActor = (actor: CellContent) => {
-        for (let i = 0; i < 100; i++) {
-            const x = Math.floor(Math.random() * gridWidth);
-            const y = Math.floor(Math.random() * gridHeight);
-            if (!grid[y][x].some(c => c.type === 'bird' || c.type === 'insect')) {
-                actor.x = x; actor.y = y;
-                grid[y][x].push(actor);
-                return;
-            }
-        }
-        const x = Math.floor(Math.random() * gridWidth);
-        const y = Math.floor(Math.random() * gridHeight);
-        actor.x = x; actor.y = y;
-        grid[y][x].push(actor);
-    };
+/**
+ * Creates the initial set of mobile actors (insects, birds) with placeholder coordinates.
+ * The actual placement is handled by the simulation worker.
+ */
+export const createInitialMobileActors = (params: SimulationParams): CellContent[] => {
+    const { initialInsects, initialBirds } = params;
+    const actors: CellContent[] = [];
 
     for (let i = 0; i < initialInsects; i++) {
         const id = `insect-init-${i}`;
         const emoji = getInsectEmoji(id);
-        placeMobileActor({ id, type: 'insect', x: 0, y: 0, pollen: null, emoji, lifespan: INSECT_LIFESPAN });
+        actors.push({ id, type: 'insect', x: -1, y: -1, pollen: null, emoji, lifespan: INSECT_LIFESPAN });
     }
     for (let i = 0; i < initialBirds; i++) {
-        placeMobileActor({ id: `bird-init-${i}`, type: 'bird', x: 0, y: 0, target: null, patrolTarget: null });
+        actors.push({ id: `bird-init-${i}`, type: 'bird', x: -1, y: -1, target: null, patrolTarget: null });
     }
 
-    return grid;
+    return actors;
 };

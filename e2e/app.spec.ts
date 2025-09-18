@@ -116,7 +116,10 @@ test.describe('Canvas and Flower Details Panel', () => {
   test.beforeEach(async ({ page }) => {
     const controls = new ControlPanelController(page);
     await controls.open();
-    await controls.setMaxCapacities();
+    await controls.getFlowersInput().fill('25');
+    await controls.getBirdsInput().fill('5');
+    await controls.getInsectsInput().fill('10');
+    await controls.getApplyAndReset().click();
     await controls.runSimulation(3);
   });
 

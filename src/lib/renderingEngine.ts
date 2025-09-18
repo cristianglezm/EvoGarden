@@ -1,10 +1,8 @@
-import type { CellContent, Flower, Insect, SimulationParams } from '../types';
+import type { CellContent, Flower, FlowerSeed, Insect, SimulationParams } from '../types';
 
 const CELL_SIZE_PX = 64;
 const GRID_COLOR = 'hsla(120, 100%, 50%, 0.2)';
 const SELECTED_CELL_COLOR = 'hsla(120, 100%, 50%, 0.4)';
-const SAPLING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 56V24M32 24C32 12 40 12 40 12M32 24C32 12 24 12 24 12" stroke="lightgreen" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
-const SAPLING_IMAGE_DATA_URL = `data:image/svg+xml;base64,${btoa(SAPLING_SVG)}`;
 
 /**
  * Helper function to efficiently check if the members of two sets are different.
@@ -24,7 +22,6 @@ export class RenderingEngine {
     private fgCtx: CanvasRenderingContext2D;
     private params: SimulationParams;
     private imageCache = new Map<string, HTMLImageElement>();
-    private saplingImage: HTMLImageElement;
     
     // State for change detection
     private lastStaticActorIds = new Set<string>();
@@ -42,9 +39,6 @@ export class RenderingEngine {
         }
         this.bgCtx = bgCtx;
         this.fgCtx = fgCtx;
-
-        this.saplingImage = new Image();
-        this.saplingImage.src = SAPLING_IMAGE_DATA_URL;
 
         this.updateCanvasSize();
     }
@@ -97,14 +91,15 @@ export class RenderingEngine {
         }
     }
 
-    private drawFlower(flower: Flower) {
-        if (!flower.imageData) return;
+    private drawImage(actor: Flower | FlowerSeed) {
+        // Both Flower and FlowerSeed now have an imageData property.
+        const dataUrl = actor.imageData;
+        if (!dataUrl) return;
 
-        const dataUrl = `${flower.imageData}`;
         let img = this.imageCache.get(dataUrl);
 
         if (img?.complete) {
-            this.bgCtx.drawImage(img, flower.x * CELL_SIZE_PX, flower.y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
+            this.bgCtx.drawImage(img, actor.x * CELL_SIZE_PX, actor.y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
         } else if (!img) {
             img = new Image();
             img.onload = () => {
@@ -117,12 +112,13 @@ export class RenderingEngine {
         }
     }
 
+
     public draw(actors: Map<string, CellContent>, selectedFlowerId: string | null) {
-        const staticActors = new Map<string, Flower>();
+        const staticActors = new Map<string, Flower | FlowerSeed>();
         const dynamicActors: CellContent[] = [];
 
         for (const actor of actors.values()) {
-            if (actor.type === 'flower') {
+            if (actor.type === 'flower' || actor.type === 'flowerSeed') {
                 staticActors.set(actor.id, actor);
             } else {
                 dynamicActors.push(actor);
@@ -144,11 +140,11 @@ export class RenderingEngine {
         this.drawDynamicLayer(dynamicActors);
     }
 
-    private _collectGarbage(currentFlowers: Map<string, Flower>) {
+    private _collectGarbage(currentStaticActors: Map<string, Flower | FlowerSeed>) {
         const activeImageUrls = new Set<string>();
-        for (const flower of currentFlowers.values()) {
-            if (flower.imageData) {
-                activeImageUrls.add(flower.imageData);
+        for (const actor of currentStaticActors.values()) {
+            if (actor.imageData) {
+                 activeImageUrls.add(actor.imageData);
             }
         }
         for (const cachedUrl of this.imageCache.keys()) {
@@ -162,26 +158,26 @@ export class RenderingEngine {
      * Performs a full, clean redraw of the static background layer.
      * This is an expensive operation and should only be called when necessary.
      */
-    private drawStaticLayer(currentFlowers: Map<string, Flower>, selectedFlowerId: string | null) {
+    private drawStaticLayer(currentStaticActors: Map<string, Flower | FlowerSeed>, selectedFlowerId: string | null) {
         // 1. Clear canvas and redraw grid lines
         this.drawGrid();
 
-        // 2. Draw all current flowers
-        for (const flower of currentFlowers.values()) {
-            this.drawFlower(flower);
+        // 2. Draw all current static actors
+        for (const actor of currentStaticActors.values()) {
+            this.drawImage(actor);
         }
 
         // 3. Draw selection highlight on top
         if (selectedFlowerId) {
-            const selectedFlower = currentFlowers.get(selectedFlowerId);
-            if (selectedFlower) {
+            const selectedActor = currentStaticActors.get(selectedFlowerId);
+            if (selectedActor) {
                 this.bgCtx.fillStyle = SELECTED_CELL_COLOR;
-                this.bgCtx.fillRect(selectedFlower.x * CELL_SIZE_PX, selectedFlower.y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
+                this.bgCtx.fillRect(selectedActor.x * CELL_SIZE_PX, selectedActor.y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
             }
         }
         
         // 4. Clean up the image cache
-        this._collectGarbage(currentFlowers);
+        this._collectGarbage(currentStaticActors);
     }
 
     private drawDynamicLayer(dynamicActors: CellContent[]) {
