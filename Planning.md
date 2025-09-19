@@ -43,7 +43,7 @@ Define the core data structures for the simulation state.
     -   `FEService`: Defines the contract for the WASM service wrapper, ensuring all methods are typed correctly, especially `getFlowerStats` which returns `Promise<FlowerGenomeStats>`.
 -   **State & Analytics**:
     -   `TickSummary`: A detailed object compiled by the `SimulationEngine` each tick, containing aggregated data like population counts, average genetic traits, key events (reproductions, predations, `eggsLaid`, `insectsBorn`), and `tickTimeMs` for performance analysis.
-    -   `Challenge`, `ChallengeState`: Interfaces for defining user challenges and managing their persistent state in a Zustand store.
+    -   `Challenge`, `ChallengeState`: Interfaces for defining user challenges and managing their persistent state in a Zustand store. Examples include survival challenges (max flower age), predation (total insects eaten), population milestones (max insect count), and genetic achievements (max toxicity).
     -   `AnalyticsDataPoint`, `AnalyticsState`: Interfaces for storing a history of `TickSummary` data for visualization, also managed in a persistent Zustand store. Includes performance metrics like `tickTimeMs` and `renderTimeMs`.
 -   **Events & Notifications**:
     -   `AppEvent`: A structured object for all events within the simulation, containing a `message`, `type`, `importance`, and optionally the `tick` it occurred on and a `timestamp`.

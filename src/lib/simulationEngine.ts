@@ -42,6 +42,8 @@ export class SimulationEngine {
     private params: SimulationParams;
     private flowerService: FEService;
     private totalInsectsEaten = 0;
+    private totalBirdsHunted = 0;
+    private totalHerbicidePlanesSpawned = 0;
     
     private flowerWorkerPort: MessagePort | null = null;
     private completedFlowersQueue: CompletedFlowerPayload[] = [];
@@ -61,6 +63,7 @@ export class SimulationEngine {
     private insectsDiedOfOldAgeThisTick = 0;
     private eggsLaidThisTick = 0;
     private insectsBornThisTick = 0;
+    private birdsHuntedThisTick = 0;
 
     constructor(params: SimulationParams, flowerService: FEService) {
         this.params = params;
@@ -136,6 +139,7 @@ export class SimulationEngine {
         this.insectsDiedOfOldAgeThisTick = 0;
         this.eggsLaidThisTick = 0;
         this.insectsBornThisTick = 0;
+        this.birdsHuntedThisTick = 0;
     }
 
     private _processCooldowns() {
@@ -182,6 +186,7 @@ export class SimulationEngine {
         const hasPlane = Array.from(nextActorState.values()).some(a => a.type === 'herbicidePlane');
         
         if (this.herbicideCooldown === 0 && !hasPlane && flowerCountForDensity >= flowerDensityThresholdCount) {
+            this.totalHerbicidePlanesSpawned++;
             const STRIDE = 3;
             const pattern = Math.floor(Math.random() * 4);
 
@@ -247,7 +252,9 @@ export class SimulationEngine {
                     });
                     break;
                 case 'eagle':
-                    processEagleTick(actor as Eagle, { grid: this.grid, params: this.params, qtree, nextActorState, events });
+                    if (processEagleTick(actor as Eagle, { grid: this.grid, params: this.params, qtree, nextActorState, events })) {
+                        this.birdsHuntedThisTick++;
+                    }
                     break;
                 case 'herbicidePlane':
                     processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState });
@@ -349,7 +356,7 @@ export class SimulationEngine {
     }
     
     private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
-        let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0;
+        let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
@@ -375,6 +382,8 @@ export class SimulationEngine {
                 herbicidePlaneCount++;
             } else if (actor.type === 'herbicideSmoke') {
                 herbicideSmokeCount++;
+            } else if (actor.type === 'nutrient') {
+                nutrientCount++;
             }
         }
 
@@ -383,12 +392,16 @@ export class SimulationEngine {
         this.birdCountHistory.push(birdCount);
         if (this.birdCountHistory.length > POPULATION_TREND_WINDOW) this.birdCountHistory.shift();
 
+        const flowerDensity = (flowerCountForStats + seedCount) / (this.params.gridWidth * this.params.gridHeight);
+
         return {
             tick: this.tick,
             flowerCount: flowerCountForStats + seedCount,
             insectCount, birdCount, eagleCount, herbicidePlaneCount, herbicideSmokeCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
+            totalBirdsHunted: this.totalBirdsHunted, totalHerbicidePlanesSpawned: this.totalHerbicidePlanesSpawned,
+            nutrientCount, flowerDensity,
             eggsLaid: this.eggsLaidThisTick, insectsBorn: this.insectsBornThisTick, eggsEaten: this.eggsEatenThisTick,
             insectsDiedOfOldAge: this.insectsDiedOfOldAgeThisTick,
             avgHealth: flowerCountForStats > 0 ? totalHealth / flowerCountForStats : 0,
@@ -506,6 +519,8 @@ export class SimulationEngine {
         const newActorQueue: CellContent[] = [];
         this._processActorTicks(initialActors, nextActorState, qtree, flowerQtree, events, newActorQueue);
 
+        this.totalBirdsHunted += this.birdsHuntedThisTick;
+
         // Add newly requested actors (e.g., seeds from behaviors) to the state
         for (const actor of newActorQueue) {
             nextActorState.set(actor.id, actor);
@@ -534,6 +549,7 @@ export class SimulationEngine {
     public getStateForSave() {
         const stateToSave = JSON.parse(JSON.stringify({ 
             params: this.params, grid: this.grid, tick: this.tick, totalInsectsEaten: this.totalInsectsEaten,
+            totalBirdsHunted: this.totalBirdsHunted, totalHerbicidePlanesSpawned: this.totalHerbicidePlanesSpawned,
         }));
         stateToSave.grid.flat(2).forEach((entity: CellContent) => {
             if (entity.type === 'flower') (entity as Flower).imageData = '';
@@ -542,8 +558,8 @@ export class SimulationEngine {
         return stateToSave;
     }
 
-    public async loadState(savedPayload: {params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten?: number}) {
-        const { params: loadedParams, grid: loadedGrid, tick: loadedTick, totalInsectsEaten: loadedTotalInsectsEaten } = savedPayload;
+    public async loadState(savedPayload: {params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten?: number, totalBirdsHunted?: number, totalHerbicidePlanesSpawned?: number}) {
+        const { params: loadedParams, grid: loadedGrid, tick: loadedTick, totalInsectsEaten: loadedTotalInsectsEaten, totalBirdsHunted: loadedTotalBirdsHunted, totalHerbicidePlanesSpawned: loadedTotalHerbicidePlanes } = savedPayload;
         if (!loadedGrid || !loadedParams) {
             console.error("Aborting load: Invalid state.", savedPayload);
             return;
@@ -552,6 +568,8 @@ export class SimulationEngine {
         this.params = { ...DEFAULT_SIM_PARAMS, ...loadedParams };
         this.tick = loadedTick; 
         this.totalInsectsEaten = loadedTotalInsectsEaten || 0;
+        this.totalBirdsHunted = loadedTotalBirdsHunted || 0;
+        this.totalHerbicidePlanesSpawned = loadedTotalHerbicidePlanes || 0;
         this.grid = loadedGrid;
         this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: this.params });
         
@@ -583,6 +601,8 @@ export class SimulationEngine {
         this.params = newParams;
         this.tick = 0;
         this.totalInsectsEaten = 0;
+        this.totalBirdsHunted = 0;
+        this.totalHerbicidePlanesSpawned = 0;
         this.insectCountHistory = [];
         this.birdCountHistory = [];
         this.birdSpawnCooldown = 0;

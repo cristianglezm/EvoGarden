@@ -197,7 +197,8 @@ export interface FEParams {
 
 // --- Challenges & Analytics ---
 
-export type ChallengeId = 'survival-1' | 'survival-2' | 'survival-3' | 'predation-1' | 'predation-2' | 'predation-3';
+export type ChallengeId = 'survival-1' | 'survival-2' | 'survival-3' | 'predation-1' | 'predation-2' | 'predation-3' |
+'circle-of-life' | 'pest-control' | 'bountiful-harvest' | 'poison-garden' | 'peak-performer' | 'the-swarm-1' | 'the-swarm-2' | 'avian-sanctuary-1' | 'avian-sanctuary-2' | 'unchecked-growth';
 
 export interface Challenge {
     id: ChallengeId;
@@ -229,6 +230,10 @@ export interface AnalyticsDataPoint {
     insectsDiedOfOldAge: number;
     eggsLaid: number;
     insectsBorn: number;
+    totalBirdsHunted: number;
+    totalHerbicidePlanesSpawned: number;
+    nutrientCount: number;
+    flowerDensity: number;
     avgHealth: number;
     maxHealth: number;
     maxToxicity: number;
@@ -262,6 +267,10 @@ export interface TickSummary {
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative
+    totalBirdsHunted: number; // Cumulative
+    totalHerbicidePlanesSpawned: number; // Cumulative
+    nutrientCount: number; // Current tick
+    flowerDensity: number; // Current tick
     maxFlowerAge: number;
     eggsLaid: number;
     insectsBorn: number;
