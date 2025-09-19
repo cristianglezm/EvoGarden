@@ -40,10 +40,10 @@ export class FlowerPanelController {
   }
 
   async waitForFlowerData() {
-    await expect(this.page.getByText(/Health/i)).toBeVisible();
-    await expect(this.page.getByText(/Stamina/i)).toBeVisible();
-    await expect(this.page.getByText(/Genetic Traits/i)).toBeVisible();
-    await expect(this.page.getByText(/Base Effects/i)).toBeVisible();
+    await expect(this.page.getByText('Health', { exact: true })).toBeVisible();
+    await expect(this.page.getByText('Stamina', { exact: true })).toBeVisible();
+    await expect(this.page.getByText('Genetic Traits', { exact: true })).toBeVisible();
+    await expect(this.page.getByText('Base Effects', { exact: true })).toBeVisible();
   }
 
   async getFlowerData() {
