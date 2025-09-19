@@ -11,7 +11,7 @@ export interface EagleContext {
     events: AppEvent[];
 }
 
-export const processEagleTick = (eagle: Eagle, context: EagleContext) => {
+export const processEagleTick = (eagle: Eagle, context: EagleContext): boolean => {
     const { params, qtree, nextActorState, events } = context;
     const { gridWidth, gridHeight } = params;
     const { x, y } = eagle;
@@ -49,6 +49,7 @@ export const processEagleTick = (eagle: Eagle, context: EagleContext) => {
                 nextActorState.delete(targetBird.id); // Eat the bird
                 nextActorState.delete(eagle.id);    // Eagle leaves after the hunt
                 events.push({ message: '🦅 An eagle hunted a bird!', type: 'info', importance: 'high' });
+                return true; // Hunt was successful
 
             } else if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight) {
                 eagle.x = newX; 
@@ -61,4 +62,5 @@ export const processEagleTick = (eagle: Eagle, context: EagleContext) => {
         // No target, eagle despawns
         nextActorState.delete(eagle.id);
     }
+    return false; // No hunt occurred
 };
