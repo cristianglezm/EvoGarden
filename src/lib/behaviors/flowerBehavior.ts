@@ -46,29 +46,39 @@ export const processFlowerTick = (
     if (flower.isMature) {
         let hasReproducedThisTick = false;
         
-        // 1. Proximity & Expansion
-        const neighbors = neighborVectors
-            .map(([dx, dy]) => ({ x: flower.x + dx, y: flower.y + dy }))
-            .filter(p => p.x >= 0 && p.x < gridWidth && p.y >= 0 && p.y < gridHeight)
-            .sort(() => 0.5 - Math.random()); // Shuffle to give all neighbors a fair chance
+        // 1. Asexual Expansion (one check per flower)
+        if (Math.random() < FLOWER_EXPANSION_CHANCE) {
+            const suitableNeighbors = neighborVectors
+                .map(([dx, dy]) => ({ x: flower.x + dx, y: flower.y + dy }))
+                .filter(p => {
+                    if (p.x < 0 || p.x >= gridWidth || p.y < 0 || p.y >= gridHeight) return false;
+                    const cell = grid[p.y][p.x];
+                    return cell.length === 0 || cell.every(c => c.type === 'egg' || c.type === 'nutrient' || c.type === 'flowerSeed');
+                })
+                .sort(() => 0.5 - Math.random());
 
-        for (const n of neighbors) {
-            if (hasReproducedThisTick) break;
-
-            const neighborCell = grid[n.y][n.x];
-            const neighborFlower = neighborCell.find(c => c.type === 'flower') as Flower | undefined;
-            const isSuitableForSpawn = neighborCell.length === 0 || neighborCell.every(c => c.type === 'egg' || c.type === 'nutrient' || c.type === 'flowerSeed');
-
-            if (isSuitableForSpawn && Math.random() < FLOWER_EXPANSION_CHANCE) {
-                const seed = requestNewFlower(n.x, n.y, flower.genome);
+            if (suitableNeighbors.length > 0) {
+                const spawnSpot = suitableNeighbors[0];
+                const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome);
                 if (seed) {
                     newActorQueue.push(seed);
                     hasReproducedThisTick = true;
                 }
-            } else if (neighborFlower?.isMature && Math.random() < PROXIMITY_POLLINATION_CHANCE) {
-                const spawnSpot = findCellForFlowerSpawn(grid, params, n);
+            }
+        }
+
+        // 2. Proximity Pollination (one check per flower)
+        if (!hasReproducedThisTick && Math.random() < PROXIMITY_POLLINATION_CHANCE) {
+            const matureNeighbors = neighborVectors
+                .map(([dx, dy]) => grid[flower.y + dy]?.[flower.x + dx]?.find(c => c.type === 'flower') as Flower | undefined)
+                .filter((f): f is Flower => !!f && f.isMature)
+                .sort(() => 0.5 - Math.random());
+
+            if (matureNeighbors.length > 0) {
+                const partner = matureNeighbors[0];
+                const spawnSpot = findCellForFlowerSpawn(grid, params, { x: partner.x, y: partner.y });
                 if (spawnSpot) {
-                    const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, neighborFlower.genome);
+                    const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, partner.genome);
                     if (seed) {
                         newActorQueue.push(seed);
                         hasReproducedThisTick = true;
@@ -77,7 +87,7 @@ export const processFlowerTick = (
             }
         }
 
-        // 2. Wind Pollination
+        // 3. Wind Pollination (one check per flower)
         if (!hasReproducedThisTick && Math.random() < WIND_POLLINATION_CHANCE) {
             const { dx, dy } = windVectors[windDirection];
             for (let i = 1; i <= windStrength; i++) {
@@ -92,11 +102,11 @@ export const processFlowerTick = (
                          const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome);
                          if(seed) {
                             newActorQueue.push(seed);
-                            // hasReproducedThisTick = true; // Not strictly needed as it's the last check
                          }
                     }
-                    break;
+                    break; // Stop after first potential pollination
                 }
+                // Stop if wind path is blocked
                 if (grid[targetY][targetX]?.length > 0) break;
             }
         }
