@@ -89,6 +89,7 @@ export interface Insect extends Actor {
     } | null; // Genome and source ID of last visited flower
     emoji: string;
     lifespan: number;
+    reproductionCooldown?: number;
 }
 
 export interface Bird extends Actor {
@@ -222,6 +223,7 @@ export interface AnalyticsDataPoint {
     insects: number;
     birds: number;
     eagles: number;
+    eggCount: number;
     herbicidePlanes: number;
     herbicideSmokes: number;
     reproductions: number;
@@ -262,6 +264,7 @@ export interface TickSummary {
     insectCount: number;
     birdCount: number;
     eagleCount: number;
+    eggCount: number;
     herbicidePlaneCount: number;
     herbicideSmokeCount: number;
     reproductions: number;

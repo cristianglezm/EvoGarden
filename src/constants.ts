@@ -34,8 +34,6 @@ export const NUTRIENT_FROM_PREY_LIFESPAN = 4;
 export const NUTRIENT_FROM_OLD_AGE_LIFESPAN = 5;
 
 export const BIRD_DROP_NUTRIENT_CHANCE = 0.05;
-export const INSECT_DAMAGE_TO_FLOWER = 2;
-export const INSECT_POLLINATION_CHANCE = 0.75;
 export const WIND_POLLINATION_CHANCE = 0.005;
 export const PROXIMITY_POLLINATION_CHANCE = 0.002;
 export const FLOWER_EXPANSION_CHANCE = 0.001;
@@ -43,6 +41,9 @@ export const FLOWER_EXPANSION_CHANCE = 0.001;
 // Insect lifecycle
 export const INSECT_LIFESPAN = 100; // ticks
 export const INSECT_REPRODUCTION_CHANCE = 0.65;
+export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
+export const INSECT_DAMAGE_TO_FLOWER = 2;
+export const INSECT_POLLINATION_CHANCE = 0.75;
 export const EGG_HATCH_TIME = 15; // ticks
 
 // Population Control

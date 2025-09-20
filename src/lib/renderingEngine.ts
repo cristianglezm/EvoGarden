@@ -83,10 +83,17 @@ export class RenderingEngine {
         if (emoji) {
             ctx.save();
             ctx.globalAlpha = 0.9;
-            ctx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX / 2, actor.y * CELL_SIZE_PX + CELL_SIZE_PX / 2);
+
+            if (emoji === '🥚') {
+                ctx.font = `${CELL_SIZE_PX * 0.4}px sans-serif`;
+                ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX * 0.3, actor.y * CELL_SIZE_PX + CELL_SIZE_PX * 0.3);
+            } else {
+                 ctx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
+                 ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX / 2, actor.y * CELL_SIZE_PX + CELL_SIZE_PX / 2);
+            }
+            
             ctx.restore();
         }
     }
