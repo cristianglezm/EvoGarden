@@ -1,5 +1,5 @@
 import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend, ActorDelta, FlowerSeed } from '../types';
-import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS, SEED_HEALTH } from '../constants';
+import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS, SEED_HEALTH, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
 import { findCellForStationaryActor, cloneActor, calculatePopulationTrend, buildQuadtrees } from './simulationUtils';
@@ -313,19 +313,24 @@ export class SimulationEngine {
         
         const reproducedInsects = new Set<string>();
         for (const insect of allInsects) {
-            if (reproducedInsects.has(insect.id)) continue;
+            if (reproducedInsects.has(insect.id) || insect.reproductionCooldown) continue;
 
             const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
-            const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id));
+            const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id) && !other.reproductionCooldown);
 
             if (partners.length > 0 && Math.random() < INSECT_REPRODUCTION_CHANCE) {
                 // Use the temporary, up-to-date grid for placement checks
                 const spot = findCellForStationaryActor(currentTickGrid, this.params, 'egg', { x: insect.x, y: insect.y });
+                const partner = partners[0];
                 if (spot) {
                     const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
                     nextActorState.set(eggId, { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji });
+                    
+                    insect.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
+                    partner.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
+
                     this.eggsLaidThisTick++;
-                    reproducedInsects.add(insect.id).add(partners[0].id);
+                    reproducedInsects.add(insect.id).add(partner.id);
                     events.push({ message: `${insect.emoji} laid an egg!`, type: 'info', importance: 'low' });
                 }
             }
@@ -356,7 +361,8 @@ export class SimulationEngine {
     }
     
     private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
-        let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0;
+        let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, eggCount = 0;
+        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
@@ -378,6 +384,8 @@ export class SimulationEngine {
                 birdCount++;
             } else if (actor.type === 'eagle') {
                 eagleCount++;
+            } else if (actor.type === 'egg') {
+                eggCount++;
             } else if (actor.type === 'herbicidePlane') {
                 herbicidePlaneCount++;
             } else if (actor.type === 'herbicideSmoke') {
@@ -397,7 +405,7 @@ export class SimulationEngine {
         return {
             tick: this.tick,
             flowerCount: flowerCountForStats + seedCount,
-            insectCount, birdCount, eagleCount, herbicidePlaneCount, herbicideSmokeCount,
+            insectCount, birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.totalBirdsHunted, totalHerbicidePlanesSpawned: this.totalHerbicidePlanesSpawned,

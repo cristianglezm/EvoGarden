@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAnalyticsStore } from '../stores/analyticsStore';
 import { Chart } from './Chart';
 import type { EChartsOption } from 'echarts';
@@ -31,15 +31,36 @@ const baseChartOptions: EChartsOption = {
     }
 };
 
+const createLegendSelectHandler = (
+    setter: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+) => (params: { selected: Record<string, boolean> }) => {
+    setter(params.selected);
+};
+
+
 export const ChartsPanel: React.FC = () => {
     const history = useAnalyticsStore(state => state.history);
+    
+    // State to hold legend visibility for each chart
+    const [performanceLegend, setPerformanceLegend] = useState<Record<string, boolean>>({ 'Tick Time (Worker)': true, 'Render Time (UI)': true });
+    const [populationLegend, setPopulationLegend] = useState<Record<string, boolean>>({ 'Flowers': true, 'Insects': true, 'Birds': true, 'Eagles': true, 'Herbicide Planes': true, 'Herbicide Smokes': true, 'Eggs': true });
+    const [eventsLegend, setEventsLegend] = useState<Record<string, boolean>>({ 'Reproductions': true, 'Insects Eaten': true, 'Eggs Laid': true, 'Insects Born': true, 'Eggs Eaten': true, 'Died of Old Age': true });
+    const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true });
+    const [effectsLegend, setEffectsLegend] = useState<Record<string, boolean>>({ 'Avg Vitality': true, 'Avg Agility': true, 'Avg Strength': true, 'Avg Intelligence': true, 'Avg Luck': true });
+
+    // Event handlers for legend changes
+    const handlePerformanceLegendChange = createLegendSelectHandler(setPerformanceLegend);
+    const handlePopulationLegendChange = createLegendSelectHandler(setPopulationLegend);
+    const handleEventsLegendChange = createLegendSelectHandler(setEventsLegend);
+    const handleTraitsLegendChange = createLegendSelectHandler(setTraitsLegend);
+    const handleEffectsLegendChange = createLegendSelectHandler(setEffectsLegend);
 
     const performanceOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
         return {
             ...baseChartOptions,
             title: { text: 'Performance (ms)', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Tick Time (Worker)', 'Render Time (UI)'], top: 35, textStyle: { color: '#bbf7d0' } },
+            legend: { data: ['Tick Time (Worker)', 'Render Time (UI)'], top: 35, textStyle: { color: '#bbf7d0' }, selected: performanceLegend },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             yAxis: { ...baseChartOptions.yAxis, name: 'Milliseconds' },
             series: [
@@ -47,32 +68,33 @@ export const ChartsPanel: React.FC = () => {
                 { name: 'Render Time (UI)', type: 'line', data: history.map(h => h.renderTimeMs.toFixed(2)), color: '#ed8936' },
             ],
         };
-    }, [history]);
+    }, [history, performanceLegend]);
 
     const populationOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
         return {
             ...baseChartOptions,
             title: { text: 'Population Dynamics', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Flowers', 'Insects', 'Birds', 'Eagles', 'Herbicide Planes', 'Herbicide Smokes'], top: 35, textStyle: { color: '#bbf7d0' } },
+            legend: { data: ['Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes'], top: 35, textStyle: { color: '#bbf7d0' }, selected: populationLegend },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
                 { name: 'Flowers', type: 'line', data: history.map(h => h.flowers), color: '#48bb78' },
                 { name: 'Insects', type: 'line', data: history.map(h => h.insects), color: '#4299e1' },
                 { name: 'Birds', type: 'line', data: history.map(h => h.birds), color: '#f56565' },
                 { name: 'Eagles', type: 'line', data: history.map(h => h.eagles), color: '#d69e2e' },
+                { name: 'Eggs', type: 'line', data: history.map(h => h.eggCount), color: '#a0aec0' },
                 { name: 'Herbicide Planes', type: 'line', data: history.map(h => h.herbicidePlanes || 0), color: '#cbd5e0' },
                 { name: 'Herbicide Smokes', type: 'line', data: history.map(h => h.herbicideSmokes || 0), color: '#718096' },
             ],
         };
-    }, [history]);
+    }, [history, populationLegend]);
 
     const eventsOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
         return {
             ...baseChartOptions,
             title: { text: 'Ecosystem Events', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Reproductions', 'Insects Eaten', 'Eggs Laid', 'Insects Born', 'Eggs Eaten', 'Died of Old Age'], top: 35, textStyle: { color: '#bbf7d0' } },
+            legend: { data: ['Reproductions', 'Insects Eaten', 'Eggs Laid', 'Insects Born', 'Eggs Eaten', 'Died of Old Age'], top: 35, textStyle: { color: '#bbf7d0' }, selected: eventsLegend },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
                 { name: 'Reproductions', type: 'line', data: history.map(h => h.reproductions), color: '#9f7aea' },
@@ -83,7 +105,7 @@ export const ChartsPanel: React.FC = () => {
                 { name: 'Died of Old Age', type: 'line', data: history.map(h => h.insectsDiedOfOldAge), color: '#f7fafc' },
             ],
         };
-    }, [history]);
+    }, [history, eventsLegend]);
 
     const flowerTraitsOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
@@ -93,7 +115,8 @@ export const ChartsPanel: React.FC = () => {
             legend: {
                 data: ['Avg Health', 'Max Health', 'Avg Stamina', 'Max Stamina', 'Avg Maturation', 'Avg Nutrient Efficiency', 'Max Toxicity'],
                 top: 35,
-                textStyle: { color: '#bbf7d0' }
+                textStyle: { color: '#bbf7d0' },
+                selected: traitsLegend,
             },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             yAxis: [
@@ -118,14 +141,14 @@ export const ChartsPanel: React.FC = () => {
                 { name: 'Max Toxicity', type: 'line', yAxisIndex: 1, data: history.map(h => h.maxToxicity.toFixed(2)), color: '#c05621' },
             ],
         };
-    }, [history]);
+    }, [history, traitsLegend]);
     
     const baseEffectsOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
         return {
             ...baseChartOptions,
             title: { text: 'Base Genetic Effects', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Avg Vitality', 'Avg Agility', 'Avg Strength', 'Avg Intelligence', 'Avg Luck'], top: 35, textStyle: { color: '#bbf7d0' } },
+            legend: { data: ['Avg Vitality', 'Avg Agility', 'Avg Strength', 'Avg Intelligence', 'Avg Luck'], top: 35, textStyle: { color: '#bbf7d0' }, selected: effectsLegend },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             yAxis: { ...baseChartOptions.yAxis, name: 'Effect Score' },
             series: [
@@ -136,25 +159,25 @@ export const ChartsPanel: React.FC = () => {
                 { name: 'Avg Luck', type: 'line', data: history.map(h => h.avgLuck.toFixed(2)), color: '#48bb78' },
             ],
         };
-    }, [history]);
+    }, [history, effectsLegend]);
 
 
     return (
         <div className="p-4 space-y-4">
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
-                <Chart option={populationOption} />
+                <Chart option={populationOption} onEvents={{ 'legendselectchanged': handlePopulationLegendChange }} />
             </div>
              <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
-                <Chart option={eventsOption} />
+                <Chart option={eventsOption} onEvents={{ 'legendselectchanged': handleEventsLegendChange }} />
             </div>
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
-                <Chart option={flowerTraitsOption} />
+                <Chart option={flowerTraitsOption} onEvents={{ 'legendselectchanged': handleTraitsLegendChange }} />
             </div>
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
-                <Chart option={baseEffectsOption} />
+                <Chart option={baseEffectsOption} onEvents={{ 'legendselectchanged': handleEffectsLegendChange }} />
             </div>
              <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
-                <Chart option={performanceOption} />
+                <Chart option={performanceOption} onEvents={{ 'legendselectchanged': handlePerformanceLegendChange }} />
             </div>
         </div>
     );

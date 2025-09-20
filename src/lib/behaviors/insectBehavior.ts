@@ -35,6 +35,11 @@ export const processInsectTick = (
         incrementInsectsDiedOfOldAge();
         return; // End tick processing for this insect
     }
+    
+    // Decrement reproduction cooldown if it's active
+    if (insect.reproductionCooldown && insect.reproductionCooldown > 0) {
+        insect.reproductionCooldown--;
+    }
 
     const { x, y } = insect;
     let target: { x: number, y: number } | null = null;
