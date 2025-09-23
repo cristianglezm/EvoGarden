@@ -6,7 +6,7 @@ export class DataPanelController {
 
   constructor(page: Page) {
     this.page = page;
-    this.panel = page.locator('aside:has-text("Challenges & Analytics")');
+    this.panel = page.locator('aside:has-text("Data & Records")');
   }
 
   async open() {
@@ -27,6 +27,10 @@ export class DataPanelController {
     return this.panel.getByRole('tab', { name: 'Analytics' });
   }
 
+  getSeedBankTab() {
+    return this.panel.getByRole('tab', { name: 'Seed Bank' });
+  }
+
   async goToChallengesTab() {
     await this.getChallengesTab().click();
     // Check for a known challenge title to confirm the tab is loaded.
@@ -38,5 +42,11 @@ export class DataPanelController {
     // Charts are rendered inside a canvas, so we can't get text.
     // Instead, we verify that the canvas element for the charts is visible.
     await expect(this.panel.locator('canvas').first()).toBeVisible();
+  }
+
+  async goToSeedBankTab() {
+    await this.getSeedBankTab().click();
+    // Check for some static text to confirm the tab is loaded.
+    await expect(this.page.getByText('The Seed Bank is empty.')).toBeVisible();
   }
 }

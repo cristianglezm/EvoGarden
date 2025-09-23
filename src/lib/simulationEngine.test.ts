@@ -3,6 +3,16 @@ import { SimulationEngine } from './simulationEngine';
 import { DEFAULT_SIM_PARAMS, SEED_HEALTH } from '../constants';
 import type { FEService, Flower, Grid, CellContent, ActorUpdateDelta, ActorAddDelta, FlowerSeed } from '../types';
 
+vi.mock('../services/db', () => ({
+  db: {
+    seedBank: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+      toArray: vi.fn().mockResolvedValue([]),
+    },
+  },
+}));
+
 const mockFlowerService: FEService = {
     initialize: vi.fn().mockResolvedValue(undefined),
     setParams: vi.fn(),

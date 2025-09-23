@@ -328,3 +328,15 @@ export interface TickSummary {
     season: Season;
     weatherEvent: WeatherEventType;
 }
+
+// --- Seed Bank ---
+
+export type SeedBankCategory = 'longestLived' | 'mostToxic' | 'mostHealing';
+
+export interface SeedBankEntry {
+    category: SeedBankCategory;
+    genome: string;
+    value: number;
+    imageData: string;
+    sex: 'male' | 'female' | 'both';
+}

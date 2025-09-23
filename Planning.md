@@ -48,6 +48,7 @@ Define the core data structures for the simulation state.
     -   `TickSummary`: A detailed object compiled by the `SimulationEngine` each tick, containing aggregated data like population counts, average genetic traits, key events (reproductions, predations, `eggsLaid`, `insectsBorn`), and `tickTimeMs` for performance analysis. It now also includes the current environmental state (`currentTemperature`, `season`, etc.).
     -   `Challenge`, `ChallengeState`: Interfaces for defining user challenges and managing their persistent state in a Zustand store. Examples include survival challenges (max flower age), predation (total insects eaten), population milestones (max insect count), and genetic achievements (max toxicity).
     -   `AnalyticsDataPoint`, `AnalyticsState`: Interfaces for storing a history of `TickSummary` data for visualization, also managed in a persistent Zustand store. This now includes environmental data to power the new Environment chart.
+    -   **`SeedBankEntry`**: Interface for storing champion flowers in IndexedDB, containing the `category` ('longestLived', 'mostToxic', 'mostHealing'), `genome`, achievement `value`, a rendered `imageData`, and `sex`.
 -   **Events & Notifications**:
     -   `AppEvent`: A structured object for all events within the simulation, containing a `message`, `type`, `importance`, and optionally the `tick` it occurred on and a `timestamp`.
     -   `LogEntry`: The object stored in the `eventLogStore`, extending `AppEvent` with a unique ID.
@@ -87,6 +88,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
 -   **`SimulationEngine` (`simulationEngine.ts`)**: This class is the **orchestrator** of the simulation. Its main game loop (`calculateNextTick`) manages the simulation's state and sequence of events. Instead of returning the entire grid state, it now calculates a minimal set of "delta" updates (e.g., actor added, removed, or properties changed) which are sent to the UI for efficient state synchronization. It does not contain actor-specific logic itself; instead, it delegates that to the Behavior System. Its responsibilities include:
     -   Maintaining the master actor state (`grid`, `tick` count).
     -   **Managing the Dynamic Environment**: At the start of each tick, it updates the `EnvironmentState` by calculating the current season based on a sinusoidal wave and determining if a random weather event (e.g., heatwave, cold snap) should occur.
+    -   **Champion Tracking**: Checks every flower that dies against current records for longest lifespan and highest toxicity/healing. If a new record is set, it saves the flower's genome and a rendered image to the persistent Seed Bank (IndexedDB).
     -   Creating and populating the Quadtrees each tick.
     -   Iterating through actors and calling the appropriate behavior module, passing the current `EnvironmentState`.
     -   Handling global events like insect reproduction and nutrient healing.
@@ -141,7 +143,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
 
 -   **Herbicide Control**: To prevent "flower deadlock," an `HerbicidePlane` is deployed if the flower density exceeds a configured threshold.
 
--   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it spawns a small number of new actors to give the simulation a chance to recover.
+-   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 
 ### 5.3. Performance Optimization with Quadtrees (`lib/Quadtree.ts`)
 To avoid performance degradation as the number of actors grows, the `SimulationEngine` creates and populates several purpose-built Quadtrees **on every tick**. This provides highly efficient spatial lookups for different AI needs.
@@ -166,8 +168,9 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
 -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower.
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
--   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel` and `ChartsPanel`.
+-   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
 -   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
+-   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
 -   **Header Components**:
     -   `EnvironmentDisplay`: A new real-time display in the header showing the current season, temperature, humidity, and any active weather events.
     -   `EventLog.tsx`: A non-intrusive, terminal-style log that displays a real-time feed of events.
@@ -211,10 +214,11 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
     -   `src/components/Modal.tsx`: A generic modal component.
-    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges and analytics, with a tabbed interface.
+    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
     -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress from the `challengeStore`.
     -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
     -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
+    -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank. Allows users to view a 3D model of the champions, download their genomes, and clear the database.
     -   `src/components/Toast.tsx`: Renders a single toast notification with a message and icon.
     -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.

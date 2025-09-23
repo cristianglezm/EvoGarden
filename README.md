@@ -14,6 +14,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Dynamic Weather & Seasons**: Experience a living environment with four distinct seasons (Spring, Summer, Autumn, Winter) that cyclically affect temperature and humidity. Be prepared for unpredictable weather events like heatwaves, cold snaps, heavy rain, and droughts that create new evolutionary pressures.
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
 -   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), and genetic evolution (*Poison Garden*).
+-   **Seed Bank**: Automatically saves the genomes of "champion" flowers—the longest-lived, most toxic, and most healing—to a persistent database. These champions are then used to repopulate the garden after a collapse, ensuring genetic resilience. Users can view these champions, download their genomes, or clear the bank to start fresh.
 -   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics, key ecosystem events, the average expression of genetic traits, application performance, and a new **Environment chart** that visualizes the history of temperature and humidity changes.
 -   **Advanced Notification System**:
     -   **Real-time Event Log & Environment Display**: A retro, terminal-style log in the header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
@@ -110,10 +111,11 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
     -   `src/components/Modal.tsx`: A generic modal component.
-    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges and analytics, with a tabbed interface.
+    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
     -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress from the `challengeStore`.
     -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
     -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
+    -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank. Allows users to view a 3D model of the champions, download their genomes, and clear the database.
     -   `src/components/Toast.tsx`: Renders a single toast notification with a message and icon.
     -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
