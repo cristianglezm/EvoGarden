@@ -89,7 +89,7 @@ describe('FlowerDetailsPanel', () => {
   it('copies genome to clipboard when copy button is clicked', async () => {
     render(<FlowerDetailsPanel flower={mockFlower} isRunning={false} setIsRunning={mockSetIsRunning} />);
     
-    const copyButton = screen.getByTitle('Copy genome');
+    const copyButton = screen.getByTitle('Copy genome to clipboard');
     fireEvent.click(copyButton);
 
     await waitFor(() => {

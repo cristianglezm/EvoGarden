@@ -52,12 +52,13 @@ The garden is no longer static. It features a fully dynamic climate system that 
 ### Actors & Behaviours
 -   **Flowers**: The foundation of the ecosystem. Their appearance and base stats are dictated by their genome's response to the environment.
     -   **Environmental Stress**: Flowers are now directly affected by the climate. If the `currentTemperature` is outside their genetically-determined optimal range, their stamina is consumed **twice as fast**, rewarding flowers that evolve to be resilient to the local climate.
+    -   **Toxicity & Healing**: Flowers have a genetically determined `toxicityRate`. If this rate is negative, the flower **heals** visiting insects, extending their lifespan. If it's above a certain positive threshold, it becomes **carnivorous**, damaging any insect that lands on it. This creates a powerful evolutionary trade-off between attracting pollinators and self-defense.
     -   **Lifecycle**: They consume stamina, then health. They heal by absorbing nutrients. If their health reaches zero, they wither.
     -   **Reproduction**: Mature flowers can reproduce in three ways: Proximity Pollination, Insect Pollination, and Wind Pollination.
 -   **Insects** (`🦋`, `🐛`, `🐌`, `🐞`, `🐝`):
     -   **Dormancy**: Insects are now sensitive to cold. If the `currentTemperature` drops below a certain threshold, they become dormant, ceasing all activity and halting their aging process until the weather warms up.
     -   **AI & Movement**: Insects use a Quadtree to find the nearest flower, with a degree of randomness in their pathfinding to create more realistic pollination patterns.
-    -   **Interaction**: They damage flowers slightly and carry their pollen to other flowers to trigger reproduction.
+    -   **Interaction**: They are now affected by a flower's toxicity. They will damage non-carnivorous flowers, be damaged *by* carnivorous flowers, or be healed by healing flowers. They carry pollen to other flowers to trigger reproduction.
     -   **Reproduction**: Two insects of the same species on the same cell may lay an egg.
     -   **Lifecycle**: Insects have a limited lifespan and decompose into a nutrient upon death.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.

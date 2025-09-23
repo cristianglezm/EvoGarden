@@ -4,6 +4,7 @@ import { CopyIcon, CheckIcon, LoaderIcon, DownloadIcon } from './icons';
 import { flowerService } from '../services/flowerService';
 import { Modal } from './Modal';
 import { Flower3DViewer } from './Flower3DViewer';
+import { TOXIC_FLOWER_THRESHOLD } from '../constants';
 
 interface FlowerDetailsPanelProps {
     flower: Flower | null;
@@ -100,7 +101,15 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Genetic Traits</h3>
                     <p><strong>Sex:</strong> <span className="capitalize">{flower.sex}</span></p>
                     <p><strong>Optimal Temp:</strong> {flower.minTemperature}°C to {flower.maxTemperature}°C</p>
-                    <p><strong>Toxicity:</strong> {(flower.toxicityRate * 100).toFixed(0)}%</p>
+                    <div className="flex items-center">
+                        <p className="mr-2"><strong>Toxicity:</strong> {(flower.toxicityRate * 100).toFixed(0)}%</p>
+                        {flower.toxicityRate < 0 && (
+                            <span className="text-xs text-accent-green bg-accent-green/20 px-2 py-0.5 rounded-full">Healing</span>
+                        )}
+                        {flower.toxicityRate > TOXIC_FLOWER_THRESHOLD && (
+                            <span className="text-xs text-accent-red bg-accent-red/20 px-2 py-0.5 rounded-full">Carnivorous</span>
+                        )}
+                    </div>
                     <p><strong>Nutrient Efficiency:</strong> {flower.nutrientEfficiency.toFixed(2)}x</p>
                 </div>
                 
@@ -115,43 +124,45 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                     </div>
                 </div>
                 
-                <div className="grow">
-                    <label htmlFor="genome" className="block mb-1 text-sm font-medium text-primary-light">Genome</label>
-                    <div className="relative">
-                        <textarea
-                            id="genome"
-                            readOnly
-                            value={flower.genome}
-                            className="w-full h-24 p-2 bg-background/50 border border-surface-hover rounded-md text-xs text-secondary font-mono resize-none"
-                        />
-                        <div className="absolute top-2 right-2 flex flex-col space-y-1">
-                            <button
-                                onClick={handleCopyGenome}
-                                className="p-1.5 bg-surface-hover hover:bg-surface-hover/80 rounded-md transition-colors cursor-pointer"
-                                title="Copy genome"
-                            >
-                                {copied ? <CheckIcon className="w-4 h-4 text-tertiary" /> : <CopyIcon className="w-4 h-4" />}
-                            </button>
-                             <button
-                                onClick={handleDownloadGenome}
-                                className="p-1.5 bg-surface-hover hover:bg-surface-hover/80 rounded-md transition-colors cursor-pointer"
-                                title="Download genome as JSON"
-                            >
-                                <DownloadIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
+                <div className="grow flex flex-col">
+                    <label htmlFor="genome" className="block mb-1 text-sm font-medium text-primary-light shrink-0">Genome</label>
+                    <textarea
+                        id="genome"
+                        readOnly
+                        value={flower.genome}
+                        className="w-full grow p-2 bg-background/50 border border-surface-hover rounded-md text-xs text-secondary font-mono resize-none"
+                    />
                 </div>
 
-                <div className="pt-2 space-y-2">
-                    <label className="flex items-center space-x-2 cursor-pointer p-2 bg-surface-hover/50 rounded-md hover:bg-surface-hover">
+                {/* --- ACTION BAR --- */}
+                <div className="border-t border-border/50 pt-3 mt-auto space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                        <button 
+                            onClick={handleCopyGenome} 
+                            className="flex items-center justify-center gap-2 text-sm p-2 bg-surface-hover rounded-md hover:bg-border/20 transition-colors"
+                            title="Copy genome to clipboard"
+                        >
+                            {copied ? <CheckIcon data-testid="CheckIcon" className="w-4 h-4 text-tertiary" /> : <CopyIcon className="w-4 h-4" />}
+                            Copy Genome
+                        </button>
+                        <button 
+                            onClick={handleDownloadGenome} 
+                            className="flex items-center justify-center gap-2 text-sm p-2 bg-surface-hover rounded-md hover:bg-border/20 transition-colors"
+                            title="Download genome as a JSON file"
+                        >
+                            <DownloadIcon className="w-4 h-4" />
+                            Download
+                        </button>
+                    </div>
+
+                    <label className="flex items-center space-x-2 cursor-pointer p-2 bg-surface-hover/50 rounded-md hover:bg-surface-hover text-sm text-secondary">
                         <input
                             type="checkbox"
                             checked={useEmissive}
                             onChange={(e) => setUseEmissive(e.target.checked)}
                             className="h-4 w-4 rounded bg-surface border-border text-accent-green focus:ring-accent-green"
                         />
-                        <span className="text-sm text-secondary">Use Emissive Material</span>
+                        <span>Use Emissive Material</span>
                     </label>
 
                     <button
