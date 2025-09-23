@@ -1,5 +1,5 @@
 import type { Insect, SimulationParams, Grid, Flower, CellContent, Nutrient, AppEvent, FlowerSeed } from '../../types';
-import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP } from '../../constants';
+import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, INSECT_HEAL_FROM_HEALING_FLOWER } from '../../constants';
 import { findCellForFlowerSpawn } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
 
@@ -104,16 +104,28 @@ export const processInsectTick = (
     // 5. Pollination logic (runs after movement is decided)
     const flower = grid[newY][newX].find(c => c.type === 'flower') as Flower | undefined;
     if (flower && nextActorState.has(flower.id)) {
-         const nextFlower = nextActorState.get(flower.id) as Flower;
-         nextFlower.health = Math.max(0, nextFlower.health - INSECT_DAMAGE_TO_FLOWER);
-         
-         if (insect.pollen && insect.pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
-             const spawnSpot = findCellForFlowerSpawn(grid, params, {x: newX, y: newY});
-             if (spawnSpot) {
-                 const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, insect.pollen.genome);
-                 if(seed) newActorQueue.push(seed);
-             }
-         }
-         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id };
+        const nextFlower = nextActorState.get(flower.id) as Flower;
+        
+        if (nextFlower.toxicityRate < 0) {
+            // Healing flower: heals the insect. Lifespan is a countdown, so adding to it extends life.
+            insect.lifespan += INSECT_HEAL_FROM_HEALING_FLOWER;
+        } else if (nextFlower.toxicityRate > TOXIC_FLOWER_THRESHOLD) {
+            // Toxic/Carnivorous flower: damages the insect.
+            insect.lifespan -= INSECT_DAMAGE_FROM_TOXIC_FLOWER;
+            // The flower also takes a small amount of damage in the struggle
+            nextFlower.health = Math.max(0, nextFlower.health - (INSECT_DAMAGE_TO_FLOWER / 2));
+        } else {
+            // Normal/mildly toxic flower: gets damaged by insect.
+            nextFlower.health = Math.max(0, nextFlower.health - INSECT_DAMAGE_TO_FLOWER);
+        }
+        
+        if (insect.pollen && insect.pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
+            const spawnSpot = findCellForFlowerSpawn(grid, params, {x: newX, y: newY});
+            if (spawnSpot) {
+                const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, insect.pollen.genome);
+                if(seed) newActorQueue.push(seed);
+            }
+        }
+        insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id };
     }
 };

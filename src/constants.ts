@@ -52,10 +52,17 @@ export const WIND_POLLINATION_CHANCE = 0.005;
 export const PROXIMITY_POLLINATION_CHANCE = 0.002;
 export const FLOWER_EXPANSION_CHANCE = 0.001;
 
+// Toxicity rate above which a flower harms insects
+export const TOXIC_FLOWER_THRESHOLD = 0.1;
+// Lifespan ticks removed from an insect by a toxic flower
+export const INSECT_DAMAGE_FROM_TOXIC_FLOWER = 5;
+// Lifespan ticks added to an insect by a healing flower
+export const INSECT_HEAL_FROM_HEALING_FLOWER = 5;
+
 // Insect lifecycle
 export const INSECT_LIFESPAN = 100; // ticks
 export const INSECT_REPRODUCTION_CHANCE = 0.65;
-export const INSECT_REPRODUCTION_COOLDOWN = 10; // ticks
+export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
 export const EGG_HATCH_TIME = 15; // ticks
 export const INSECT_DORMANCY_TEMP = 5; // 5°C
 

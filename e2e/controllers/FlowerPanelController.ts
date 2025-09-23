@@ -61,12 +61,12 @@ export class FlowerPanelController {
   getGenomeTextarea() { return this.page.getByRole('textbox', { name: 'Genome' }); }
 
   async copyGenome() {
-    await this.page.getByTitle('Copy genome').click();
+    await this.page.getByTitle('Copy genome to clipboard').click();
     await expect(this.detailsPanel.getByTestId('CheckIcon')).toBeVisible();
   }
 
   getDownloadGenomeButton() {
-    return this.page.getByTitle('Download genome as JSON');
+    return this.page.getByTitle('Download genome as a JSON file');
   }
 
   async view3DFlower() {

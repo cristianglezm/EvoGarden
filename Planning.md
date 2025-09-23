@@ -29,7 +29,7 @@ Define the core data structures for the simulation state.
 
 -   **`SimulationParams`**: A comprehensive interface for all simulation settings. This includes grid dimensions, initial actor counts, and **core simulation constants** (`tickCostMultiplier`, `eggHatchTime`, etc.) to allow for easy tweaking and saving. It also includes the `notificationMode` to control the event system. This has been expanded to include a full suite of **dynamic weather parameters**: `seasonLengthInTicks`, `temperatureAmplitude`, `humidityAmplitude`, and settings for random weather events like `weatherEventChance` and temperature/humidity modifiers.
 -   **Actor Types**: Define interfaces for each entity:
-    -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, etc.), and its position.
+    -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
     -   `Insect`: Includes `emoji`, position, `lifespan`, and `pollen` (tracking the genome and source ID of the last flower visited).
     -   `Bird`: Includes position and a `target` coordinate.
@@ -107,6 +107,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
 
     -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
         -   **Dormancy**: The `processInsectTick` function now checks the `currentTemperature` from the context. If it is below a certain threshold (`INSECT_DORMANCY_TEMP`), the function returns immediately, causing the insect to skip its turn and effectively become dormant.
+        -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's lifespan is extended. If the rate is above a positive threshold (toxic/carnivorous), the insect's lifespan is reduced. Otherwise, the insect damages the flower as normal.
         -   **Lifecycle**: Insects have a limited `lifespan`. Each tick, it decrements. If it reaches zero, the insect dies and is replaced by a nutrient.
         -   **AI**: Uses the `flowerQtree` to find the nearest flower and moves towards it, with a degree of randomness to prevent unnatural swarming.
         -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event.

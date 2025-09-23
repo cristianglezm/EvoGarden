@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processInsectTick } from './insectBehavior';
 import type { Insect, Flower, Grid, CellContent, AppEvent, FlowerSeed } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN, SEED_HEALTH, INSECT_DORMANCY_TEMP } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN, SEED_HEALTH, INSECT_DORMANCY_TEMP, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, INSECT_HEAL_FROM_HEALING_FLOWER } from '../../constants';
 
 const INSECT_WANDER_CHANCE = 0.2; // 20% chance to wander even if a target is found
 
@@ -101,6 +101,32 @@ describe('insectBehavior', () => {
         expect(flowerState.health).toBe(flower.maxHealth - INSECT_DAMAGE_TO_FLOWER);
         expect(insect.pollen).toEqual({ genome: flower.genome, sourceFlowerId: flower.id });
         vi.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should be healed by a healing flower', () => {
+        const healingFlower: Flower = { ...mockFlower, id: 'h-flower', x: 6, y: 6, toxicityRate: -0.5 };
+        grid[6][6].push(healingFlower);
+        nextActorState.set(healingFlower.id, healingFlower);
+        flowerQtree.insert({ x: healingFlower.x, y: healingFlower.y, data: healingFlower });
+
+        const initialLifespan = insect.lifespan;
+        processInsectTick(insect, setupContext(), newActorQueue);
+        
+        expect(insect.lifespan).toBe(initialLifespan -1 /* age */ + INSECT_HEAL_FROM_HEALING_FLOWER);
+    });
+    
+    it('should take damage from a toxic flower', () => {
+        const toxicFlower: Flower = { ...mockFlower, id: 't-flower', x: 6, y: 6, toxicityRate: TOXIC_FLOWER_THRESHOLD + 0.1 };
+        grid[6][6].push(toxicFlower);
+        nextActorState.set(toxicFlower.id, toxicFlower);
+        flowerQtree.insert({ x: toxicFlower.x, y: toxicFlower.y, data: toxicFlower });
+
+        const initialLifespan = insect.lifespan;
+        processInsectTick(insect, setupContext(), newActorQueue);
+
+        expect(insect.lifespan).toBe(initialLifespan - 1 - INSECT_DAMAGE_FROM_TOXIC_FLOWER);
+        const flowerState = nextActorState.get(toxicFlower.id) as Flower;
+        expect(flowerState.health).toBe(toxicFlower.maxHealth - (INSECT_DAMAGE_TO_FLOWER / 2));
     });
 
     it('should pollinate a different mature flower and queue a FlowerSeed', () => {
