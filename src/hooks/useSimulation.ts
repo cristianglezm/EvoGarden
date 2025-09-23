@@ -12,6 +12,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const [isRunning, _setIsRunning] = useState(false);
     const [isWorkerInitialized, setIsWorkerInitialized] = useState(false);
     const [workerError, setWorkerError] = useState<Error | null>(null);
+    const [latestSummary, setLatestSummary] = useState<TickSummary | null>(null);
     const workerRef = useRef<Worker | null>(null);
     const flowerWorkerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
@@ -53,6 +54,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                         if (actor) newActors.set(actor.id, actor);
                     });
                     setActors(newActors);
+                    setLatestSummary(null);
                     setIsLoading(false);
                     break;
                 }
@@ -60,6 +62,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                     const { deltas, events, summary } = payload;
                     
                     latestSummaryRef.current = summary;
+                    setLatestSummary(summary);
 
                     setActors(currentActors => {
                         const newActors = new Map(currentActors);
@@ -104,6 +107,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const resetWithNewParams = useCallback((params: SimulationParams) => {
         workerRef.current?.postMessage({ type: 'update-params', payload: params });
         latestSummaryRef.current = null;
+        setLatestSummary(null);
     }, []);
 
 
@@ -119,5 +123,5 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         }
     };
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError };
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary };
 };

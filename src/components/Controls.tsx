@@ -44,7 +44,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isFloat = name === 'humidity' || name === 'herbicideFlowerDensityThreshold';
+        const isFloat = name === 'humidity' || name === 'herbicideFlowerDensityThreshold' || name === 'humidityAmplitude' || name === 'weatherEventChance' || name === 'heavyRainHumidityIncrease' || name === 'droughtHumidityDecrease';
         const isString = name === 'windDirection' || name === 'notificationMode';
         
         setLocalParams(prev => {
@@ -137,13 +137,25 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         <span className="text-secondary text-sm">Grid Height: {localParams.gridHeight}</span>
                         <input type="range" name="gridHeight" min="10" max="35" value={localParams.gridHeight} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
-                    <label className="block">
-                        <span className="text-secondary text-sm">Temperature: {localParams.temperature}°C</span>
-                        <input type="range" name="temperature" min="-10" max="50" value={localParams.temperature} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                     <label className="block">
+                        <span className="text-secondary text-sm">Season Length: {localParams.seasonLengthInTicks} ticks</span>
+                        <input type="range" name="seasonLengthInTicks" min="100" max="5000" step="100" value={localParams.seasonLengthInTicks} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
                     <label className="block">
-                        <span className="text-secondary text-sm">Humidity: {Math.round(localParams.humidity * 100)}%</span>
+                        <span className="text-secondary text-sm">Base Temperature: {localParams.temperature}°C</span>
+                        <input type="range" name="temperature" min="-10" max="50" value={localParams.temperature} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                     <label className="block">
+                        <span className="text-secondary text-sm">Temp. Variation: ±{localParams.temperatureAmplitude}°C</span>
+                        <input type="range" name="temperatureAmplitude" min="0" max="25" value={localParams.temperatureAmplitude} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Base Humidity: {Math.round(localParams.humidity * 100)}%</span>
                         <input type="range" name="humidity" min="0" max="1" step="0.01" value={localParams.humidity} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Humidity Variation: ±{Math.round(localParams.humidityAmplitude * 100)}%</span>
+                        <input type="range" name="humidityAmplitude" min="0" max="0.5" step="0.01" value={localParams.humidityAmplitude} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
                     <label className="block">
                         <span className="text-secondary text-sm">Wind Direction</span>

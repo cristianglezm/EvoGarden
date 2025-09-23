@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processInsectTick } from './insectBehavior';
 import type { Insect, Flower, Grid, CellContent, AppEvent, FlowerSeed } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN, SEED_HEALTH } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, INSECT_LIFESPAN, SEED_HEALTH, INSECT_DORMANCY_TEMP } from '../../constants';
 
 const INSECT_WANDER_CHANCE = 0.2; // 20% chance to wander even if a target is found
 
@@ -48,6 +48,7 @@ describe('insectBehavior', () => {
         flowerQtree,
         events,
         incrementInsectsDiedOfOldAge,
+        currentTemperature: DEFAULT_SIM_PARAMS.temperature,
     });
 
     it('should move towards the nearest flower in vision', () => {
@@ -172,5 +173,22 @@ describe('insectBehavior', () => {
         expect(events[0].message).toBe('💀 An insect died of old age.');
         
         expect(incrementInsectsDiedOfOldAge).toHaveBeenCalledTimes(1);
+    });
+
+    it('should be dormant and not move if temperature is below dormancy threshold', () => {
+        const context = setupContext();
+        context.currentTemperature = INSECT_DORMANCY_TEMP - 1; // Below threshold
+
+        const initialX = insect.x;
+        const initialY = insect.y;
+        const initialLifespan = insect.lifespan;
+
+        processInsectTick(insect, context, newActorQueue);
+        
+        expect(insect.x).toBe(initialX);
+        expect(insect.y).toBe(initialY);
+        expect(insect.lifespan).toBe(initialLifespan); // Lifespan should not decrease
+        expect(newActorQueue.length).toBe(0);
+        expect(events.length).toBe(0);
     });
 });

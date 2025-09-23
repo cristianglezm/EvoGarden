@@ -13,6 +13,7 @@ export interface FlowerContext {
     params: SimulationParams;
     grid: Grid; // The original grid from the start of the tick
     requestNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null;
+    currentTemperature: number;
 }
 
 export const processFlowerTick = (
@@ -20,7 +21,7 @@ export const processFlowerTick = (
     context: FlowerContext,
     newActorQueue: CellContent[]
 ) => {
-    const { params, grid, requestNewFlower } = context;
+    const { params, grid, requestNewFlower, currentTemperature } = context;
     const { gridWidth, gridHeight, windDirection, windStrength } = params;
 
     flower.age++;
@@ -28,8 +29,13 @@ export const processFlowerTick = (
         flower.isMature = true;
     }
 
-    const staminaCost = FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER;
+    let staminaCost = FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER;
     const healthCost = FLOWER_HEALTH_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER;
+    
+    // Apply environmental stress
+    if (currentTemperature < flower.minTemperature || currentTemperature > flower.maxTemperature) {
+        staminaCost *= 2; // Double stamina cost if outside optimal temperature range
+    }
 
     if (flower.stamina > 0) {
         flower.stamina -= staminaCost;

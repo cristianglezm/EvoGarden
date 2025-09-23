@@ -27,7 +27,7 @@ To build a web-based predator-prey simulation in a garden environment. The core 
 
 Define the core data structures for the simulation state.
 
--   **`SimulationParams`**: A comprehensive interface for all simulation settings. This includes grid dimensions, initial actor counts, environmental factors (`humidity`, `temperature`, `wind`), and **core simulation constants** (`tickCostMultiplier`, `eggHatchTime`, etc.) to allow for easy tweaking and saving. It also includes the `notificationMode` to control the event system.
+-   **`SimulationParams`**: A comprehensive interface for all simulation settings. This includes grid dimensions, initial actor counts, and **core simulation constants** (`tickCostMultiplier`, `eggHatchTime`, etc.) to allow for easy tweaking and saving. It also includes the `notificationMode` to control the event system. This has been expanded to include a full suite of **dynamic weather parameters**: `seasonLengthInTicks`, `temperatureAmplitude`, `humidityAmplitude`, and settings for random weather events like `weatherEventChance` and temperature/humidity modifiers.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
@@ -41,10 +41,13 @@ Define the core data structures for the simulation state.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
 -   **Service Interfaces**:
     -   `FEService`: Defines the contract for the WASM service wrapper, ensuring all methods are typed correctly, especially `getFlowerStats` which returns `Promise<FlowerGenomeStats>`.
+-   **Environment Types**:
+    -   `Season`, `WeatherEventType`, `WeatherEvent`: Enums and interfaces to model the four seasons and random weather events (heatwave, cold snap, etc.).
+    -   `EnvironmentState`: An object to hold the current environmental conditions of the simulation (`currentTemperature`, `currentHumidity`, `season`, `currentWeatherEvent`).
 -   **State & Analytics**:
-    -   `TickSummary`: A detailed object compiled by the `SimulationEngine` each tick, containing aggregated data like population counts, average genetic traits, key events (reproductions, predations, `eggsLaid`, `insectsBorn`), and `tickTimeMs` for performance analysis.
+    -   `TickSummary`: A detailed object compiled by the `SimulationEngine` each tick, containing aggregated data like population counts, average genetic traits, key events (reproductions, predations, `eggsLaid`, `insectsBorn`), and `tickTimeMs` for performance analysis. It now also includes the current environmental state (`currentTemperature`, `season`, etc.).
     -   `Challenge`, `ChallengeState`: Interfaces for defining user challenges and managing their persistent state in a Zustand store. Examples include survival challenges (max flower age), predation (total insects eaten), population milestones (max insect count), and genetic achievements (max toxicity).
-    -   `AnalyticsDataPoint`, `AnalyticsState`: Interfaces for storing a history of `TickSummary` data for visualization, also managed in a persistent Zustand store. Includes performance metrics like `tickTimeMs` and `renderTimeMs`.
+    -   `AnalyticsDataPoint`, `AnalyticsState`: Interfaces for storing a history of `TickSummary` data for visualization, also managed in a persistent Zustand store. This now includes environmental data to power the new Environment chart.
 -   **Events & Notifications**:
     -   `AppEvent`: A structured object for all events within the simulation, containing a `message`, `type`, `importance`, and optionally the `tick` it occurred on and a `timestamp`.
     -   `LogEntry`: The object stored in the `eventLogStore`, extending `AppEvent` with a unique ID.
@@ -83,8 +86,9 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
 ### 5.2. The Simulation Engine & Behavior System (`src/lib/`)
 -   **`SimulationEngine` (`simulationEngine.ts`)**: This class is the **orchestrator** of the simulation. Its main game loop (`calculateNextTick`) manages the simulation's state and sequence of events. Instead of returning the entire grid state, it now calculates a minimal set of "delta" updates (e.g., actor added, removed, or properties changed) which are sent to the UI for efficient state synchronization. It does not contain actor-specific logic itself; instead, it delegates that to the Behavior System. Its responsibilities include:
     -   Maintaining the master actor state (`grid`, `tick` count).
+    -   **Managing the Dynamic Environment**: At the start of each tick, it updates the `EnvironmentState` by calculating the current season based on a sinusoidal wave and determining if a random weather event (e.g., heatwave, cold snap) should occur.
     -   Creating and populating the Quadtrees each tick.
-    -   Iterating through actors and calling the appropriate behavior module.
+    -   Iterating through actors and calling the appropriate behavior module, passing the current `EnvironmentState`.
     -   Handling global events like insect reproduction and nutrient healing.
     -   **Requesting new flowers** via the asynchronous worker pipeline.
     -   **Processing the `completedFlowersQueue`** at the start of each tick to replace seeds with full flowers.
@@ -95,112 +99,98 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
 -   **Behavior System (`lib/behaviors/`)**: This is a modular pattern for separating actor logic. The engine calls a dedicated function for each actor type, passing the actor's state and a `context` object with necessary global information. Crucially, behaviors no longer create UI notifications directly; they now push structured `AppEvent` objects into the context's `events` array.
 
     -   **`flowerBehavior`**: Manages the complete flower lifecycle.
+        -   **Environmental Stress**: The `processFlowerTick` function now uses the `currentTemperature` from the context. If the temperature is outside the flower's genetically determined `minTemperature`/`maxTemperature` range, its stamina cost for that tick is doubled.
         -   **State**: Handles aging, maturation, and energy consumption (stamina, then health).
-        -   **Reproduction**: Implements all three reproduction methods:
-            1.  **Asexual Expansion**: A chance to spawn a clone in an adjacent empty cell.
-            2.  **Proximity Pollination**: Sexual reproduction with an adjacent, mature flower.
-            3.  **Wind Pollination**: A chance to pollinate a distant flower along the wind's path.
+        -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
     -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
-        -   **Lifecycle**: Insects have a limited `lifespan`. Each tick, it decrements. If it reaches zero, the insect dies and is replaced by a nutrient, completing the cycle and dispatching a "died of old age" event.
-        -   **AI**: Uses the `flowerQtree` to find the nearest flower within its vision range and moves towards it. To prevent unnatural swarming behavior (or "zerging"), a degree of randomness is introduced. Even when a target is identified, there is a chance the insect will make a random move instead. If no flower is found, it wanders randomly.
-        -   **Interaction**: When it lands on a flower's cell, it inflicts a small amount of damage and picks up the flower's pollen (genome).
-        -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event by calling `createNewFlower`.
+        -   **Dormancy**: The `processInsectTick` function now checks the `currentTemperature` from the context. If it is below a certain threshold (`INSECT_DORMANCY_TEMP`), the function returns immediately, causing the insect to skip its turn and effectively become dormant.
+        -   **Lifecycle**: Insects have a limited `lifespan`. Each tick, it decrements. If it reaches zero, the insect dies and is replaced by a nutrient.
+        -   **AI**: Uses the `flowerQtree` to find the nearest flower and moves towards it, with a degree of randomness to prevent unnatural swarming.
+        -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event.
 
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
-        -   **AI**: Uses the main `qtree` to find prey. It has a target priority: it will always prefer to hunt unprotected insects, but if none are available, it will target stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination to search for prey near food sources. Its vision check remains active during patrols, allowing it to divert and hunt if a target of opportunity appears.
-        -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it (removes the insect/egg from the simulation) and dispatches a corresponding "eaten" event.
-        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping (`💩`) on that cell. Eating an egg does not produce a nutrient.
+        -   **AI**: Uses the main `qtree` to find prey (unprotected insects or eggs). When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
+        -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it.
+        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping.
     
     -   **`eagleBehavior`**: The apex predator, spawned as a regulatory mechanism.
         -   **AI**: Uses the main `qtree` to find the nearest bird.
-        -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it and is immediately removed from the simulation, dispatching a high-importance "hunted a bird" event.
-        -   **Lifecycle**: Eagles are transient actors. If they cannot find a target, they despawn. Their purpose is to perform a single hunt to cull the bird population.
+        -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it and is immediately removed from the simulation.
+        -   **Lifecycle**: Eagles are transient actors. If they cannot find a target, they despawn.
 
     -   **`herbicidePlaneBehavior`**: The plane follows a simple, deterministic path.
-        -   **Movement**: Spawns at a random edge of the grid and moves in a straight line towards the opposite edge, one cell per tick.
+        -   **Movement**: Spawns at a random edge and moves in a straight line towards the opposite edge.
         -   **Action**: At each cell on its path, it drops a single `HerbicideSmoke` actor.
-        -   **Lifecycle**: Once it moves past its destination coordinate, it is removed from the simulation.
+        -   **Lifecycle**: Removed from the simulation once it moves past its destination.
 
     -   **`herbicideSmokeBehavior`**: A temporary, damaging area-of-effect entity.
-        -   **Damage**: Each tick, it applies a fixed amount of damage to any flowers in its current cell.
-        -   **Expansion**: On its first tick of existence, it expands by creating new smoke actors in all 8 adjacent cells (if they don't already contain smoke). This happens only if `canBeExpanded` is higher than zero.
-        -   **Lifecycle**: It has a short `lifespan`. Each tick, the timer decrements. It is removed when the timer expires.
+        -   **Damage**: Each tick, it applies damage to any flowers in its current cell.
+        -   **Expansion**: On its first tick, it expands by creating new smoke actors in adjacent cells.
+        -   **Lifecycle**: It has a short `lifespan` and is removed when the timer expires.
 
     -   **`eggBehavior` & `nutrientBehavior`**: Simple state-machine behaviors.
-        -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed. A new insect is spawned in its place (dispatching a "hatched" event), unless a predator (like a bird) is occupying the same cell, in which case the egg is considered "eaten" and no insect spawns.
-        -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires. Its healing effect is handled globally by the `SimulationEngine` before its own tick is processed.
+        -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed and a new insect is spawned.
+        -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires.
 
 -   **Dynamic Population Control**: To create a more resilient and self-regulating ecosystem, the `SimulationEngine` actively monitors population trends.
-    -   **Trend Analysis**: It maintains a history of insect population counts over a recent window of ticks (`POPULATION_TREND_WINDOW`).
-    -   **Predator Spawning**: If the insect population's growth rate exceeds a `POPULATION_GROWTH_THRESHOLD_INSECT`, a new **bird** is spawned at a random available location to act as a natural check.
-    -   **Apex Predator Intervention**: Conversely, if the insect population is declining too rapidly (exceeding `POPULATION_DECLINE_THRESHOLD_INSECT`), it suggests the bird population may be too high. To correct this, an **eagle** is spawned. The eagle hunts a single bird and then leaves the simulation, culling the predator population to allow insects to recover.
-    -   **Cooldowns**: To prevent chaotic fluctuations, both bird and eagle spawning events are subject to cooldowns (`BIRD_SPAWN_COOLDOWN`, `EAGLE_SPAWN_COOLDOWN`), ensuring these population controls act as gradual adjustments rather than sudden shocks.
+    -   **Trend Analysis**: It maintains a history of insect population counts over a recent window of ticks.
+    -   **Predator Spawning**: If the insect population's growth rate exceeds a threshold, a new **bird** is spawned.
+    -   **Apex Predator Intervention**: If the insect population is declining too rapidly, an **eagle** is spawned to hunt a single bird.
+    -   **Cooldowns**: Spawning events are subject to cooldowns to prevent chaotic fluctuations.
 
--   **Herbicide Control**: To prevent the entire grid from being filled with flowers (a "flower deadlock" scenario that stops birds from hunting), the engine deploys an automated control mechanism.
-    -   **Trigger**: The engine monitors the total number of flowers. If the count exceeds a configurable percentage of the total grid cells (`herbicideFlowerDensityThreshold`), it triggers the event.
-    -   **Action**: An `HerbicidePlane` actor is spawned at a random point on the grid's perimeter.
-    -   **Cooldown**: To prevent constant spawning, this event is subject to a `herbicideCooldown`.
+-   **Herbicide Control**: To prevent "flower deadlock," an `HerbicidePlane` is deployed if the flower density exceeds a configured threshold.
+
+-   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it spawns a small number of new actors to give the simulation a chance to recover.
 
 ### 5.3. Performance Optimization with Quadtrees (`lib/Quadtree.ts`)
 To avoid performance degradation as the number of actors grows, the `SimulationEngine` creates and populates several purpose-built Quadtrees **on every tick**. This provides highly efficient spatial lookups for different AI needs.
 
--   **General `qtree`**: Contains all actors. Used for broad queries, such as:
-    -   Bird vision (finding any nearby, unprotected insects and eggs).
-    -   Eagle vision (finding the nearest bird).
-    -   Nutrient area-of-effect healing.
-
--   **`flowerQtree`**: Contains only flowers. This is a critical optimization used exclusively by:
-    -   `insectBehavior` to allow insects to find the nearest flower target without having to scan through birds, eggs, or other insects.
-    -   `birdBehavior` to allow birds to find patrol targets when idle.
-
--   **`insectQtree`**: Contains only insects. This tree is built and used within the `SimulationEngine`'s main loop to handle:
-    -   **Insect Reproduction**: Allows an insect to efficiently find if another insect of the same species is on the same cell to initiate a reproduction event. This avoids a costly `O(n^2)` check between all insects.
+-   **General `qtree`**: Contains all actors.
+-   **`flowerQtree`**: Contains only flowers, used by insects and idle birds.
+-   **`insectQtree`**: Contains only insects, used for efficient reproduction checks.
 
 ### 5.4. UI/Worker Communication (`src/hooks/useSimulation.ts`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
     -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset) to the simulation worker, and listens for incoming messages.
-    -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas. It maintains a local Map of actors and applies these changes (add, update, remove) to reconstruct the new grid state. This avoids the expensive process of deserializing the entire grid on every tick. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
+    -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas to reconstruct the new grid state. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
 
 ### 5.5. Centralized Event & Notification System
-To decouple the simulation from the UI and improve performance, a centralized event service manages all notifications.
--   **`eventService.ts`**: A singleton service on the main thread that acts as a central hub. Its `dispatch(event)` method is the single entry point for all notifications.
--   **Decoupling**: The simulation engine and its behaviors no longer know about toasts or any specific UI implementation. They simply generate and return an array of `AppEvent` objects each tick.
--   **Routing Logic**: The `EventService` contains all the logic for how to handle an event. Based on the user's `notificationMode` setting and the event's `importance`, it decides whether to send the event to the `eventLogStore`, the `toastStore`, or both. This centralizes all notification rules in one place.
--   **Performance**: For high-frequency, low-importance events, this system routes them to the highly performant Event Log instead of creating dozens of expensive toast components, solving the "toast storm" performance issue.
+-   **`eventService.ts`**: A singleton service on the main thread that acts as a central hub for all notifications.
+-   **Decoupling**: The simulation engine and its behaviors simply generate and return an array of `AppEvent` objects each tick.
+-   **Routing Logic**: Based on the user's `notificationMode` setting and the event's `importance`, the service decides whether to send the event to the `eventLogStore`, the `toastStore`, or both.
 
 ## 6. Component Architecture (`src/components/`)
--   **`App.tsx`**: Root component. Manages UI state (sidebar visibility), orchestrates the `useSimulation` hook, and handles the save/load logic on the main thread.
--   **`SimulationView.tsx`**: The host component for the rendering engine. It creates and manages two stacked `<canvas>` elements (one for static background, one for dynamic foreground) and passes them to the `RenderingEngine`. It also captures user click events on the top canvas and forwards them to the application state.
--   **`Controls.tsx`**: The UI for all `SimulationParams`, allowing users to configure and reset the simulation.
--   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower, including stats, genome, and a button to launch the 3D viewer. Includes a toggle for emissive materials.
--   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber` inside a modal.
--   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for switching between `ChallengesPanel` and `ChartsPanel`.
--   **`ChallengesPanel.tsx`**: Subscribes to `challengeStore` and displays challenge progress.
--   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations of the simulation's history, including a Performance chart showing worker tick time vs. main thread render time.
+-   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` hook, and handles save/load logic.
+-   **`SimulationView.tsx`**: Hosts the rendering engine's canvases and forwards user clicks.
+-   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
+-   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower.
+-   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
+-   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel` and `ChartsPanel`.
+-   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
+-   **Header Components**:
+    -   `EnvironmentDisplay`: A new real-time display in the header showing the current season, temperature, humidity, and any active weather events.
+    -   `EventLog.tsx`: A non-intrusive, terminal-style log that displays a real-time feed of events.
 -   **Notification Components**:
-    -   `EventLog.tsx`: A non-intrusive, terminal-style log in the header that displays a real-time feed of events from the `eventLogStore`. It is clickable to open the full panel.
-    -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events, including timestamp and tick number, pausing the simulation for review.
-    -   `Toast.tsx` & `ToastContainer.tsx`: Render pop-up notifications based on state from the `toastStore`.
+    -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events.
+    -   `Toast.tsx` & `ToastContainer.tsx`: Render pop-up notifications.
 -   **Global State (Zustand Stores)**:
-    -   `eventLogStore`: Manages the state for the `EventLog`, holding a capped-size array of recent events.
+    -   `eventLogStore`: Manages the state for the `EventLog`.
     -   `toastStore`: Manages UI notifications for high-importance events.
     -   `challengeStore` & `analyticsStore`: Use `persist` middleware to save progress and historical data to `localStorage`.
 
 ## 7. Error Handling and Resilience
--   **WASM Initialization Failure**: Both the main thread's `flowerService` and the worker's instance must handle potential failures during the `initialize()` call. If it fails, the application should display a clear, user-friendly error message and not attempt to start the simulation. A timeout should be used to prevent the app from hanging indefinitely.
--   **Worker Errors**: The `useSimulation` hook should attach an `onerror` handler to the worker instance. If the worker terminates unexpectedly, the UI should be notified, the simulation should be shown as paused, and an error message should be displayed.
+-   **WASM Initialization Failure**: Both the main thread and worker instances must handle potential failures during `initialize()`, display a clear error message, and use a timeout to prevent the app from hanging.
+-   **Worker Errors**: The `useSimulation` hook should attach an `onerror` handler to the worker. If the worker terminates unexpectedly, the UI should be notified and the simulation shown as paused.
 
 ## 8. Accessibility (A11y)
--   **Canvas Accessibility**: The primary simulation view on the canvas is not inherently accessible. To mitigate this:
-    -   Key events (e.g., a flower being pollinated, an insect being eaten) are made available in the text-based `FullEventLogPanel`, which is keyboard-accessible.
-    -   The `ToastContainer` is an `aria-live` region so screen readers can announce important pop-up notifications.
--   **UI Controls**: All interactive UI elements (buttons, sliders, tabs, modals) must be fully keyboard-navigable and have appropriate ARIA attributes (`aria-label`, `aria-valuenow`, `aria-selected`, `role`, etc.).
+-   **Canvas Accessibility**: Key events are made available in the text-based `FullEventLogPanel`. The `ToastContainer` is an `aria-live` region.
+-   **UI Controls**: All interactive UI elements must be fully keyboard-navigable and have appropriate ARIA attributes.
 
 ## 9. Testing & Developer Experience
--   **Unit & Component Testing**: Use Vitest and React Testing Library. Isolate logic in hooks and behavior modules for easier testing. Mock dependencies like the `flowerService` and the Web Worker itself in tests.
--   **E2E Testing**: Use Playwright to test full user flows, including starting/pausing the simulation, changing parameters, and interacting with panels.
--   **Automatic React DevTools**: A custom Vite plugin will be used to automatically launch the standalone React DevTools application and inject its connection script, providing a zero-config debugging experience for developers.
+-   **Unit & Component Testing**: Use Vitest and React Testing Library. Mock dependencies like the `flowerService` and the Web Worker.
+-   **E2E Testing**: Use Playwright to test full user flows.
+-   **Automatic React DevTools**: A custom Vite plugin automatically launches the standalone React DevTools application.
 
 ## 10. Project Structure
 -   `index.html`: The single-page entry point. It contains the `<div id="root">` where the React app is mounted.

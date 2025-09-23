@@ -1,8 +1,8 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend, ActorDelta, FlowerSeed } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Coord, Eagle, HerbicidePlane, HerbicideSmoke, PopulationTrend, ActorDelta, FlowerSeed, EnvironmentState, Season, WeatherEventType } from '../types';
 import { INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_LIFESPAN, POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, DEFAULT_SIM_PARAMS, SEED_HEALTH, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
 import { getInsectEmoji } from '../utils';
 import { Quadtree, Rectangle } from './Quadtree';
-import { findCellForStationaryActor, cloneActor, calculatePopulationTrend, buildQuadtrees } from './simulationUtils';
+import { findCellForStationaryActor, cloneActor, calculatePopulationTrend, buildQuadtrees, findCellForFlowerSpawn, findEmptyCell } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
 import { processFlowerTick } from './behaviors/flowerBehavior';
@@ -45,6 +45,9 @@ export class SimulationEngine {
     private totalBirdsHunted = 0;
     private totalHerbicidePlanesSpawned = 0;
     
+    // Environment state
+    private environmentState: EnvironmentState;
+    
     private flowerWorkerPort: MessagePort | null = null;
     private completedFlowersQueue: CompletedFlowerPayload[] = [];
     private stemImageData: string | null = null;
@@ -68,6 +71,12 @@ export class SimulationEngine {
     constructor(params: SimulationParams, flowerService: FEService) {
         this.params = params;
         this.flowerService = flowerService;
+        this.environmentState = {
+            currentTemperature: params.temperature,
+            currentHumidity: params.humidity,
+            season: 'Summer',
+            currentWeatherEvent: { type: 'none', duration: 0 },
+        };
     }
     
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
@@ -264,12 +273,13 @@ export class SimulationEngine {
                     break;
                 case 'insect':
                     processInsectTick(actor as Insect, { grid: this.grid, params: this.params, nextActorState, requestNewFlower: requestFlowerCallback, flowerQtree, events,
-                        incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; }
+                        incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; },
+                        currentTemperature: this.environmentState.currentTemperature,
                     }, newActorQueue);
                     break;
                 case 'flower': {
                     const flower = actor as Flower;
-                    processFlowerTick(flower, { grid: this.grid, params: this.params, requestNewFlower: requestFlowerCallback }, newActorQueue);
+                    processFlowerTick(flower, { grid: this.grid, params: this.params, requestNewFlower: requestFlowerCallback, currentTemperature: this.environmentState.currentTemperature }, newActorQueue);
                     if (flower.health <= 0) nextActorState.delete(flower.id);
                     break;
                 }
@@ -423,6 +433,10 @@ export class SimulationEngine {
             avgIntelligence: flowerCountForStats > 0 ? totalIntelligence / flowerCountForStats : 0,
             avgLuck: flowerCountForStats > 0 ? totalLuck / flowerCountForStats : 0,
             tickTimeMs,
+            currentTemperature: this.environmentState.currentTemperature,
+            currentHumidity: this.environmentState.currentHumidity,
+            season: this.environmentState.season,
+            weatherEvent: this.environmentState.currentWeatherEvent.type,
         };
     }
     
@@ -506,13 +520,110 @@ export class SimulationEngine {
         }
     }
 
+    private _updateEnvironment(events: AppEvent[]) {
+        const { seasonLengthInTicks, temperature, temperatureAmplitude, humidity, humidityAmplitude } = this.params;
+        const { weatherEventChance, weatherEventMinDuration, weatherEventMaxDuration, heatwaveTempIncrease, coldsnapTempDecrease, heavyRainHumidityIncrease, droughtHumidityDecrease } = this.params;
+        
+        // 1. Update seasonal cycle
+        const seasonalProgress = (this.tick % seasonLengthInTicks) / seasonLengthInTicks;
+        const angle = seasonalProgress * 2 * Math.PI;
+
+        let seasonalTemp = temperature + Math.sin(angle) * temperatureAmplitude;
+        let seasonalHumidity = humidity + Math.sin(angle) * humidityAmplitude;
+        
+        let season: Season;
+        if (seasonalProgress < 0.25) season = 'Spring';
+        else if (seasonalProgress < 0.5) season = 'Summer';
+        else if (seasonalProgress < 0.75) season = 'Autumn';
+        else season = 'Winter';
+        
+        this.environmentState.season = season;
+
+        // 2. Update weather events
+        const { currentWeatherEvent } = this.environmentState;
+        if (currentWeatherEvent.duration > 0) {
+            currentWeatherEvent.duration--;
+            if (currentWeatherEvent.duration === 0) {
+                events.push({ message: `The ${currentWeatherEvent.type} has ended.`, type: 'info', importance: 'low' });
+                currentWeatherEvent.type = 'none';
+            }
+        } else {
+            if (Math.random() < weatherEventChance) {
+                const eventTypes: WeatherEventType[] = ['heatwave', 'coldsnap', 'heavyrain', 'drought'];
+                currentWeatherEvent.type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                currentWeatherEvent.duration = Math.floor(Math.random() * (weatherEventMaxDuration - weatherEventMinDuration + 1)) + weatherEventMinDuration;
+                events.push({ message: `A ${currentWeatherEvent.type} has begun!`, type: 'info', importance: 'high' });
+            }
+        }
+
+        // 3. Apply event modifiers
+        switch (currentWeatherEvent.type) {
+            case 'heatwave':
+                seasonalTemp += heatwaveTempIncrease;
+                break;
+            case 'coldsnap':
+                seasonalTemp -= coldsnapTempDecrease;
+                break;
+            case 'heavyrain':
+                seasonalHumidity += heavyRainHumidityIncrease;
+                break;
+            case 'drought':
+                seasonalHumidity -= droughtHumidityDecrease;
+                break;
+        }
+
+        // 4. Finalize and clamp values
+        this.environmentState.currentTemperature = seasonalTemp;
+        this.environmentState.currentHumidity = Math.max(0, Math.min(1, seasonalHumidity));
+    }
+
     public async calculateNextTick(): Promise<{ events: AppEvent[]; summary: TickSummary; deltas: ActorDelta[] }> {
         const tickStartTime = performance.now();
         this._resetTickCounters();
         const events: AppEvent[] = [];
         
+        const previousSeason = this.environmentState.season;
+        this._updateEnvironment(events);
+        
         const initialActors = this.grid.flat(2).map(cloneActor);
         const nextActorState = new Map<string, CellContent>(initialActors.map(actor => [actor.id, cloneActor(actor)]));
+
+        // Spring Repopulation Logic
+        if (previousSeason === 'Winter' && this.environmentState.season === 'Spring') {
+            const flowerCount = Array.from(nextActorState.values()).filter(a => a.type === 'flower' || a.type === 'flowerSeed').length;
+            const insectCount = Array.from(nextActorState.values()).filter(a => a.type === 'insect').length;
+
+            if (flowerCount === 0 || insectCount === 0) {
+                events.push({ message: '🌱 Spring has arrived, and new life stirs in the garden!', type: 'success', importance: 'high' });                          
+                const tempGridForPlacement = this.grid.map(row => row.map(cell => [...cell]));
+
+                if (flowerCount === 0) {
+                    for (let i = 0; i < this.params.initialFlowers; i++) {
+                        const pos = findCellForFlowerSpawn(tempGridForPlacement, this.params);
+                        if (pos) {
+                            const seed = this._requestNewFlower(nextActorState, pos.x, pos.y);
+                            if (seed) {
+                               nextActorState.set(seed.id, seed);
+                               tempGridForPlacement[pos.y][pos.x].push(seed);
+                            }
+                        }
+                    }
+                }
+    
+                if (insectCount === 0) {
+                    for (let i = 0; i < this.params.initialInsects; i++) {
+                         const pos = findEmptyCell(tempGridForPlacement, this.params);
+                         if (pos) {
+                            const id = `insect-repop-${i}-${Date.now()}`;
+                            const emoji = getInsectEmoji(id);
+                            const newInsect: Insect = { id, type: 'insect', x: pos.x, y: pos.y, pollen: null, emoji, lifespan: INSECT_LIFESPAN };
+                            nextActorState.set(id, newInsect);
+                            tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                         }
+                    }
+                }
+            }
+        }
 
         // Process flowers that were created in the background
         const newFlowerCount = this._processCompletedFlowers(nextActorState, events);
@@ -558,6 +669,7 @@ export class SimulationEngine {
         const stateToSave = JSON.parse(JSON.stringify({ 
             params: this.params, grid: this.grid, tick: this.tick, totalInsectsEaten: this.totalInsectsEaten,
             totalBirdsHunted: this.totalBirdsHunted, totalHerbicidePlanesSpawned: this.totalHerbicidePlanesSpawned,
+            environmentState: this.environmentState,
         }));
         stateToSave.grid.flat(2).forEach((entity: CellContent) => {
             if (entity.type === 'flower') (entity as Flower).imageData = '';
@@ -566,8 +678,8 @@ export class SimulationEngine {
         return stateToSave;
     }
 
-    public async loadState(savedPayload: {params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten?: number, totalBirdsHunted?: number, totalHerbicidePlanesSpawned?: number}) {
-        const { params: loadedParams, grid: loadedGrid, tick: loadedTick, totalInsectsEaten: loadedTotalInsectsEaten, totalBirdsHunted: loadedTotalBirdsHunted, totalHerbicidePlanesSpawned: loadedTotalHerbicidePlanes } = savedPayload;
+    public async loadState(savedPayload: {params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten?: number, totalBirdsHunted?: number, totalHerbicidePlanesSpawned?: number, environmentState?: EnvironmentState}) {
+        const { params: loadedParams, grid: loadedGrid, tick: loadedTick, totalInsectsEaten: loadedTotalInsectsEaten, totalBirdsHunted: loadedTotalBirdsHunted, totalHerbicidePlanesSpawned: loadedTotalHerbicidePlanes, environmentState: loadedEnvState } = savedPayload;
         if (!loadedGrid || !loadedParams) {
             console.error("Aborting load: Invalid state.", savedPayload);
             return;
@@ -580,6 +692,14 @@ export class SimulationEngine {
         this.totalHerbicidePlanesSpawned = loadedTotalHerbicidePlanes || 0;
         this.grid = loadedGrid;
         this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: this.params });
+        
+        // Restore environment state, with fallback for older saves
+        this.environmentState = loadedEnvState || {
+            currentTemperature: this.params.temperature,
+            currentHumidity: this.params.humidity,
+            season: 'Summer',
+            currentWeatherEvent: { type: 'none', duration: 0 },
+        };
         
         // Reset transient state
         this.insectCountHistory = [];
@@ -618,6 +738,12 @@ export class SimulationEngine {
         this.herbicideCooldown = 0;
         this.lastInsectTrend = 'stable';
         this.completedFlowersQueue = [];
+        this.environmentState = {
+            currentTemperature: newParams.temperature,
+            currentHumidity: newParams.humidity,
+            season: 'Summer',
+            currentWeatherEvent: { type: 'none', duration: 0 },
+        };
         this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: this.params });
     }
 }

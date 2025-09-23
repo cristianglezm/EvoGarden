@@ -1,6 +1,21 @@
 export type WindDirection = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
 
 export type NotificationMode = 'toasts' | 'log' | 'both';
+
+export type Season = 'Spring' | 'Summer' | 'Autumn' | 'Winter';
+export type WeatherEventType = 'heatwave' | 'coldsnap' | 'heavyrain' | 'drought' | 'none';
+
+export interface WeatherEvent {
+    type: WeatherEventType;
+    duration: number; // Ticks remaining
+}
+
+export interface EnvironmentState {
+    currentTemperature: number;
+    currentHumidity: number;
+    season: Season;
+    currentWeatherEvent: WeatherEvent;
+}
 export interface SimulationParams {
     gridWidth: number;
     gridHeight: number;
@@ -18,6 +33,18 @@ export interface SimulationParams {
     herbicideCooldown: number;
     herbicideSmokeExpansionCount: number;
     notificationMode: NotificationMode;
+    // Seasonal Cycle Parameters
+    seasonLengthInTicks: number;
+    temperatureAmplitude: number;
+    humidityAmplitude: number;
+    // Weather Event Parameters
+    weatherEventChance: number;
+    heatwaveTempIncrease: number;
+    coldsnapTempDecrease: number;
+    heavyRainHumidityIncrease: number;
+    droughtHumidityDecrease: number;
+    weatherEventMinDuration: number;
+    weatherEventMaxDuration: number;
 }
 
 export interface Coord {
@@ -250,6 +277,10 @@ export interface AnalyticsDataPoint {
     avgLuck: number;
     tickTimeMs: number;
     renderTimeMs: number;
+    currentTemperature?: number;
+    currentHumidity?: number;
+    season?: Season;
+    weatherEvent?: WeatherEventType;
 }
 
 export interface AnalyticsState {
@@ -292,4 +323,8 @@ export interface TickSummary {
     avgIntelligence: number;
     avgLuck: number;
     tickTimeMs: number;
+    currentTemperature: number;
+    currentHumidity: number;
+    season: Season;
+    weatherEvent: WeatherEventType;
 }
