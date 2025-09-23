@@ -35,8 +35,8 @@ describe('Controls component', () => {
         // Check if sliders are rendered with correct default values
         expect(screen.getByLabelText(/Grid Width/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.gridWidth));
         expect(screen.getByLabelText(/Grid Height/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.gridHeight));
-        expect(screen.getByLabelText(/Temperature/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.temperature));
-        expect(screen.getByLabelText(/Humidity/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.humidity));
+        expect(screen.getByLabelText(/Base Temperature/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.temperature));
+        expect(screen.getByLabelText(/Base Humidity/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.humidity));
         expect(screen.getByLabelText(/Wind Strength/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.windStrength));
         expect(screen.getByLabelText(/Flowers/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.initialFlowers));
         expect(screen.getByLabelText(/Insects/i)).toHaveValue(String(DEFAULT_SIM_PARAMS.initialInsects));

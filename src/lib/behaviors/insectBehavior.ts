@@ -1,5 +1,5 @@
 import type { Insect, SimulationParams, Grid, Flower, CellContent, Nutrient, AppEvent, FlowerSeed } from '../../types';
-import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN } from '../../constants';
+import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP } from '../../constants';
 import { findCellForFlowerSpawn } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
 
@@ -14,6 +14,7 @@ export interface InsectContext {
     flowerQtree: Quadtree<CellContent>;
     events: AppEvent[];
     incrementInsectsDiedOfOldAge: () => void;
+    currentTemperature: number;
 }
 
 export const processInsectTick = (
@@ -21,9 +22,14 @@ export const processInsectTick = (
     context: InsectContext,
     newActorQueue: CellContent[]
 ) => {
-    const { params, grid, nextActorState, requestNewFlower, flowerQtree, events, incrementInsectsDiedOfOldAge } = context;
+    const { params, grid, nextActorState, requestNewFlower, flowerQtree, events, incrementInsectsDiedOfOldAge, currentTemperature } = context;
     const { gridWidth, gridHeight } = params;
     
+    // Environmental Effect: Dormancy
+    if (currentTemperature < INSECT_DORMANCY_TEMP) {
+        return; // Insect is dormant and does nothing
+    }
+
     // 1. Lifecycle: Check for death from old age
     insect.lifespan--;
     if (insect.lifespan <= 0) {

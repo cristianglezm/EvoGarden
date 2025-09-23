@@ -31,8 +31,11 @@ export class ControlPanelController {
   getInsectsInput() { return this.getLabel('Insects'); }
   getGridWidthInput() { return this.getLabel('Grid Width'); }
   getGridHeightInput() { return this.getLabel('Grid Height'); }
-  getTemperatureInput() { return this.getLabel('Temperature'); }
-  getHumidityInput() { return this.getLabel('Humidity'); }
+  getSeasonLengthInput() { return this.getLabel('Season Length'); }
+  getTemperatureInput() { return this.getLabel('Base Temperature'); }
+  getTemperatureVariationInput() { return this.getLabel('Temp, Variation'); }
+  getHumidityInput() { return this.getLabel('Base Humidity'); }
+  getHumidityVariationInput() { return this.getLabel('Humidity Variation'); }
   getWindDirectionInput() { return this.getLabel('Wind Direction'); }
   getWindStrengthInput() { return this.getLabel('Wind Strength'); }
 

@@ -47,6 +47,7 @@ export const ChartsPanel: React.FC = () => {
     const [eventsLegend, setEventsLegend] = useState<Record<string, boolean>>({ 'Reproductions': true, 'Insects Eaten': true, 'Eggs Laid': true, 'Insects Born': true, 'Eggs Eaten': true, 'Died of Old Age': true });
     const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true });
     const [effectsLegend, setEffectsLegend] = useState<Record<string, boolean>>({ 'Avg Vitality': true, 'Avg Agility': true, 'Avg Strength': true, 'Avg Intelligence': true, 'Avg Luck': true });
+    const [environmentLegend, setEnvironmentLegend] = useState<Record<string, boolean>>({ 'Temperature (°C)': true, 'Humidity (%)': true });
 
     // Event handlers for legend changes
     const handlePerformanceLegendChange = createLegendSelectHandler(setPerformanceLegend);
@@ -54,6 +55,32 @@ export const ChartsPanel: React.FC = () => {
     const handleEventsLegendChange = createLegendSelectHandler(setEventsLegend);
     const handleTraitsLegendChange = createLegendSelectHandler(setTraitsLegend);
     const handleEffectsLegendChange = createLegendSelectHandler(setEffectsLegend);
+    const handleEnvironmentLegendChange = createLegendSelectHandler(setEnvironmentLegend);
+
+    const environmentOption = useMemo<EChartsOption>(() => {
+        const ticks = history.map(h => h.tick);
+        return {
+            ...baseChartOptions,
+            title: { text: 'Environment', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
+            legend: { data: ['Temperature (°C)', 'Humidity (%)'], top: 35, textStyle: { color: '#bbf7d0' }, selected: environmentLegend },
+            xAxis: { ...baseChartOptions.xAxis, data: ticks },
+            yAxis: [
+                {
+                    ...(baseChartOptions.yAxis as object),
+                    type: 'value', name: '°C', position: 'left'
+                },
+                {
+                    ...(baseChartOptions.yAxis as object),
+                    type: 'value', name: '%', position: 'right', min: 0, max: 100,
+                    splitLine: { show: false },
+                }
+            ],
+            series: [
+                { name: 'Temperature (°C)', type: 'line', yAxisIndex: 0, data: history.map(h => h.currentTemperature?.toFixed(1)), color: '#f56565' },
+                { name: 'Humidity (%)', type: 'line', yAxisIndex: 1, data: history.map(h => ((h.currentHumidity ?? 0) * 100).toFixed(0)), color: '#4299e1' },
+            ],
+        };
+    }, [history, environmentLegend]);
 
     const performanceOption = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
@@ -164,6 +191,9 @@ export const ChartsPanel: React.FC = () => {
 
     return (
         <div className="p-4 space-y-4">
+            <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
+                <Chart option={environmentOption} onEvents={{ 'legendselectchanged': handleEnvironmentLegendChange }} />
+            </div>
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <Chart option={populationOption} onEvents={{ 'legendselectchanged': handlePopulationLegendChange }} />
             </div>

@@ -32,6 +32,7 @@ describe('flowerBehavior', () => {
         grid,
         params: DEFAULT_SIM_PARAMS,
         requestNewFlower,
+        currentTemperature: DEFAULT_SIM_PARAMS.temperature, // Default to a neutral temperature
     });
 
     it('should age and consume stamina', () => {
@@ -47,6 +48,17 @@ describe('flowerBehavior', () => {
         const initialHealth = flower.health;
         processFlowerTick(flower, setupContext(), newActorQueue);
         expect(flower.health).toBeLessThan(initialHealth);
+    });
+
+    it('should double stamina cost when temperature is outside optimal range', () => {
+        const context = setupContext();
+        context.currentTemperature = flower.maxTemperature + 5; // Outside range
+        const initialStamina = flower.stamina;
+
+        processFlowerTick(flower, context, newActorQueue);
+        
+        const expectedCost = FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER * 2;
+        expect(flower.stamina).toBe(initialStamina - expectedCost);
     });
 
     it('should trigger expansion and queue a new FlowerSeed', () => {

@@ -43,6 +43,10 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     avgLuck: summary.avgLuck,
                     tickTimeMs: summary.tickTimeMs,
                     renderTimeMs: renderTimeMs,
+                    currentTemperature: summary.currentTemperature,
+                    currentHumidity: summary.currentHumidity,
+                    season: summary.season,
+                    weatherEvent: summary.weatherEvent,
                 };
                 
                 const newHistory = [...get().history, newPoint];

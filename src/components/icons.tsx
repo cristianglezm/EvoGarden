@@ -132,3 +132,45 @@ export const TerminalIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
         <line x1="12" y1="19" x2="20" y2="19" />
     </svg>
 );
+
+export const SunIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2"></path>
+        <path d="M12 20v2"></path>
+        <path d="m4.93 4.93 1.41 1.41"></path>
+        <path d="m17.66 17.66 1.41 1.41"></path>
+        <path d="M2 12h2"></path>
+        <path d="M20 12h2"></path>
+        <path d="m6.34 17.66-1.41 1.41"></path>
+        <path d="m19.07 4.93-1.41 1.41"></path>
+    </svg>
+);
+
+export const CloudRainIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+        <path d="M16 14v6"></path>
+        <path d="M8 14v6"></path>
+        <path d="M12 16v6"></path>
+    </svg>
+);
+
+export const SnowflakeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <line x1="12" y1="2" x2="12" y2="22"></line>
+        <path d="m20 16-4-4 4-4"></path>
+        <path d="m4 8 4 4-4 4"></path>
+        <path d="m16 4-4 4-4-4"></path>
+        <path d="m8 20 4-4 4 4"></path>
+    </svg>
+);
+
+export const WindIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M9.59 4.59A2 2 0 1 1 11 8H2"></path>
+        <path d="M12.5 16H3.74a2 2 0 1 0 0 4h8.76"></path>
+        <path d="M19.5 12H10.26a2 2 0 1 1 0-4h9.24"></path>
+    </svg>
+);
