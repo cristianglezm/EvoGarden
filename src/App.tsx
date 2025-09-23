@@ -448,7 +448,12 @@ export default function App(): React.ReactNode {
             </button>
       </div>
       
-      <DataPanel isOpen={isDataPanelOpen} onClose={() => setIsDataPanelOpen(false)} />
+      <DataPanel 
+        isOpen={isDataPanelOpen} 
+        onClose={() => setIsDataPanelOpen(false)}
+        isRunning={isRunning}
+        setIsRunning={setIsRunning}
+      />
       <FullEventLogPanel isOpen={isFullLogOpen} onClose={handleCloseFullLog} />
 
       {/* Controls Panel Overlay */}

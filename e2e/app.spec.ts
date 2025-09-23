@@ -31,10 +31,11 @@ test.describe('Data Panel', () => {
         await dataPanel.close();
     });
 
-    test('should switch between Challenges and Analytics tabs', async ({ page }) => {
+    test('should switch between Challenges, Analytics, and Seed Bank tabs', async ({ page }) => {
         const dataPanel = new DataPanelController(page);
         await dataPanel.open();
         await dataPanel.goToAnalyticsTab();
+        await dataPanel.goToSeedBankTab();
         await dataPanel.goToChallengesTab();
     });
 });

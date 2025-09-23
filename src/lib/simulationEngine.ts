@@ -12,6 +12,7 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { FLOWER_NUTRIENT_HEAL } from '../constants';
+import { db } from '../services/db';
 
 const shallowObjectEquals = (o1: any, o2: any): boolean => {
     if (o1 === o2) return true;
@@ -59,6 +60,9 @@ export class SimulationEngine {
     private eagleSpawnCooldown = 0;
     private herbicideCooldown = 0;
     private lastInsectTrend: PopulationTrend = 'stable';
+    private longestLivedChampion: { value: number } = { value: 0 };
+    private mostToxicChampion: { value: number } = { value: 0 };
+    private mostHealingChampion: { value: number } = { value: 0 };
 
     // Tick-specific counters
     private insectsEatenThisTick = 0;
@@ -77,6 +81,84 @@ export class SimulationEngine {
             season: 'Summer',
             currentWeatherEvent: { type: 'none', duration: 0 },
         };
+        this.loadChampionsFromDb();
+    }
+    
+    private async loadChampionsFromDb() {
+        try {
+            const longestLived = await db.seedBank.get('longestLived');
+            if (longestLived) {
+                this.longestLivedChampion.value = longestLived.value;
+            }
+            const mostToxic = await db.seedBank.get('mostToxic');
+            if (mostToxic) {
+                this.mostToxicChampion.value = mostToxic.value;
+            }
+            const mostHealing = await db.seedBank.get('mostHealing');
+            if (mostHealing) {
+                this.mostHealingChampion.value = mostHealing.value;
+            }
+        } catch (error) {
+            console.error("Failed to load champions from DB:", error);
+        }
+    }
+
+    private async _checkAndSaveChampion(flower: Flower, events: AppEvent[]) {
+        let newChampion = false;
+        if (flower.age > this.longestLivedChampion.value) {
+            this.longestLivedChampion.value = flower.age;
+            const imageData = await this.flowerService.drawFlower(flower.genome).then(r => r.image);
+            await db.seedBank.put({
+                category: 'longestLived',
+                genome: flower.genome,
+                value: flower.age,
+                imageData: imageData,
+                sex: flower.sex,
+            });
+            events.push({ message: `🏆 New champion saved! Longest Lived: ${flower.age} ticks.`, type: 'success', importance: 'high' });
+            newChampion = true;
+        }
+
+        if (flower.toxicityRate > this.mostToxicChampion.value) {
+            this.mostToxicChampion.value = flower.toxicityRate;
+            const imageData = await this.flowerService.drawFlower(flower.genome).then(r => r.image);
+            await db.seedBank.put({
+                category: 'mostToxic',
+                genome: flower.genome,
+                value: flower.toxicityRate,
+                imageData: imageData,
+                sex: flower.sex,
+            });
+            events.push({ message: `☠️ New champion saved! Most Toxic: ${(flower.toxicityRate * 100).toFixed(0)}%.`, type: 'success', importance: 'high' });
+            newChampion = true;
+        }
+        
+        if (flower.toxicityRate < this.mostHealingChampion.value) {
+            this.mostHealingChampion.value = flower.toxicityRate;
+            const imageData = await this.flowerService.drawFlower(flower.genome).then(r => r.image);
+            await db.seedBank.put({
+                category: 'mostHealing',
+                genome: flower.genome,
+                value: flower.toxicityRate,
+                imageData: imageData,
+                sex: flower.sex,
+            });
+            events.push({ message: `🌿 New champion saved! Most Healing: ${(flower.toxicityRate * -100).toFixed(0)}%.`, type: 'success', importance: 'high' });
+            newChampion = true;
+        }
+
+        return newChampion;
+    }
+
+    private async _checkDeceasedChampions(initialActors: CellContent[], nextActorState: Map<string, CellContent>, events: AppEvent[]) {
+        const promises: Promise<any>[] = [];
+        for (const actor of initialActors) {
+            if (actor.type === 'flower' && !nextActorState.has(actor.id)) {
+                // This flower died this tick.
+                promises.push(this._checkAndSaveChampion(actor as Flower, events));
+            }
+        }
+        await Promise.all(promises);
     }
     
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
@@ -361,7 +443,7 @@ export class SimulationEngine {
                         }
                         nextActorState.set(flower.id, flower);
                         newFlowerCount++;
-                        events.push({ message: '🌸 A new flower has bloomed!', type: 'success', importance: 'low' });
+                        events.push({ message: '🌱 A new flower has bloomed!', type: 'success', importance: 'low' });
                     }
                 }
             }
@@ -593,15 +675,22 @@ export class SimulationEngine {
             const flowerCount = Array.from(nextActorState.values()).filter(a => a.type === 'flower' || a.type === 'flowerSeed').length;
             const insectCount = Array.from(nextActorState.values()).filter(a => a.type === 'insect').length;
 
-            if (flowerCount === 0 || insectCount === 0) {
+            if (flowerCount <= this.params.initialFlowers || insectCount <= this.params.initialInsects) {
                 events.push({ message: '🌱 Spring has arrived, and new life stirs in the garden!', type: 'success', importance: 'high' });                          
                 const tempGridForPlacement = this.grid.map(row => row.map(cell => [...cell]));
-
-                if (flowerCount === 0) {
+                
+                if (flowerCount <= this.params.initialFlowers) {
+                    const seedsFromBank = await db.seedBank.toArray();
                     for (let i = 0; i < this.params.initialFlowers; i++) {
                         const pos = findCellForFlowerSpawn(tempGridForPlacement, this.params);
                         if (pos) {
-                            const seed = this._requestNewFlower(nextActorState, pos.x, pos.y);
+                            let seed: FlowerSeed | null;
+                            if (seedsFromBank.length > 0) {
+                                const randomSeed = seedsFromBank[Math.floor(Math.random() * seedsFromBank.length)];
+                                seed = this._requestNewFlower(nextActorState, pos.x, pos.y, randomSeed.genome);
+                            } else {
+                                seed = this._requestNewFlower(nextActorState, pos.x, pos.y);
+                            }
                             if (seed) {
                                nextActorState.set(seed.id, seed);
                                tempGridForPlacement[pos.y][pos.x].push(seed);
@@ -610,7 +699,7 @@ export class SimulationEngine {
                     }
                 }
     
-                if (insectCount === 0) {
+                if (insectCount <= this.params.initialInsects) {
                     for (let i = 0; i < this.params.initialInsects; i++) {
                          const pos = findEmptyCell(tempGridForPlacement, this.params);
                          if (pos) {
@@ -637,6 +726,8 @@ export class SimulationEngine {
 
         const newActorQueue: CellContent[] = [];
         this._processActorTicks(initialActors, nextActorState, qtree, flowerQtree, events, newActorQueue);
+        
+        await this._checkDeceasedChampions(initialActors, nextActorState, events);
 
         this.totalBirdsHunted += this.birdsHuntedThisTick;
 
@@ -709,6 +800,7 @@ export class SimulationEngine {
         this.herbicideCooldown = 0;
         this.lastInsectTrend = 'stable';
         this.completedFlowersQueue = [];
+        this.loadChampionsFromDb();
 
         const regenerationPromises = this.grid.flat(2).map(entity => {
             if (entity.type === 'flower' && entity.genome) {
@@ -744,6 +836,7 @@ export class SimulationEngine {
             season: 'Summer',
             currentWeatherEvent: { type: 'none', duration: 0 },
         };
+        this.loadChampionsFromDb();
         this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: this.params });
     }
 }
