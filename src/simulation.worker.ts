@@ -64,6 +64,7 @@ self.onmessage = async (e: MessageEvent) => {
                 engine.setStemImage(stem.image);
             } else {
                 engine.setParams(params);
+                if (!(await initializeWasm())) return;
                 flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
                 const stem = await flowerService.makeStem();
                 engine.setStemImage(stem.image);
