@@ -121,7 +121,7 @@ test.describe('Canvas and Flower Details Panel', () => {
     await controls.getBirdsInput().fill('5');
     await controls.getInsectsInput().fill('10');
     await controls.getApplyAndReset().click();
-    await controls.runSimulation(3);
+    await controls.runSimulation(5);
   });
 
   test('should select a flower and show the details panel', async ({ page }) => {

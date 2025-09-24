@@ -1,7 +1,8 @@
-import type { Insect, SimulationParams, Grid, Flower, CellContent, Nutrient, AppEvent, FlowerSeed } from '../../types';
+import type { Insect, SimulationParams, Grid, Flower, CellContent, Nutrient, AppEvent } from '../../types';
 import { INSECT_DAMAGE_TO_FLOWER, INSECT_POLLINATION_CHANCE, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, INSECT_HEAL_FROM_HEALING_FLOWER } from '../../constants';
 import { findCellForFlowerSpawn } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
+import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 const INSECT_VISION_RANGE = 5;
 const INSECT_WANDER_CHANCE = 0.2; // 20% chance to wander even if a target is found
@@ -10,7 +11,7 @@ export interface InsectContext {
     params: SimulationParams;
     grid: Grid; // The original grid from the start of the tick
     nextActorState: Map<string, CellContent>;
-    requestNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null;
+    asyncFlowerFactory: AsyncFlowerFactory;
     flowerQtree: Quadtree<CellContent>;
     events: AppEvent[];
     incrementInsectsDiedOfOldAge: () => void;
@@ -22,7 +23,7 @@ export const processInsectTick = (
     context: InsectContext,
     newActorQueue: CellContent[]
 ) => {
-    const { params, grid, nextActorState, requestNewFlower, flowerQtree, events, incrementInsectsDiedOfOldAge, currentTemperature } = context;
+    const { params, grid, nextActorState, asyncFlowerFactory, flowerQtree, events, incrementInsectsDiedOfOldAge, currentTemperature } = context;
     const { gridWidth, gridHeight } = params;
     
     // Environmental Effect: Dormancy
@@ -122,7 +123,7 @@ export const processInsectTick = (
         if (insect.pollen && insect.pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(grid, params, {x: newX, y: newY});
             if (spawnSpot) {
-                const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, insect.pollen.genome);
+                const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, insect.pollen.genome);
                 if(seed) newActorQueue.push(seed);
             }
         }

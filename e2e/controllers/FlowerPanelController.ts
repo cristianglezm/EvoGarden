@@ -79,13 +79,9 @@ export class FlowerPanelController {
     await expect(modal).not.toBeVisible();
   }
   async closeDetails() {
-    const canvas = this.page.getByRole('grid', { name: 'EvoGarden simulation grid' });
-    // Try clicking in a corner (likely empty)
-    const box = await canvas.boundingBox();
-    if (!box) throw new Error('Canvas not found');
-      const x = box.width * 0.05;
-      const y = box.height * 0.05;
-      await canvas.click({ position: { x, y } });
-      await expect(this.detailsPanel).not.toBeVisible({ timeout: 2000 });
+    const closeButton = this.detailsPanel.getByRole('button', { name: 'Close flower details panel' });
+    await expect(closeButton).toBeVisible();
+    await closeButton.click();
+    await expect(this.detailsPanel).not.toBeVisible({ timeout: 2000 });
   }
 }

@@ -38,7 +38,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 
 ### Performance & Architecture
 -   **Dual-Worker Architecture**: The application uses two separate Web Workers (one for the main simulation loop, one for expensive WASM genetics calls) to achieve a completely non-blocking simulation.
--   **Asynchronous Flower Creation**: New flowers are generated in the background without pausing the simulation. A lightweight `FlowerSeed` placeholder is used until the full flower is ready.
+-   **Asynchronous Flower Creation**: New flowers are generated in the background without pausing the simulation. This is managed by an **`AsyncFlowerFactory`** which communicates with the genetics worker. A lightweight `FlowerSeed` placeholder is used until the full flower is ready.
 -   **Delta-Based State Updates**: The simulation worker sends only a small list of changes ("deltas") to the UI each tick, minimizing data transfer and ensuring a fluid experience.
 -   **Layered Canvas & Change Detection**: The simulation is rendered across two stacked canvas layers (a static background for flowers/grid, a dynamic foreground for mobile actors) to eliminate the bottleneck of re-drawing hundreds of complex SVGs every frame.
 -   **Multi-Quadtree Optimization**: The simulation uses multiple Quadtree data structures each tick for high-performance spatial querying, avoiding slow, full-grid scans.
@@ -73,9 +73,9 @@ The garden is no longer static. It features a fully dynamic climate system that 
 Nutrients (`💩`) are the simulation's core resource, created from predated insects, insects that die of old age, or random bird droppings. They provide an area-of-effect heal to all flowers in a 3x3 area before being consumed. This creates a dynamic resource cycle: predators consume prey -> deaths create nutrients -> nutrients heal flowers -> healthy flowers support more prey -> more prey supports more predators.
 
 ### Ecosystem Balance & Dynamic Population Control
-The garden is a self-regulating system. The simulation engine actively monitors population trends to prevent ecological collapse.
--   **Insect Booms**: If the insect population grows too rapidly, the simulation will dynamically spawn a new **bird**.
--   **Insect Crashes & Apex Predators**: If the insect population begins to crash, the simulation intervenes by spawning an **eagle** to hunt a single bird.
+The garden is a self-regulating system. A dedicated **`PopulationManager`** actively monitors population trends to prevent ecological collapse.
+-   **Insect Booms**: If the insect population grows too rapidly, the manager will dynamically spawn a new **bird**.
+-   **Insect Crashes & Apex Predators**: If the insect population begins to crash, the manager intervenes by spawning an **eagle** to hunt a single bird.
 
 ## 🧬 The Genetics Engine: `@cristianglezm/flower-evolver-wasm`
 
@@ -103,7 +103,10 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
     -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
-    -   `src/lib/simulationEngine.ts`: **The heart of the simulation.** This class contains the main simulation loop (`calculateNextTick`), all state management (the grid, actors), and orchestrates actor logic. It is instantiated and run exclusively within the web worker.
+    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation. Its main loop (`calculateNextTick`) coordinates the different managers and systems. It is instantiated and run exclusively within the web worker.
+    -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns for spawning, and decides when to introduce new birds, eagles, or herbicide planes based on population trends.
+    -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`. It handles the queue of requested flowers, provides `FlowerSeed` placeholders to the engine, and returns fully-formed `Flower` objects once they have been computed by the WASM module.
+    -   `src/lib/EcosystemManager.ts`: **Global Rules.** A module that contains functions for system-wide behaviors that don't belong to a single actor, such as nutrient healing and insect reproduction.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.

@@ -2,9 +2,9 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
-import type { CellContent, Flower, SimulationParams, Grid, TickSummary, WeatherEventType } from './types';
+import type { CellContent, Flower, SimulationParams, Grid } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
-import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, SunIcon, CloudRainIcon, SnowflakeIcon, WindIcon } from './components/icons';
+import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
 import { ToastContainer } from './components/ToastContainer';
 import { flowerService } from './services/flowerService';
@@ -15,40 +15,10 @@ import { db } from './services/db';
 import { EventLog } from './components/EventLog';
 import { useEventLogStore } from './stores/eventLogStore';
 import { FullEventLogPanel } from './components/FullEventLogPanel';
+import { EnvironmentDisplay } from './components/EnvironmentDisplay';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
-
-const EnvironmentDisplay: React.FC<{ summary: TickSummary | null }> = ({ summary }) => {
-    if (!summary) {
-        return <div className="h-5"></div>; // Placeholder to prevent layout shift
-    }
-
-    const { season, currentTemperature, currentHumidity, weatherEvent } = summary;
-
-    const eventIcons: Record<WeatherEventType, React.ReactNode> = {
-        heatwave: <SunIcon className="w-4 h-4 text-accent-yellow" />,
-        coldsnap: <SnowflakeIcon className="w-4 h-4 text-accent-blue" />,
-        heavyrain: <CloudRainIcon className="w-4 h-4 text-blue-300" />,
-        drought: <WindIcon className="w-4 h-4 text-yellow-500" />,
-        none: null,
-    };
-
-    return (
-        <div className="flex items-center space-x-3 text-xs text-secondary mt-1">
-            <span>{season}</span>
-            <span className="font-semibold text-primary">{currentTemperature.toFixed(1)}°C</span>
-            <span>{(currentHumidity * 100).toFixed(0)}% Hum.</span>
-            {weatherEvent !== 'none' && (
-                <div className="flex items-center space-x-1 capitalize p-1 bg-surface-hover/50 rounded">
-                    {eventIcons[weatherEvent]}
-                    <span>{weatherEvent}</span>
-                </div>
-            )}
-        </div>
-    );
-};
-
 
 export default function App(): React.ReactNode {
   const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
@@ -412,6 +382,7 @@ export default function App(): React.ReactNode {
               flower={selectedFlower} 
               isRunning={isRunning}
               setIsRunning={setIsRunning}
+              onClose={() => handleSelectFlower(null)}
             />
           </aside>
         )}

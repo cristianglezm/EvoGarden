@@ -59,12 +59,12 @@ describe('FlowerDetailsPanel', () => {
   });
 
   it('renders placeholder text when no flower is selected', () => {
-    render(<FlowerDetailsPanel flower={null} isRunning={false} setIsRunning={mockSetIsRunning} />);
+    render(<FlowerDetailsPanel flower={null} isRunning={false} setIsRunning={mockSetIsRunning} onClose={() => {}} />);
     expect(screen.getByText(/Select a flower on the grid/i)).toBeInTheDocument();
   });
 
   it('renders all flower details correctly when a flower is provided', () => {
-    render(<FlowerDetailsPanel flower={mockFlower} isRunning={false} setIsRunning={mockSetIsRunning} />);
+    render(<FlowerDetailsPanel flower={mockFlower} isRunning={false} setIsRunning={mockSetIsRunning} onClose={() => {}} />);
     
     // Check stats
     expect(screen.getByText('Health')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('FlowerDetailsPanel', () => {
   });
 
   it('copies genome to clipboard when copy button is clicked', async () => {
-    render(<FlowerDetailsPanel flower={mockFlower} isRunning={false} setIsRunning={mockSetIsRunning} />);
+    render(<FlowerDetailsPanel flower={mockFlower} isRunning={false} setIsRunning={mockSetIsRunning} onClose={() => {}} />);
     
     const copyButton = screen.getByTitle('Copy genome to clipboard');
     fireEvent.click(copyButton);
@@ -103,7 +103,7 @@ describe('FlowerDetailsPanel', () => {
   it('opens 3D viewer modal when "View in 3D" is clicked', async () => {
     vi.mocked(flowerService.draw3DFlower).mockResolvedValue('<gltf-string>');
     
-    render(<FlowerDetailsPanel flower={mockFlower} isRunning={true} setIsRunning={mockSetIsRunning} />);
+    render(<FlowerDetailsPanel flower={mockFlower} isRunning={true} setIsRunning={mockSetIsRunning} onClose={() => {}} />);
     
     const view3DButton = screen.getByRole('button', { name: /View in 3D/i });
     fireEvent.click(view3DButton);
