@@ -57,13 +57,16 @@ self.onmessage = async (e: MessageEvent) => {
                 if (!(await initializeWasm())) return;
                 
                 // Set params on the local service *before* generating assets
-                flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+                flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
                 
                 engine = new SimulationEngine(params, flowerService);
                 const stem = await flowerService.makeStem();
                 engine.setStemImage(stem.image);
             } else {
                 engine.setParams(params);
+                flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
+                const stem = await flowerService.makeStem();
+                engine.setStemImage(stem.image);
             }
 
             if (flowerWorkerPort) {
@@ -154,7 +157,7 @@ self.onmessage = async (e: MessageEvent) => {
              }
              
              // Set parameters before generating stem to ensure correct quality
-             flowerService.setParams({ radius: (payload.params as SimulationParams).flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+             flowerService.setParams({ radius: (payload.params as SimulationParams).flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
              
              // Generate the stem image directly in this worker to avoid deadlocks
              const stemForLoad = await flowerService.makeStem();
