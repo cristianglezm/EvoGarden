@@ -38,42 +38,40 @@ const gameLoop = async () => {
     gameLoopTimeoutId = self.setTimeout(gameLoop, TICK_RATE_MS);
 };
 
-const handleFlowerWorkerMessage = (e: MessageEvent) => {
-    if (engine) {
-        engine.handleFlowerWorkerMessage(e.data);
-    }
-};
-
 self.onmessage = async (e: MessageEvent) => {
     const { type, payload } = e.data;
     switch (type) {
         case 'init-ports':
             flowerWorkerPort = payload.flowerWorkerPort;
-            if (flowerWorkerPort) {
-                flowerWorkerPort.onmessage = handleFlowerWorkerMessage;
-            }
+            // The SimulationEngine is responsible for setting the onmessage handler for this port
+            // via the AsyncFlowerFactory.
             break;
         case 'update-params':
             if (isLoadingState) return;
             isRunning = false;
             if (gameLoopTimeoutId) clearTimeout(gameLoopTimeoutId);
 
+            const params = payload as SimulationParams;
+
             if (!engine) {
                 if (!(await initializeWasm())) return;
-                engine = new SimulationEngine(payload as SimulationParams, flowerService);
+                
+                // Set params on the local service *before* generating assets
+                flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+                
+                engine = new SimulationEngine(params, flowerService);
                 const stem = await flowerService.makeStem();
                 engine.setStemImage(stem.image);
             } else {
-                engine.setParams(payload as SimulationParams);
+                engine.setParams(params);
             }
 
             if (flowerWorkerPort) {
-                engine.setFlowerWorkerPort(flowerWorkerPort, payload);
+                engine.setFlowerWorkerPort(flowerWorkerPort, params);
             } else {
                 console.error("Simulation worker could not set flower worker port on engine.");
             }
             
-            const params = payload as SimulationParams;
             const flowerPromises = Array.from({ length: params.initialFlowers }, () => 
                 createNewFlower(flowerService, params, -1, -1)
             );
@@ -154,6 +152,9 @@ self.onmessage = async (e: MessageEvent) => {
              } else {
                 console.error("Simulation worker could not set flower worker port on engine during load.");
              }
+             
+             // Set parameters before generating stem to ensure correct quality
+             flowerService.setParams({ radius: (payload.params as SimulationParams).flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
              
              // Generate the stem image directly in this worker to avoid deadlocks
              const stemForLoad = await flowerService.makeStem();

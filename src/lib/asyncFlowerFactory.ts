@@ -1,0 +1,98 @@
+import type { Flower, FlowerSeed, SimulationParams, CellContent } from '../types';
+import { SEED_HEALTH } from '../constants';
+
+interface CompletedFlowerPayload {
+    requestId: string;
+    flower: Flower | null; // Flower can be null on creation failure
+}
+
+export interface CompletedFlowerResult {
+    flowersToAdd: Flower[];
+    seedsToRemove: string[];
+}
+
+export class AsyncFlowerFactory {
+    private flowerWorkerPort: MessagePort | null = null;
+    private completedFlowersQueue: CompletedFlowerPayload[] = [];
+    private stemImageData: string | null = null;
+
+    public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
+        this.flowerWorkerPort = port;
+        this.flowerWorkerPort.onmessage = (e: MessageEvent) => {
+            this.handleMessage(e.data);
+        };
+        this.flowerWorkerPort.postMessage({ type: 'update-params', payload: params });
+    }
+
+    public setStemImage(imageData: string) {
+        this.stemImageData = imageData;
+    }
+
+    public updateParams(params: SimulationParams) {
+        this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: params });
+    }
+
+    private handleMessage(data: { type: string, payload: any }) {
+        const { type, payload } = data;
+        if (type === 'flower-created' || type === 'flower-creation-failed') {
+            this.completedFlowersQueue.push(payload);
+        }
+    }
+
+    public requestNewFlower(
+        nextActorState: Map<string, CellContent>,
+        x: number,
+        y: number,
+        parentGenome1?: string,
+        parentGenome2?: string
+    ): FlowerSeed | null {
+        if (!this.flowerWorkerPort || !this.stemImageData) {
+            console.error("AsyncFlowerFactory not ready to request a new flower.");
+            return null;
+        }
+
+        let totalHealth = 0;
+        let flowerCount = 0;
+        for (const actor of nextActorState.values()) {
+            if (actor.type === 'flower') {
+                totalHealth += (actor as Flower).health;
+                flowerCount++;
+            }
+        }
+        
+        const avgHealth = flowerCount > 0 ? totalHealth / flowerCount : SEED_HEALTH;
+        const seedHealth = Math.max(1, Math.round(avgHealth));
+
+        const requestId = `seed-${x}-${y}-${Date.now()}-${Math.random()}`;
+        this.flowerWorkerPort.postMessage({
+            type: 'request-flower',
+            payload: { requestId, x, y, parentGenome1, parentGenome2 }
+        });
+
+        return { id: requestId, type: 'flowerSeed', x, y, imageData: this.stemImageData, health: seedHealth, maxHealth: seedHealth, age: 0 };
+    }
+    
+    public getCompletedFlowers(actorState: Map<string, CellContent>): CompletedFlowerResult {
+        const result: CompletedFlowerResult = { flowersToAdd: [], seedsToRemove: [] };
+        if (this.completedFlowersQueue.length === 0) {
+            return result;
+        }
+
+        for (const { requestId, flower } of this.completedFlowersQueue) {
+            const seed = actorState.get(requestId);
+            if (seed && seed.type === 'flowerSeed') {
+                result.seedsToRemove.push(requestId);
+                if (flower) {
+                    flower.age += seed.age;
+                    if (flower.age >= flower.maturationPeriod) {
+                        flower.isMature = true;
+                    }
+                    result.flowersToAdd.push(flower);
+                }
+            }
+        }
+
+        this.completedFlowersQueue = [];
+        return result;
+    }
+}

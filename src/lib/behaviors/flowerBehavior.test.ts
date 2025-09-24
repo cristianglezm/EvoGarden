@@ -2,11 +2,15 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processFlowerTick } from './flowerBehavior';
 import type { Flower, Grid, CellContent, FlowerSeed } from '../../types';
 import { DEFAULT_SIM_PARAMS, FLOWER_STAMINA_COST_PER_TICK, FLOWER_TICK_COST_MULTIPLIER, FLOWER_EXPANSION_CHANCE, PROXIMITY_POLLINATION_CHANCE, SEED_HEALTH } from '../../constants';
+import { AsyncFlowerFactory } from '../asyncFlowerFactory';
+
+vi.mock('../asyncFlowerFactory');
 
 describe('flowerBehavior', () => {
     let flower: Flower;
     let grid: Grid;
-    let requestNewFlower: Mock<(x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null>;
+    let mockAsyncFlowerFactory: AsyncFlowerFactory;
+    let requestNewFlower: Mock;
     let newActorQueue: CellContent[];
 
     const mockFlower: Flower = {
@@ -24,15 +28,20 @@ describe('flowerBehavior', () => {
         flower = { ...mockFlower };
         grid = Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => []));
         grid[5][5].push(flower);
+        
         requestNewFlower = vi.fn().mockReturnValue(mockSeed);
+        mockAsyncFlowerFactory = new (AsyncFlowerFactory as any)();
+        mockAsyncFlowerFactory.requestNewFlower = requestNewFlower;
+
         newActorQueue = [];
     });
     
     const setupContext = () => ({
         grid,
         params: DEFAULT_SIM_PARAMS,
-        requestNewFlower,
+        asyncFlowerFactory: mockAsyncFlowerFactory,
         currentTemperature: DEFAULT_SIM_PARAMS.temperature, // Default to a neutral temperature
+        nextActorState: new Map<string, CellContent>(),
     });
 
     it('should age and consume stamina', () => {
@@ -63,9 +72,10 @@ describe('flowerBehavior', () => {
 
     it('should trigger expansion and queue a new FlowerSeed', () => {
         vi.spyOn(Math, 'random').mockReturnValue(FLOWER_EXPANSION_CHANCE / 2);
-        processFlowerTick(flower, setupContext(), newActorQueue);
+        const context = setupContext();
+        processFlowerTick(flower, context, newActorQueue);
         expect(requestNewFlower).toHaveBeenCalled();
-        expect(requestNewFlower).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), flower.genome);
+        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), flower.genome);
         expect(newActorQueue.length).toBe(1);
         expect(newActorQueue[0]).toEqual(mockSeed);
         vi.spyOn(Math, 'random').mockRestore();
@@ -76,13 +86,14 @@ describe('flowerBehavior', () => {
         grid[6][5].push(neighborFlower);
         vi.spyOn(Math, 'random').mockReturnValue(PROXIMITY_POLLINATION_CHANCE / 2);
         
-        processFlowerTick(flower, setupContext(), newActorQueue);
+        const context = setupContext();
+        processFlowerTick(flower, context, newActorQueue);
 
         expect(requestNewFlower).toHaveBeenCalled();
         try {
-            expect(requestNewFlower).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'g1', 'g2');
+            expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g1', 'g2');
         } catch {
-            expect(requestNewFlower).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'g2', 'g1');
+            expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1');
         }
         expect(newActorQueue.length).toBe(1);
         expect(newActorQueue[0]).toEqual(mockSeed);

@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef } from 'react';
 import type { Flower } from '../types';
-import { CopyIcon, CheckIcon, LoaderIcon, DownloadIcon } from './icons';
+import { CopyIcon, CheckIcon, LoaderIcon, DownloadIcon, XIcon } from './icons';
 import { flowerService } from '../services/flowerService';
 import { Modal } from './Modal';
 import { Flower3DViewer } from './Flower3DViewer';
@@ -10,6 +10,7 @@ interface FlowerDetailsPanelProps {
     flower: Flower | null;
     isRunning: boolean;
     setIsRunning: (running: boolean) => void;
+    onClose: () => void;
 }
 
 const StatBar: React.FC<{ value: number, max: number, label: string, colorClass: string }> = ({ value, max, label, colorClass }) => (
@@ -24,7 +25,7 @@ const StatBar: React.FC<{ value: number, max: number, label: string, colorClass:
     </div>
 );
 
-export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning }) => {
+export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning, onClose }) => {
     const [copied, setCopied] = useState(false);
     const [is3DViewerOpen, setIs3DViewerOpen] = useState(false);
     const [gltfString, setGltfString] = useState<string | null>(null);
@@ -82,8 +83,15 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
 
     const panelContent = flower ? (
         <>
-            <header className="bg-background text-primary-light font-bold text-lg text-center p-1 rounded-t-[5px]">
-                <h2>Flower Details</h2>
+            <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px]">
+                <h2 className="font-bold text-lg">Flower Details</h2>
+                 <button 
+                    onClick={onClose} 
+                    className="p-1 text-primary-light hover:bg-black/20 rounded-full"
+                    aria-label="Close flower details panel"
+                >
+                    <XIcon className="w-6 h-6" />
+                </button>
             </header>
             <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto">
                 <div className="space-y-3">

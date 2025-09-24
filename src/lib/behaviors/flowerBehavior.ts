@@ -1,4 +1,4 @@
-import type { Flower, SimulationParams, Grid, FlowerSeed, CellContent } from '../../types';
+import type { Flower, SimulationParams, Grid, CellContent } from '../../types';
 import { 
     FLOWER_TICK_COST_MULTIPLIER, 
     FLOWER_STAMINA_COST_PER_TICK, 
@@ -8,12 +8,14 @@ import {
     WIND_POLLINATION_CHANCE
 } from '../../constants';
 import { findCellForFlowerSpawn, neighborVectors, windVectors } from '../simulationUtils';
+import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 export interface FlowerContext {
     params: SimulationParams;
     grid: Grid; // The original grid from the start of the tick
-    requestNewFlower: (x: number, y: number, genome?: string, parentGenome2?: string) => FlowerSeed | null;
+    asyncFlowerFactory: AsyncFlowerFactory;
     currentTemperature: number;
+    nextActorState: Map<string, CellContent>;
 }
 
 export const processFlowerTick = (
@@ -21,7 +23,7 @@ export const processFlowerTick = (
     context: FlowerContext,
     newActorQueue: CellContent[]
 ) => {
-    const { params, grid, requestNewFlower, currentTemperature } = context;
+    const { params, grid, asyncFlowerFactory, currentTemperature, nextActorState } = context;
     const { gridWidth, gridHeight, windDirection, windStrength } = params;
 
     flower.age++;
@@ -65,7 +67,7 @@ export const processFlowerTick = (
 
             if (suitableNeighbors.length > 0) {
                 const spawnSpot = suitableNeighbors[0];
-                const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome);
+                const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome);
                 if (seed) {
                     newActorQueue.push(seed);
                     hasReproducedThisTick = true;
@@ -84,7 +86,7 @@ export const processFlowerTick = (
                 const partner = matureNeighbors[0];
                 const spawnSpot = findCellForFlowerSpawn(grid, params, { x: partner.x, y: partner.y });
                 if (spawnSpot) {
-                    const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, partner.genome);
+                    const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, partner.genome);
                     if (seed) {
                         newActorQueue.push(seed);
                         hasReproducedThisTick = true;
@@ -105,7 +107,7 @@ export const processFlowerTick = (
                 if (targetFlower?.isMature) {
                     const spawnSpot = findCellForFlowerSpawn(grid, params, {x: targetX, y: targetY});
                     if (spawnSpot) {
-                         const seed = requestNewFlower(spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome);
+                         const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome);
                          if(seed) {
                             newActorQueue.push(seed);
                          }

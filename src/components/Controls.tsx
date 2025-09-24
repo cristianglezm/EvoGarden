@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { SimulationParams, WindDirection } from '../types';
-import { PlayIcon, PauseIcon, RefreshCwIcon, SaveIcon, UploadIcon, ChevronDownIcon, LoaderIcon } from './icons';
+import { PlayIcon, PauseIcon, RefreshCwIcon, SaveIcon, UploadIcon, LoaderIcon } from './icons';
+import { CollapsibleSection } from './CollapsibleSection';
 
 interface ControlsProps {
     params: SimulationParams;
@@ -16,24 +17,6 @@ interface ControlsProps {
 
 const WIND_DIRECTIONS: WindDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const FLOWER_DETAIL_OPTIONS = [4, 8, 16, 32, 64];
-
-const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, children, defaultOpen = true }) => {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
-    return (
-        <div className="pt-3 border-t border-border/50">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-between w-full text-left py-2 cursor-pointer"
-                aria-expanded={isOpen}
-            >
-                <h3 className="text-lg font-semibold text-primary-light/80">{title}</h3>
-                <ChevronDownIcon className={`w-5 h-5 text-secondary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {isOpen && <div className="mt-2 space-y-3">{children}</div>}
-        </div>
-    );
-};
-
 
 export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRunning, setIsRunning, onSave, onLoad, hasSavedState, isSaving, onStart }) => {
     const [localParams, setLocalParams] = useState<SimulationParams>(params);

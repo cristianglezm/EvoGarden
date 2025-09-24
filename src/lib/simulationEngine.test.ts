@@ -159,7 +159,7 @@ describe('SimulationEngine', () => {
             engine.initializeGridWithActors([seed]);
 
             const completedFlower: Flower = { ...mockFlower, id: 'flower-new', x: 2, y: 2, genome: 'completed-genome', age: 0 };
-            (engine as any).completedFlowersQueue.push({ requestId: 'seed-to-replace', flower: completedFlower });
+            ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-to-replace', flower: completedFlower });
 
             const { deltas } = await engine.calculateNextTick();
 
@@ -184,7 +184,7 @@ describe('SimulationEngine', () => {
             const seed: FlowerSeed = { id: 'seed-to-remove', type: 'flowerSeed', x: 3, y: 3, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 5 };
             engine.initializeGridWithActors([seed]);
 
-            (engine as any).completedFlowersQueue.push({ requestId: 'seed-to-remove', flower: null! });
+            ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-to-remove', flower: null! });
 
             const { deltas } = await engine.calculateNextTick();
 
