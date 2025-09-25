@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
-import type { CellContent, Flower, SimulationParams, Grid } from './types';
+import type { CellContent, Flower, SimulationParams, Grid, Insect } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
@@ -19,6 +19,47 @@ import { EnvironmentDisplay } from './components/EnvironmentDisplay';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
+
+/**
+ * Rehydrates the simulation grid by fetching detailed actor data (flowers, insects)
+ * from IndexedDB and merging it with the placeholder data from the metadata.
+ * This supports backward compatibility with older save files that stored full actor data
+ * in localStorage.
+ * @param metadata The saved state metadata from localStorage.
+ * @returns A promise that resolves to the fully rehydrated grid.
+ */
+const rehydrateGrid = async (metadata: any): Promise<Grid> => {
+    const flowers = await db.savedFlowers.toArray();
+    const insects = await db.savedInsects.toArray();
+
+    const hasFlowerPlaceholders = metadata.grid.flat(2).some((a: any) => a.type === 'flower' && a.genome === undefined);
+    if (flowers.length === 0 && hasFlowerPlaceholders) {
+        throw new Error("Metadata found, but no flowers in the database. Save file may be corrupt.");
+    }
+    
+    const hasInsectPlaceholders = metadata.grid.flat(2).some((a: any) => a.type === 'insect' && a.lifespan === undefined);
+    if (insects.length === 0 && hasInsectPlaceholders) {
+        throw new Error("Metadata found, but no insects in the database. Save file may be corrupt.");
+    }
+
+    const actorMap = new Map<string, CellContent>([
+        ...flowers.map((f): [string, CellContent] => [f.id, f]),
+        ...insects.map((i): [string, CellContent] => [i.id, i])
+    ]);
+
+    return metadata.grid.map((row: CellContent[][]) => 
+        row.map((cell: CellContent[]) => 
+            cell.map((actor: CellContent) => {
+                // Only rehydrate placeholders to maintain compatibility with old saves
+                if ((actor.type === 'flower' && (actor as Flower).genome === undefined) || (actor.type === 'insect' && (actor as Insect).lifespan === undefined)) {
+                    return actorMap.get(actor.id) || null;
+                }
+                return actor;
+            }).filter((actor): actor is CellContent => actor !== null)
+        )
+    );
+};
+
 
 export default function App(): React.ReactNode {
   const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
@@ -83,23 +124,7 @@ export default function App(): React.ReactNode {
             if (metadataJSON) {
                 setLoadingMessage('Loading saved garden...');
                 const metadata = JSON.parse(metadataJSON);
-                const flowers = await db.savedFlowers.toArray();
-                
-                if (flowers.length === 0 && metadata.grid.flat(2).some((a: any) => a.type === 'flower')) {
-                    throw new Error("Metadata found, but no flowers in the database. Save file may be corrupt.");
-                }
-
-                const flowerMap = new Map(flowers.map(f => [f.id, f]));
-                const rehydratedGrid = metadata.grid.map((row: CellContent[][]) => 
-                    row.map((cell: CellContent[]) => 
-                        cell.map((actor: CellContent) => {
-                            if (actor.type === 'flower') {
-                                return flowerMap.get(actor.id) || null;
-                            }
-                            return actor;
-                        }).filter((actor): actor is CellContent => actor !== null)
-                    )
-                );
+                const rehydratedGrid = await rehydrateGrid(metadata);
 
                 const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
                 workerRef.current!.postMessage({ type: 'load-state', payload: fullStateToLoad });
@@ -121,7 +146,8 @@ export default function App(): React.ReactNode {
             setError("Failed to load core simulation components. This could be due to a network issue, a corrupt save file, or an unsupported browser. Please refresh the page to try again.");
             // Clear potentially corrupt state
             localStorage.removeItem(META_SAVE_KEY);
-            db.savedFlowers.clear();
+            await db.savedFlowers.clear();
+            await db.savedInsects.clear();
             setIsLoading(false);
         }
     };
@@ -233,14 +259,19 @@ export default function App(): React.ReactNode {
 
         const fullState = stateFromWorker as { params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten: number };
         const flowersToSave: Flower[] = [];
+        const insectsToSave: Insect[] = [];
 
-        // Create a "skeleton" grid with placeholders for flowers
+        // Create a "skeleton" grid with placeholders for flowers and insects
         const skeletonGrid = fullState.grid.map(row => 
             row.map(cell => 
                 cell.map(actor => {
                     if (actor.type === 'flower') {
                         flowersToSave.push(actor as Flower);
                         return { id: actor.id, type: 'flower', x: actor.x, y: actor.y };
+                    }
+                    if (actor.type === 'insect') {
+                        insectsToSave.push(actor as Insect);
+                        return { id: actor.id, type: 'insect', x: actor.x, y: actor.y };
                     }
                     return actor;
                 })
@@ -253,9 +284,11 @@ export default function App(): React.ReactNode {
         };
 
         // Transactionally write to DB and localStorage
-        await db.transaction('rw', db.savedFlowers, async () => {
+        await db.transaction('rw', db.savedFlowers, db.savedInsects, async () => {
             await db.savedFlowers.clear();
+            await db.savedInsects.clear();
             await db.savedFlowers.bulkAdd(flowersToSave);
+            await db.savedInsects.bulkAdd(insectsToSave);
         });
 
         localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
@@ -283,23 +316,7 @@ export default function App(): React.ReactNode {
 
     try {
         const metadata = JSON.parse(metadataJSON);
-        const flowers = await db.savedFlowers.toArray();
-
-        if (flowers.length === 0 && metadata.grid.flat(2).some((a: any) => a.type === 'flower')) {
-            throw new Error("Metadata found, but no flowers in the database. Save file may be corrupt.");
-        }
-
-        const flowerMap = new Map(flowers.map(f => [f.id, f]));
-        const rehydratedGrid = metadata.grid.map((row: CellContent[][]) => 
-            row.map((cell: CellContent[]) => 
-                cell.map((actor: CellContent) => {
-                    if (actor.type === 'flower') {
-                        return flowerMap.get(actor.id) || null;
-                    }
-                    return actor;
-                }).filter((actor): actor is CellContent => actor !== null)
-            )
-        );
+        const rehydratedGrid = await rehydrateGrid(metadata);
 
         const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
         workerRef.current.postMessage({ type: 'load-state', payload: fullStateToLoad });
@@ -317,6 +334,7 @@ export default function App(): React.ReactNode {
         setIsLoading(false);
         localStorage.removeItem(META_SAVE_KEY);
         await db.savedFlowers.clear();
+        await db.savedInsects.clear();
         setHasSavedState(false);
     }
   }, [workerRef, setIsRunning]);
