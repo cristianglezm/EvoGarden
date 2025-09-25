@@ -30,13 +30,15 @@ export const findEmptyCell = (grid: Grid, params: SimulationParams, origin?: Coo
     return emptyCells[Math.floor(Math.random() * emptyCells.length)];
 };
 
-export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, origin?: Coord): Coord | null => {
-    const isSuitable = (cell: CellContent[]) => cell.length === 0 || cell.every(c => c.type === 'egg' || c.type === 'nutrient');
+export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, origin?: Coord, claimedCells?: Set<string>): Coord | null => {
+    const isSuitable = (cell: CellContent[], x: number, y: number) => 
+        (!claimedCells || !claimedCells.has(`${x},${y}`)) &&
+        (cell.length === 0 || cell.every(c => c.type === 'egg' || c.type === 'nutrient'));
 
     if(origin) {
         const suitableNeighbors = neighborVectors
             .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
-            .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && isSuitable(grid[p.y][p.x]))
+            .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && isSuitable(grid[p.y][p.x], p.x, p.y))
             .sort(() => 0.5 - Math.random());
         if (suitableNeighbors.length > 0) return suitableNeighbors[0];
     }
@@ -44,7 +46,7 @@ export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, ori
     const suitableCells: Coord[] = [];
     for (let y = 0; y < params.gridHeight; y++) {
         for (let x = 0; x < params.gridWidth; x++) {
-            if (isSuitable(grid[y][x])) {
+            if (isSuitable(grid[y][x], x, y)) {
                 suitableCells.push({ x, y });
             }
         }
@@ -54,14 +56,18 @@ export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, ori
     return suitableCells[Math.floor(Math.random() * suitableCells.length)];
 };
 
-export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle', origin?: Coord): Coord | null => {
+export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle', origin?: Coord, claimedCells?: Set<string>): Coord | null => {
+    const isSuitable = (cell: CellContent[], x: number, y: number) =>
+        (!claimedCells || !claimedCells.has(`${x},${y}`)) &&
+        !cell.some(c => c.type === type);
+
     if (origin) {
         const validNeighbors = neighborVectors
             .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
             .filter(p => 
                 p.x >= 0 && p.x < params.gridWidth && 
                 p.y >= 0 && p.y < params.gridHeight && 
-                !grid[p.y][p.x].some(c => c.type === type)
+                isSuitable(grid[p.y][p.x], p.x, p.y)
             )
             .sort(() => 0.5 - Math.random());
         if (validNeighbors.length > 0) return validNeighbors[0];
@@ -70,7 +76,7 @@ export const findCellForStationaryActor = (grid: Grid, params: SimulationParams,
     const validCells: Coord[] = [];
     for (let y = 0; y < params.gridHeight; y++) {
         for (let x = 0; x < params.gridWidth; x++) {
-            if (!grid[y][x].some(c => c.type === type)) {
+            if (isSuitable(grid[y][x], x, y)) {
                 validCells.push({ x, y });
             }
         }

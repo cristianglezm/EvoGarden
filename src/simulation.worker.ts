@@ -46,29 +46,26 @@ self.onmessage = async (e: MessageEvent) => {
             // The SimulationEngine is responsible for setting the onmessage handler for this port
             // via the AsyncFlowerFactory.
             break;
-        case 'update-params':
+        case 'update-params': {
             if (isLoadingState) return;
             isRunning = false;
             if (gameLoopTimeoutId) clearTimeout(gameLoopTimeoutId);
 
             const params = payload as SimulationParams;
 
+            if (!(await initializeWasm())) return;
+
+            // Set params on the local service *before* generating assets
+            flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
+
             if (!engine) {
-                if (!(await initializeWasm())) return;
-                
-                // Set params on the local service *before* generating assets
-                flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
-                
                 engine = new SimulationEngine(params, flowerService);
-                const stem = await flowerService.makeStem();
-                engine.setStemImage(stem.image);
             } else {
                 engine.setParams(params);
-                if (!(await initializeWasm())) return;
-                flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
-                const stem = await flowerService.makeStem();
-                engine.setStemImage(stem.image);
             }
+
+            const stem = await flowerService.makeStem();
+            engine.setStemImage(stem.image);
 
             if (flowerWorkerPort) {
                 engine.setFlowerWorkerPort(flowerWorkerPort, params);
@@ -118,6 +115,7 @@ self.onmessage = async (e: MessageEvent) => {
             engine.initializeGridWithActors(allActors);
             self.postMessage({ type: 'init-complete', payload: engine.getGridState() });
             break;
+        }
 
         case 'start':
             if (!isRunning) {

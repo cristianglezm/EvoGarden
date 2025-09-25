@@ -1,14 +1,16 @@
 import type { HerbicideSmoke, CellContent, Grid, SimulationParams, Flower, FlowerSeed } from '../../types';
 import { neighborVectors } from '../simulationUtils';
+import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 export interface HerbicideSmokeContext {
     grid: Grid;
     params: SimulationParams;
     nextActorState: Map<string, CellContent>;
+    asyncFlowerFactory: AsyncFlowerFactory;
 }
 
 export const processHerbicideSmokeTick = (smoke: HerbicideSmoke, context: HerbicideSmokeContext) => {
-    const { nextActorState, params } = context;
+    const { nextActorState, params, asyncFlowerFactory } = context;
     const { gridWidth, gridHeight, herbicideDamage, herbicideSmokeLifespan } = params;
 
     // 1. Apply damage to flowers and seeds in the same cell
@@ -19,6 +21,9 @@ export const processHerbicideSmokeTick = (smoke: HerbicideSmoke, context: Herbic
         target.health = Math.max(0, target.health - herbicideDamage);
         if (target.health <= 0) {
             nextActorState.delete(target.id); // Remove if destroyed
+            if (target.type === 'flowerSeed') {
+                asyncFlowerFactory.cancelFlowerRequest(target.id);
+            }
         }
     }
 

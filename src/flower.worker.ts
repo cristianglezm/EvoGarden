@@ -2,12 +2,17 @@
 
 import { flowerService } from './services/flowerService';
 import { createNewFlower } from './lib/simulationInitializer';
-import type { SimulationParams } from './types';
+import type { SimulationParams, FlowerCreationRequest } from './types';
 
 let simWorkerPort: MessagePort | null = null;
 let currentParams: SimulationParams | null = null;
 
 const INIT_TIMEOUT_MS = 15000;
+
+// --- Queue System for Flower Creation ---
+let requestQueue: FlowerCreationRequest[] = [];
+let cancellationQueue: string[] = []; // New queue for cancellation IDs
+let isProcessing = false;
 
 // Initialize the WASM service for this worker thread.
 const initializeWasm = async (): Promise<boolean> => {
@@ -22,6 +27,62 @@ const initializeWasm = async (): Promise<boolean> => {
         return false;
     }
 };
+
+/**
+ * Processes the flower request queue sequentially. It first clears any
+ * cancelled requests before starting a new genetics task.
+ */
+const processQueue = async () => {
+    if (isProcessing) {
+        return;
+    }
+    
+    // Batch process cancellations before starting a new task
+    if (cancellationQueue.length > 0) {
+        const cancelledIds = new Set(cancellationQueue);
+        requestQueue = requestQueue.filter(req => !cancelledIds.has(req.requestId));
+        cancellationQueue = [];
+    }
+
+    if (requestQueue.length === 0) {
+        isProcessing = false;
+        return;
+    }
+    
+    isProcessing = true;
+
+    const request = requestQueue.shift();
+    if (!request) {
+        isProcessing = false;
+        // Use setTimeout to avoid deep recursion and allow message queue to clear.
+        setTimeout(processQueue, 0);
+        return;
+    }
+    
+    const newFlower = await createNewFlower(flowerService, currentParams!, request.x, request.y, request.parentGenome1, request.parentGenome2);
+    
+    // After async work, check if the request was cancelled while processing.
+    const wasCancelled = cancellationQueue.some(id => id === request.requestId);
+
+    if (!wasCancelled) {
+        if (newFlower) {
+            simWorkerPort?.postMessage({
+                type: 'flower-created',
+                payload: { requestId: request.requestId, flower: newFlower }
+            });
+        } else {
+            simWorkerPort?.postMessage({
+                type: 'flower-creation-failed',
+                payload: { requestId: request.requestId }
+            });
+        }
+    }
+    
+    isProcessing = false;
+    // After finishing, immediately try to process the next item.
+    setTimeout(processQueue, 0);
+};
+
 
 // Main message handler for messages coming from the main thread (App.tsx)
 self.onmessage = async (e: MessageEvent) => {
@@ -55,24 +116,23 @@ const handleSimWorkerMessage = (e: MessageEvent) => {
                 return;
             }
             
-            // Fire-and-forget to allow the worker to accept new requests immediately
-            // while processing this one in the background.
-            (async () => {
-                const { requestId, x, y, parentGenome1, parentGenome2 } = payload;
-                const newFlower = await createNewFlower(flowerService, currentParams!, x, y, parentGenome1, parentGenome2);
-                
-                if (newFlower) {
-                    simWorkerPort?.postMessage({
-                        type: 'flower-created',
-                        payload: { requestId, flower: newFlower }
-                    });
-                } else {
-                    simWorkerPort?.postMessage({
-                        type: 'flower-creation-failed',
-                        payload: { requestId }
-                    });
-                }
-            })();
+            requestQueue.push(payload);
+            // Don't start processing immediately if already busy. The loop will pick it up.
+            if (!isProcessing) {
+                processQueue();
+            }
             break;
+            
+        case 'cancel-flower-request': {
+            // Add to cancellation queue instead of filtering immediately
+            cancellationQueue.push(payload.requestId);
+            break;
+        }
+        
+        case 'cancel-all-requests': {
+            requestQueue = [];
+            cancellationQueue = [];
+            break;
+        }
     }
 };
