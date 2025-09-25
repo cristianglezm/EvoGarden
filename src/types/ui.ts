@@ -1,4 +1,5 @@
 
+
 import type { TickSummary, Season, WeatherEventType } from './base';
 
 export interface AppEvent {
@@ -77,6 +78,7 @@ export interface AnalyticsDataPoint {
     currentHumidity?: number;
     season?: Season;
     weatherEvent?: WeatherEventType;
+    pendingFlowerRequests: number;
 }
 
 export interface AnalyticsState {

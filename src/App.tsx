@@ -16,6 +16,7 @@ import { EventLog } from './components/EventLog';
 import { useEventLogStore } from './stores/eventLogStore';
 import { FullEventLogPanel } from './components/FullEventLogPanel';
 import { EnvironmentDisplay } from './components/EnvironmentDisplay';
+import { WorkerStatusDisplay } from './components/WorkerStatusDisplay';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -375,7 +376,10 @@ export default function App(): React.ReactNode {
             <LogoIcon className="h-8 w-8 text-tertiary" />
             <div className="flex flex-col">
                 <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
-                <EnvironmentDisplay summary={latestSummary} />
+                 <div className="flex items-center space-x-4">
+                    <EnvironmentDisplay summary={latestSummary} />
+                    <WorkerStatusDisplay pendingRequests={latestSummary?.pendingFlowerRequests} />
+                </div>
             </div>
         </div>
         <div className="w-1/3 max-w-sm">

@@ -42,7 +42,7 @@ export const ChartsPanel: React.FC = () => {
     const history = useAnalyticsStore(state => state.history);
     
     // State to hold legend visibility for each chart
-    const [performanceLegend, setPerformanceLegend] = useState<Record<string, boolean>>({ 'Tick Time (Worker)': true, 'Render Time (UI)': true });
+    const [performanceLegend, setPerformanceLegend] = useState<Record<string, boolean>>({ 'Tick Time (Worker)': true, 'Render Time (UI)': true, 'Pending Requests': true });
     const [populationLegend, setPopulationLegend] = useState<Record<string, boolean>>({ 'Flowers': true, 'Insects': true, 'Birds': true, 'Eagles': true, 'Herbicide Planes': true, 'Herbicide Smokes': true, 'Eggs': true });
     const [eventsLegend, setEventsLegend] = useState<Record<string, boolean>>({ 'Reproductions': true, 'Insects Eaten': true, 'Eggs Laid': true, 'Insects Born': true, 'Eggs Eaten': true, 'Died of Old Age': true });
     const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true });
@@ -86,13 +86,28 @@ export const ChartsPanel: React.FC = () => {
         const ticks = history.map(h => h.tick);
         return {
             ...baseChartOptions,
-            title: { text: 'Performance (ms)', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Tick Time (Worker)', 'Render Time (UI)'], top: 35, textStyle: { color: '#bbf7d0' }, selected: performanceLegend },
+            title: { text: 'Performance & Workload', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
+            legend: { data: ['Tick Time (Worker)', 'Render Time (UI)', 'Pending Requests'], top: 35, textStyle: { color: '#bbf7d0' }, selected: performanceLegend },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
-            yAxis: { ...baseChartOptions.yAxis, name: 'Milliseconds' },
+            yAxis: [
+                {
+                    ...(baseChartOptions.yAxis as object),
+                    type: 'value',
+                    name: 'Milliseconds',
+                    position: 'left',
+                },
+                {
+                    ...(baseChartOptions.yAxis as object),
+                    type: 'value',
+                    name: 'Count',
+                    position: 'right',
+                    splitLine: { show: false },
+                },
+            ],
             series: [
-                { name: 'Tick Time (Worker)', type: 'line', data: history.map(h => h.tickTimeMs.toFixed(2)), color: '#38b2ac' },
-                { name: 'Render Time (UI)', type: 'line', data: history.map(h => h.renderTimeMs.toFixed(2)), color: '#ed8936' },
+                { name: 'Tick Time (Worker)', type: 'line', yAxisIndex: 0, data: history.map(h => h.tickTimeMs.toFixed(2)), color: '#38b2ac' },
+                { name: 'Render Time (UI)', type: 'line', yAxisIndex: 0, data: history.map(h => h.renderTimeMs.toFixed(2)), color: '#ed8936' },
+                { name: 'Pending Requests', type: 'line', yAxisIndex: 1, data: history.map(h => h.pendingFlowerRequests), color: '#ed64a6' },
             ],
         };
     }, [history, performanceLegend]);

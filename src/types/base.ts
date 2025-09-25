@@ -1,4 +1,3 @@
-
 import type { SavedCellActor, CellContent } from './actors';
 
 export type WindDirection = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
@@ -110,4 +109,13 @@ export interface TickSummary {
     currentHumidity: number;
     season: Season;
     weatherEvent: WeatherEventType;
+    pendingFlowerRequests: number;
+}
+
+export interface FlowerCreationRequest {
+    requestId: string;
+    x: number;
+    y: number;
+    parentGenome1?: string;
+    parentGenome2?: string;
 }

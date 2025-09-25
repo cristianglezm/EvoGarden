@@ -47,6 +47,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     currentHumidity: summary.currentHumidity,
                     season: summary.season,
                     weatherEvent: summary.weatherEvent,
+                    pendingFlowerRequests: summary.pendingFlowerRequests,
                 };
                 
                 const newHistory = [...get().history, newPoint];

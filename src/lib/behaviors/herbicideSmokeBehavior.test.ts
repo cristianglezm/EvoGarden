@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { processHerbicideSmokeTick } from './herbicideSmokeBehavior';
-import type { HerbicideSmoke, Flower, CellContent, Grid, SimulationParams } from '../../types';
+import type { HerbicideSmoke, Flower, CellContent, Grid, SimulationParams, FlowerSeed } from '../../types';
 import { DEFAULT_SIM_PARAMS } from '../../constants';
+import { AsyncFlowerFactory } from '../asyncFlowerFactory';
+
+vi.mock('../asyncFlowerFactory');
 
 describe('herbicideSmokeBehavior', () => {
     let smoke: HerbicideSmoke;
@@ -9,6 +12,8 @@ describe('herbicideSmokeBehavior', () => {
     let nextActorState: Map<string, CellContent>;
     let grid: Grid;
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 5, gridHeight: 5, herbicideDamage: 25 };
+    let mockAsyncFlowerFactory: AsyncFlowerFactory;
+    let cancelFlowerRequest: Mock;
 
     beforeEach(() => {
         smoke = {
@@ -31,12 +36,17 @@ describe('herbicideSmokeBehavior', () => {
         nextActorState = new Map();
         nextActorState.set(smoke.id, smoke);
         nextActorState.set(flower.id, flower);
+        
+        cancelFlowerRequest = vi.fn();
+        mockAsyncFlowerFactory = new (AsyncFlowerFactory as any)();
+        mockAsyncFlowerFactory.cancelFlowerRequest = cancelFlowerRequest;
     });
 
     const setupContext = () => ({
         grid,
         params,
         nextActorState,
+        asyncFlowerFactory: mockAsyncFlowerFactory,
     });
 
     it('should apply damage to flowers in the same cell', () => {
@@ -69,5 +79,27 @@ describe('herbicideSmokeBehavior', () => {
         processHerbicideSmokeTick(smoke, setupContext());
         expect(smoke.lifespan).toBe(0);
         expect(nextActorState.has(smoke.id)).toBe(false);
+    });
+    
+    it('should destroy a flower seed and cancel its creation request', () => {
+        const seed: FlowerSeed = {
+            id: 'seed-1',
+            type: 'flowerSeed',
+            x: 2,
+            y: 2,
+            health: 10,
+            maxHealth: 10,
+            age: 0,
+            imageData: 'stem'
+        };
+        nextActorState.set(seed.id, seed);
+        grid[2][2].push(seed);
+
+        processHerbicideSmokeTick(smoke, setupContext());
+
+        // The seed's health (10) is less than the damage (25), so it should be destroyed.
+        expect(nextActorState.has(seed.id)).toBe(false);
+        expect(cancelFlowerRequest).toHaveBeenCalledTimes(1);
+        expect(cancelFlowerRequest).toHaveBeenCalledWith(seed.id);
     });
 });

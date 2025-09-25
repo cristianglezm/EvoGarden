@@ -3,7 +3,7 @@ import { getInsectEmoji } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
-import { processFlowerTick } from './behaviors/flowerBehavior';
+import { processFlowerTick, processFlowerSeedTick } from './behaviors/flowerBehavior';
 import { processInsectTick } from './behaviors/insectBehavior';
 import { processNutrientTick } from './behaviors/nutrientBehavior';
 import { processEagleTick } from './behaviors/eagleBehavior';
@@ -192,7 +192,8 @@ export class SimulationEngine {
         qtree: Quadtree<CellContent>,
         flowerQtree: Quadtree<CellContent>,
         events: AppEvent[],
-        newActorQueue: CellContent[]
+        newActorQueue: CellContent[],
+        claimedCellsThisTick: Set<string>
     ): void {
         const flowerContext = {
             grid: this.grid,
@@ -200,6 +201,7 @@ export class SimulationEngine {
             asyncFlowerFactory: this.asyncFlowerFactory,
             currentTemperature: this.environmentState.currentTemperature,
             nextActorState,
+            claimedCellsThisTick,
         };
         const insectContext = {
             ...flowerContext,
@@ -228,7 +230,7 @@ export class SimulationEngine {
                     processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState });
                     break;
                 case 'herbicideSmoke':
-                    processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState });
+                    processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
                     break;
                 case 'insect':
                     processInsectTick(actor as Insect, insectContext, newActorQueue);
@@ -240,8 +242,7 @@ export class SimulationEngine {
                     break;
                 }
                 case 'flowerSeed': {
-                    const seed = actor as FlowerSeed;
-                    seed.age++;
+                    processFlowerSeedTick(actor as FlowerSeed, flowerContext);
                     break;
                 }
                 case 'egg':
@@ -316,6 +317,7 @@ export class SimulationEngine {
             currentHumidity: this.environmentState.currentHumidity,
             season: this.environmentState.season,
             weatherEvent: this.environmentState.currentWeatherEvent.type,
+            pendingFlowerRequests: this.asyncFlowerFactory.getPendingRequestCount(),
         };
     }
     
@@ -391,6 +393,9 @@ export class SimulationEngine {
                     // This cell is already claimed by another flower or seed this tick.
                     // The first one encountered wins, this one is removed.
                     nextActorState.delete(actorId);
+                    if(actor.type === 'flowerSeed') {
+                        this.asyncFlowerFactory.cancelFlowerRequest(actor.id);
+                    }
                 } else {
                     // This is the first flower/seed in this cell, claim it.
                     occupiedCells.add(coordKey);
@@ -415,6 +420,7 @@ export class SimulationEngine {
         
         const initialActors = this.grid.flat(2).map(cloneActor);
         const nextActorState = new Map<string, CellContent>(initialActors.map(actor => [actor.id, cloneActor(actor)]));
+        const claimedCellsThisTick = new Set<string>();
 
         // Spring Repopulation Logic
         if (previousSeason === 'Winter' && this.environmentState.season === 'Spring') {
@@ -428,8 +434,9 @@ export class SimulationEngine {
                 if (flowerCount <= this.params.initialFlowers) {
                     const seedsFromBank = await db.seedBank.toArray();
                     for (let i = 0; i < this.params.initialFlowers; i++) {
-                        const pos = findCellForFlowerSpawn(tempGridForPlacement, this.params);
+                        const pos = findCellForFlowerSpawn(tempGridForPlacement, this.params, undefined, claimedCellsThisTick);
                         if (pos) {
+                            claimedCellsThisTick.add(`${pos.x},${pos.y}`);
                             let seed: FlowerSeed | null;
                             if (seedsFromBank.length > 0) {
                                 const randomSeed = seedsFromBank[Math.floor(Math.random() * seedsFromBank.length)];
@@ -476,14 +483,28 @@ export class SimulationEngine {
         ecosystemManager.processNutrientHealing(nextActorState, qtree);
 
         const newActorQueue: CellContent[] = [];
-        this._processActorTicks(initialActors, nextActorState, qtree, flowerQtree, events, newActorQueue);
+        this._processActorTicks(initialActors, nextActorState, qtree, flowerQtree, events, newActorQueue, claimedCellsThisTick);
         
         await this._checkDeceasedChampions(initialActors, nextActorState, events);
 
         this.populationManager.totalBirdsHunted += this.birdsHuntedThisTick;
 
-        // Add newly requested actors (e.g., seeds from behaviors) to the state
-        for (const actor of newActorQueue) {
+        // --- Safeguard for Queued Actors ---
+        const newActorQueueOccupiedCells = new Set<string>();
+        const finalNewActorQueue = newActorQueue.filter(actor => {
+            const coordKey = `${actor.x},${actor.y}`;
+            if (newActorQueueOccupiedCells.has(coordKey) || claimedCellsThisTick.has(coordKey)) {
+                // If a cell is already claimed by another new actor, discard this one and cancel its request.
+                if(actor.type === 'flowerSeed') {
+                    this.asyncFlowerFactory.cancelFlowerRequest(actor.id);
+                }
+                return false;
+            }
+            newActorQueueOccupiedCells.add(coordKey);
+            return true;
+        });
+        
+        for (const actor of finalNewActorQueue) {
             nextActorState.set(actor.id, actor);
         }
 
@@ -571,7 +592,8 @@ export class SimulationEngine {
         this.tick = 0;
         this.totalInsectsEaten = 0;
         this.populationManager.updateParams(newParams);
-        this.asyncFlowerFactory.updateParams(newParams);
+        this.asyncFlowerFactory.reset();
+        this.asyncFlowerFactory.updateParams(this.params);
         this.environmentState = {
             currentTemperature: newParams.temperature,
             currentHumidity: newParams.humidity,

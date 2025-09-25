@@ -1,4 +1,4 @@
-import type { Flower, FlowerSeed, SimulationParams, CellContent } from '../types';
+import type { Flower, FlowerSeed, SimulationParams, CellContent, FlowerCreationRequest } from '../types';
 import { SEED_HEALTH } from '../constants';
 
 interface CompletedFlowerPayload {
@@ -15,6 +15,7 @@ export class AsyncFlowerFactory {
     private flowerWorkerPort: MessagePort | null = null;
     private completedFlowersQueue: CompletedFlowerPayload[] = [];
     private stemImageData: string | null = null;
+    private pendingRequests = new Set<string>();
 
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
         this.flowerWorkerPort = port;
@@ -31,11 +32,18 @@ export class AsyncFlowerFactory {
     public updateParams(params: SimulationParams) {
         this.flowerWorkerPort?.postMessage({ type: 'update-params', payload: params });
     }
+    
+    public reset() {
+        this.completedFlowersQueue = [];
+        this.pendingRequests.clear();
+        this.flowerWorkerPort?.postMessage({ type: 'cancel-all-requests' });
+    }
 
     private handleMessage(data: { type: string, payload: any }) {
         const { type, payload } = data;
         if (type === 'flower-created' || type === 'flower-creation-failed') {
             this.completedFlowersQueue.push(payload);
+            this.pendingRequests.delete(payload.requestId);
         }
     }
 
@@ -64,12 +72,28 @@ export class AsyncFlowerFactory {
         const seedHealth = Math.max(1, Math.round(avgHealth));
 
         const requestId = `seed-${x}-${y}-${Date.now()}-${Math.random()}`;
+        
+        const requestPayload: FlowerCreationRequest = {
+            requestId, x, y, parentGenome1, parentGenome2
+        };
+
         this.flowerWorkerPort.postMessage({
             type: 'request-flower',
-            payload: { requestId, x, y, parentGenome1, parentGenome2 }
+            payload: requestPayload
         });
+        
+        this.pendingRequests.add(requestId);
 
         return { id: requestId, type: 'flowerSeed', x, y, imageData: this.stemImageData, health: seedHealth, maxHealth: seedHealth, age: 0 };
+    }
+    
+    public cancelFlowerRequest(requestId: string) {
+        this.flowerWorkerPort?.postMessage({
+            type: 'cancel-flower-request',
+            payload: { requestId }
+        });
+        // Immediately remove from pending set to update UI counter
+        this.pendingRequests.delete(requestId);
     }
     
     public getCompletedFlowers(actorState: Map<string, CellContent>): CompletedFlowerResult {
@@ -94,5 +118,9 @@ export class AsyncFlowerFactory {
 
         this.completedFlowersQueue = [];
         return result;
+    }
+
+    public getPendingRequestCount(): number {
+        return this.pendingRequests.size;
     }
 }
