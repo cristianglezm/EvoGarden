@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
@@ -12,11 +12,13 @@ import { eventService } from './services/eventService';
 import { DataPanel } from './components/DataPanel';
 import { useAnalyticsStore } from './stores/analyticsStore';
 import { db } from './services/db';
-import { EventLog } from './components/EventLog';
 import { useEventLogStore } from './stores/eventLogStore';
 import { FullEventLogPanel } from './components/FullEventLogPanel';
-import { EnvironmentDisplay } from './components/EnvironmentDisplay';
-import { WorkerStatusDisplay } from './components/WorkerStatusDisplay';
+import { ActorSelectionPanel } from './components/ActorSelectionPanel';
+import { InsectDetailsPanel } from './components/InsectDetailsPanel';
+import { EggDetailsPanel } from './components/EggDetailsPanel';
+import { GenericActorDetailsPanel } from './components/GenericActorDetailsPanel';
+import { StatusPanel } from './components/StatusPanel';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -64,7 +66,8 @@ const rehydrateGrid = async (metadata: any): Promise<Grid> => {
 
 export default function App(): React.ReactNode {
   const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
-  const [selectedFlowerId, setSelectedFlowerId] = useState<string | null>(null);
+  const [selectedActor, setSelectedActor] = useState<CellContent | null>(null);
+  const [actorsInSelectedCell, setActorsInSelectedCell] = useState<CellContent[]>([]);
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
   const [isFullLogOpen, setIsFullLogOpen] = useState(false);
@@ -134,7 +137,7 @@ export default function App(): React.ReactNode {
                 const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
                 setParams(loadedParams);
                 setIsRunning(false);
-                setSelectedFlowerId(null);
+                setSelectedActor(null);
                 eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
             } else {
                 // Initialize with default params
@@ -165,12 +168,6 @@ export default function App(): React.ReactNode {
   }, [params.flowerDetailRadius, isServiceInitialized]);
 
 
-  const selectedFlower = useMemo(() => {
-    if (!selectedFlowerId) return null;
-    const actor = actors.get(selectedFlowerId);
-    return actor?.type === 'flower' ? actor : null;
-  }, [selectedFlowerId, actors]);
-
   const handleFrameRendered = useCallback((renderTimeMs: number) => {
       if (latestSummaryRef.current) {
           useAnalyticsStore.getState().addDataPoint({
@@ -188,51 +185,63 @@ export default function App(): React.ReactNode {
     setIsRunning(false); // Stop the simulation on reset
     setParams(newParams);
     resetWithNewParams(newParams); // Explicitly tell the worker to reset
-    setSelectedFlowerId(null);
+    setSelectedActor(null);
+    setActorsInSelectedCell([]);
     setIsControlsOpen(false); // Close panel on apply
     useAnalyticsStore.getState().reset(); // Reset analytics data
     useEventLogStore.getState().reset(); // Reset event log
   };
-  
-  const handleSelectFlower = useCallback((flower: Flower | null) => {
-    setSelectedFlowerId(flower?.id ?? null);
-    if (flower) {
-        // A flower is selected. Store the current running state and then pause.
-        wasRunningBeforeSelectionRef.current = isRunning;
-        setIsRunning(false);
-    } else {
-        // Deselecting. If the simulation was running before, resume it.
-        if (wasRunningBeforeSelectionRef.current) {
-            setIsRunning(true);
-        }
-    }
+
+  const handleActorSelection = useCallback((actor: CellContent | null) => {
+      setSelectedActor(actor);
+      setActorsInSelectedCell([]); // Clear the list view once a final selection is made
+      
+      if (actor) {
+          wasRunningBeforeSelectionRef.current = isRunning;
+          setIsRunning(false);
+      } else {
+          if (wasRunningBeforeSelectionRef.current) {
+              setIsRunning(true);
+          }
+      }
   }, [isRunning, setIsRunning]);
+
+  const handleCellClick = useCallback((actors: CellContent[]) => {
+      if (actors.length === 0) {
+          handleActorSelection(null);
+      } else if (actors.length === 1) {
+          handleActorSelection(actors[0]);
+      } else {
+          // Multiple actors, show selection panel
+          wasRunningBeforeSelectionRef.current = isRunning;
+          setIsRunning(false);
+          setActorsInSelectedCell(actors);
+          setSelectedActor(null);
+      }
+  }, [handleActorSelection, isRunning, setIsRunning]);
 
   // Effect to handle clicking outside of the details panel to close it.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (!selectedFlowerId) return; // Only run if a flower is selected
+        if (!selectedActor && actorsInSelectedCell.length === 0) return;
 
         const isClickInsideDetails = detailsPanelRef.current?.contains(event.target as Node);
         const isClickInsideControlsButton = controlsButtonRef.current?.contains(event.target as Node);
         const isClickInsideControlsPanel = controlsPanelRef.current?.contains(event.target as Node);
         const isClickInsideSimulationView = simulationViewRef.current?.contains(event.target as Node);
 
-        // If the click is on the canvas, its own handler will manage selection/deselection.
-        // If the click is inside any other interactive panel, do nothing.
         if (isClickInsideSimulationView || isClickInsideDetails || isClickInsideControlsButton || isClickInsideControlsPanel) {
             return;
         }
 
-        // Otherwise, the click was outside all interactive areas, so deselect the flower.
-        handleSelectFlower(null);
+        handleActorSelection(null);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
         document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [selectedFlowerId, handleSelectFlower]);
+  }, [selectedActor, actorsInSelectedCell, handleActorSelection]);
 
   const handleSaveSimulation = useCallback(async () => {
     if (!workerRef.current || isSaving) return;
@@ -325,7 +334,7 @@ export default function App(): React.ReactNode {
         const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
         setParams(loadedParams);
         setIsRunning(false);
-        setSelectedFlowerId(null);
+        setSelectedActor(null);
         setIsControlsOpen(false);
         eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
     } catch (err) {
@@ -369,52 +378,73 @@ export default function App(): React.ReactNode {
     );
   }
 
+  const renderDetailsPanel = () => {
+    if (actorsInSelectedCell.length > 0) {
+        return <ActorSelectionPanel actors={actorsInSelectedCell} onSelect={handleActorSelection} onClose={() => handleActorSelection(null)} />;
+    }
+    if (selectedActor) {
+        switch(selectedActor.type) {
+            case 'flower':
+                return <FlowerDetailsPanel flower={selectedActor} isRunning={isRunning} setIsRunning={setIsRunning} onClose={() => handleActorSelection(null)} />;
+            case 'insect':
+                return <InsectDetailsPanel insect={selectedActor} onClose={() => handleActorSelection(null)} />;
+            case 'egg':
+                return <EggDetailsPanel egg={selectedActor} onClose={() => handleActorSelection(null)} />;
+            case 'bird':
+            case 'eagle':
+            case 'nutrient':
+            case 'herbicidePlane':
+            case 'herbicideSmoke':
+            case 'flowerSeed':
+                return <GenericActorDetailsPanel actor={selectedActor} onClose={() => handleActorSelection(null)} />;
+            default:
+                // Fallback for any unhandled type
+                handleActorSelection(null);
+                return null;
+        }
+    }
+    return null;
+  };
+const detailsPanel = renderDetailsPanel();
+
+
   return (
     <div className="min-h-screen bg-background text-primary flex flex-col font-sans relative overflow-hidden">
-      <header className="bg-background p-2 shadow-lg flex items-stretch justify-between z-10 h-20 gap-4">
-        <div className="flex items-center space-x-3 flex-shrink-0">
-            <LogoIcon className="h-8 w-8 text-tertiary" />
-            <div className="flex flex-col">
+        <header className="bg-background p-2 shadow-lg flex items-start justify-between z-10 gap-4">
+            <div className="flex items-center space-x-3 flex-shrink-0 pt-2">
+                <LogoIcon className="h-8 w-8 text-tertiary" />
                 <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
-                 <div className="flex items-center space-x-4">
-                    <EnvironmentDisplay summary={latestSummary} />
-                    <WorkerStatusDisplay pendingRequests={latestSummary?.pendingFlowerRequests} />
-                </div>
             </div>
-        </div>
-        <div className="w-1/3 max-w-sm">
-            <EventLog onClick={handleOpenFullLog} />
-        </div>
-        <a 
-            href="https://github.com/cristianglezm/EvoGarden" 
-            target="_blank" 
-            rel="noopener"
-            className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center"
-            aria-label="View on GitHub"
-            title="View on GitHub"
-        >
-            <GitHubIcon className="h-7 w-7" />
-        </a>
-      </header>
+            
+            <div className="flex-grow min-w-0 mx-4">
+                <StatusPanel summary={latestSummary} onLogClick={handleOpenFullLog} />
+            </div>
+
+            <a 
+                href="https://github.com/cristianglezm/EvoGarden" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center pt-2"
+                aria-label="View on GitHub"
+                title="View on GitHub"
+            >
+                <GitHubIcon className="h-7 w-7" />
+            </a>
+        </header>
       
       <main className="grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">
-        {selectedFlower && (
-          <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
-            <FlowerDetailsPanel 
-              flower={selectedFlower} 
-              isRunning={isRunning}
-              setIsRunning={setIsRunning}
-              onClose={() => handleSelectFlower(null)}
-            />
-          </aside>
+        {detailsPanel && (
+            <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
+                {detailsPanel}
+            </aside>
         )}
         
         <div ref={simulationViewRef} className="grow flex flex-col h-full">
           <SimulationView 
             params={params}
             actors={actors}
-            onSelectFlower={handleSelectFlower}
-            selectedFlowerId={selectedFlowerId}
+            onCellClick={handleCellClick}
+            selectedActorId={selectedActor?.id ?? null}
             onFrameRendered={handleFrameRendered}
           />
         </div>

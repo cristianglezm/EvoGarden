@@ -31,6 +31,10 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     droughtHumidityDecrease: 0.2,
     weatherEventMinDuration: 20, // Ticks
     weatherEventMaxDuration: 50, // Ticks
+    // Insect Evolution
+    reproductionCooldown: 1,
+    mutationChance: 0.05,
+    mutationAmount: 0.2,
 };
 
 // --- FLOWER CONSTANTS ---
