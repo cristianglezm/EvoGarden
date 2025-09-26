@@ -1,6 +1,6 @@
-import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats } from '../types';
-import { getInsectEmoji } from '../utils';
-import { INSECT_LIFESPAN } from '../constants';
+import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Insect } from '../types';
+import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
+import { INSECT_DATA } from '../constants';
 
 // Fallback values
 const FALLBACK_MAX_HEALTH = 100;
@@ -56,7 +56,20 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
     for (let i = 0; i < initialInsects; i++) {
         const id = `insect-init-${i}`;
         const emoji = getInsectEmoji(id);
-        actors.push({ id, type: 'insect', x: -1, y: -1, pollen: null, emoji, lifespan: INSECT_LIFESPAN });
+        const baseStats = INSECT_DATA.get(emoji);
+        
+        if (baseStats) {
+            const newInsect: Insect = { 
+                id, type: 'insect', x: -1, y: -1, 
+                pollen: null, emoji, 
+                genome: generateRandomInsectGenome(),
+                health: baseStats.maxHealth,
+                maxHealth: baseStats.maxHealth,
+                stamina: baseStats.maxStamina,
+                maxStamina: baseStats.maxStamina
+            };
+            actors.push(newInsect);
+        }
     }
     for (let i = 0; i < initialBirds; i++) {
         actors.push({ id: `bird-init-${i}`, type: 'bird', x: -1, y: -1, target: null, patrolTarget: null });
