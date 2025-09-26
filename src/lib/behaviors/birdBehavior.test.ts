@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processBirdTick } from './birdBehavior';
 import type { Bird, Insect, Grid, CellContent, AppEvent, Flower, Egg } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../../constants';
 
 describe('birdBehavior', () => {
     let bird: Bird;
@@ -13,6 +13,16 @@ describe('birdBehavior', () => {
     let grid: Grid;
     let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
+    const mockInsectStats = INSECT_DATA.get('🦋')!;
+
+    const createMockInsect = (id: string, x: number, y: number): Insect => ({
+        id, type: 'insect', x, y, emoji: '🦋', pollen: null,
+        health: mockInsectStats.maxHealth,
+        maxHealth: mockInsectStats.maxHealth,
+        stamina: mockInsectStats.maxStamina,
+        maxStamina: mockInsectStats.maxStamina,
+        genome: [],
+    });
 
     beforeEach(() => {
         bird = { id: 'bird1', type: 'bird', x: 5, y: 5, target: null, patrolTarget: null };
@@ -38,8 +48,8 @@ describe('birdBehavior', () => {
     });
     
     it('should find the closest unprotected insect as a target', () => {
-        const closeInsect: Insect = { id: 'insect1', type: 'insect', x: 7, y: 7, emoji: '🦋', pollen: null, lifespan: 100 };
-        const farInsect: Insect = { id: 'insect2', type: 'insect', x: 9, y: 9, emoji: '🦋', pollen: null, lifespan: 100 };
+        const closeInsect = createMockInsect('insect1', 7, 7);
+        const farInsect = createMockInsect('insect2', 9, 9);
         grid[7][7].push(closeInsect);
         grid[9][9].push(farInsect);
         nextActorState.set(closeInsect.id, closeInsect);
@@ -53,8 +63,8 @@ describe('birdBehavior', () => {
     });
 
     it('should ignore insects that are protected by a flower', () => {
-        const protectedInsect: Insect = { id: 'insect1', type: 'insect', x: 6, y: 6, emoji: '🦋', pollen: null, lifespan: 100 };
-        const unprotectedInsect: Insect = { id: 'insect2', type: 'insect', x: 8, y: 8, emoji: '🦋', pollen: null, lifespan: 100 };
+        const protectedInsect = createMockInsect('insect1', 6, 6);
+        const unprotectedInsect = createMockInsect('insect2', 8, 8);
         const flower = { id: 'flower1', type: 'flower', x: 6, y: 6 } as Flower;
         
         grid[6][6].push(protectedInsect, flower);
@@ -80,8 +90,7 @@ describe('birdBehavior', () => {
     });
 
     it('should move one step towards its prey target', () => {
-        // Setup the target insect in the grid and state so the bird can "see" it
-        const targetInsect: Insect = { id: 'insect-target', type: 'insect', x: 8, y: 8, emoji: '🦋', pollen: null, lifespan: 100 };
+        const targetInsect = createMockInsect('insect-target', 8, 8);
         grid[8][8].push(targetInsect);
         nextActorState.set(targetInsect.id, targetInsect);
 
@@ -100,8 +109,8 @@ describe('birdBehavior', () => {
         expect(bird.y).toBe(6);
     });
 
-    it('should prey on an insect and create a nutrient', () => {
-        const targetInsect: Insect = { id: 'insect1', type: 'insect', x: 6, y: 6, emoji: '🦋', pollen: null, lifespan: 100 };
+    it('should prey on an insect and create a nutrient with lifespan based on insect maxHealth', () => {
+        const targetInsect = createMockInsect('insect1', 6, 6);
         bird.x = 5; bird.y = 5;
         bird.target = { x: 6, y: 6 };
         
@@ -119,13 +128,16 @@ describe('birdBehavior', () => {
         expect(nutrient).toBeDefined();
         expect(nutrient?.x).toBe(6);
         expect(nutrient?.y).toBe(6);
+        // Check nutrient lifespan calculation
+        const expectedLifespan = 2 + Math.floor(targetInsect.maxHealth / 30);
+        expect((nutrient as any).lifespan).toBe(expectedLifespan);
         expect(bird.target).toBeNull();
     });
 
     it('should prey on an egg and not create a nutrient', () => {
         const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(1.0); // Ensure random nutrient drop doesn't happen
         
-        const targetEgg: Egg = { id: 'egg1', type: 'egg', x: 6, y: 6, hatchTimer: 10, insectEmoji: '🐛' };
+        const targetEgg: Egg = { id: 'egg1', type: 'egg', x: 6, y: 6, hatchTimer: 10, insectEmoji: '🐛', genome: [] };
         bird.x = 5; bird.y = 5;
         bird.target = { x: 6, y: 6 };
         

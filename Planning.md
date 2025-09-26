@@ -31,13 +31,14 @@ Define the core data structures for the simulation state.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
-    -   `Insect`: Includes `emoji`, position, `lifespan`, and `pollen` (tracking the genome and source ID of the last flower visited).
+    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files.
+    -   `InsectStats`: A new interface defining the base stats for each insect type (`attack`, `maxHealth`, `maxStamina`, `speed`, `role`, `eggHatchTime`, `reproductionCost`).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
     -   `HerbicidePlane`: Includes position, a `path` vector, and an `end` coordinate.
     -   `HerbicideSmoke`: Includes position, a `lifespan`, and a `canBeExpanded`.
     -   `Nutrient`: Includes position and a `lifespan` in ticks.
-    -   `Egg`: Includes position, `hatchTimer`, and the `insectEmoji` it will spawn.
+    -   `Egg`: Includes position, `hatchTimer`, the `insectEmoji` it will spawn, and the `genome` inherited from its parents.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
 -   **Service Interfaces**:
     -   `FEService`: Defines the contract for the WASM service wrapper, ensuring all methods are typed correctly, especially `getFlowerStats` which returns `Promise<FlowerGenomeStats>`.
@@ -117,7 +118,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   **Role**: To group functions that operate on the entire actor state rather than a single actor, cleaning up the main engine loop.
     -   **Responsibilities**:
         -   `processNutrientHealing`: Scans for all nutrients and applies their healing effect to nearby flowers.
-        -   `handleInsectReproduction`: Scans for pairs of insects on the same cell and initiates reproduction.
+        -   `handleInsectReproduction`: Scans for pairs of insects of the same species on the same cell, initiating reproduction. It handles the creation of a new `Egg` with a `genome` created by crossing over the parents' genomes with a chance of mutation, then puts the parents on a `reproductionCooldown`.
 
 -   **Behavior System (`lib/behaviors/`)**: This is a modular pattern for separating actor logic. The engine calls a dedicated function for each actor type, passing the actor's state and a `context` object with necessary global information. Crucially, behaviors no longer create UI notifications directly; they now push structured `AppEvent` objects into the context's `events` array.
 
@@ -127,10 +128,10 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
     -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
+        -   **Health and Stamina System**: Insects have `health` which decays slowly each tick. If health reaches zero, the insect dies and is replaced by a nutrient. Actions like moving and attacking cost `stamina`, while idling regenerates it. An insect cannot act if it lacks sufficient stamina.
+        -   **Genetic Algorithm-based AI**: Insects no longer target the nearest flower. Instead, they use their unique `genome` (an array of weights) to calculate a "desirability score" for all visible flowers based on the flower's stats (health, toxicity, etc.). This drives them towards flowers that are evolutionarily advantageous for them. A small degree of randomness prevents unnatural swarming.
         -   **Dormancy**: The `processInsectTick` function now checks the `currentTemperature` from the context. If it is below a certain threshold (`INSECT_DORMANCY_TEMP`), the function returns immediately, causing the insect to skip its turn and effectively become dormant.
-        -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's lifespan is extended. If the rate is above a positive threshold (toxic/carnivorous), the insect's lifespan is reduced. Otherwise, the insect damages the flower as normal.
-        -   **Lifecycle**: Insects have a limited `lifespan`. Each tick, it decrements. If it reaches zero, the insect dies and is replaced by a nutrient.
-        -   **AI**: Uses the `flowerQtree` to find the nearest flower and moves towards it, with a degree of randomness to prevent unnatural swarming.
+        -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's health is restored. If the rate is above a positive threshold (toxic/carnivorous), the insect's health is reduced. Otherwise, the insect damages the flower as normal, gaining a small amount of health back.
         -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event.
 
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
@@ -222,7 +223,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating specific tasks to specialized managers.
     -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
-    -   `src/lib/EcosystemManager.ts`: **Global Rules.** A module that contains functions for system-wide behaviors like nutrient healing and insect reproduction.
+    -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
