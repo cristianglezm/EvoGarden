@@ -1,5 +1,5 @@
 import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season } from '../types';
-import { getInsectEmoji } from '../utils';
+import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
@@ -13,7 +13,7 @@ import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
 import * as ecosystemManager from './ecosystemManager';
-import { DEFAULT_SIM_PARAMS, INSECT_LIFESPAN } from '../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../constants';
 import { Quadtree } from './Quadtree';
 import { updateEnvironment } from './environmentManager';
 
@@ -232,9 +232,12 @@ export class SimulationEngine {
                 case 'herbicideSmoke':
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
                     break;
-                case 'insect':
-                    processInsectTick(actor as Insect, insectContext, newActorQueue);
+                case 'insect': {
+                    const insect = actor as Insect;
+                    processInsectTick(insect, insectContext, newActorQueue);
+                    if (insect.health <= 0) nextActorState.delete(insect.id);
                     break;
+                }
                 case 'flower': {
                     const flower = actor as Flower;
                     processFlowerTick(flower, flowerContext, newActorQueue);
@@ -377,10 +380,6 @@ export class SimulationEngine {
         return deltas;
     }
     
-    /**
-     * Enforces the rule that only one flower or seed can exist per cell.
-     * Iterates through the actor state and removes duplicates, keeping the first one encountered.
-     */
     private _resolveFlowerAndSeedConflicts(nextActorState: Map<string, CellContent>): void {
         const occupiedCells = new Set<string>(); // Stores "x,y" coordinates
         const actorIds = [...nextActorState.keys()]; // Use a copy of keys for safe iteration
@@ -458,9 +457,20 @@ export class SimulationEngine {
                          if (pos) {
                             const id = `insect-repop-${i}-${Date.now()}`;
                             const emoji = getInsectEmoji(id);
-                            const newInsect: Insect = { id, type: 'insect', x: pos.x, y: pos.y, pollen: null, emoji, lifespan: INSECT_LIFESPAN };
-                            nextActorState.set(id, newInsect);
-                            tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                            const baseStats = INSECT_DATA.get(emoji);
+                            if (baseStats) {
+                                const newInsect: Insect = { 
+                                    id, type: 'insect', x: pos.x, y: pos.y, 
+                                    pollen: null, emoji, 
+                                    genome: generateRandomInsectGenome(),
+                                    health: baseStats.maxHealth,
+                                    maxHealth: baseStats.maxHealth,
+                                    stamina: baseStats.maxStamina,
+                                    maxStamina: baseStats.maxStamina
+                                };
+                                nextActorState.set(id, newInsect);
+                                tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                            }
                          }
                     }
                 }
@@ -562,7 +572,6 @@ export class SimulationEngine {
         this.grid = loadedGrid;
         this.asyncFlowerFactory.updateParams(this.params);
         
-        // Restore environment state, with fallback for older saves
         this.environmentState = loadedEnvState || {
             currentTemperature: this.params.temperature,
             currentHumidity: this.params.humidity,
@@ -579,8 +588,21 @@ export class SimulationEngine {
                     .catch(err => console.error(`Failed to regenerate image for flower ${entity.id}`, err));
             }
             if (entity.type === 'insect') {
-                if (!entity.emoji) entity.emoji = getInsectEmoji(entity.id);
-                if (entity.lifespan === undefined) entity.lifespan = INSECT_LIFESPAN; // Backwards compatibility
+                const insect = entity as Insect;
+                if (!insect.emoji) insect.emoji = getInsectEmoji(insect.id);
+                
+                // Backward compatibility for saves from before the health/stamina update
+                if (insect.lifespan !== undefined && insect.health === undefined) {
+                    const baseStats = INSECT_DATA.get(insect.emoji);
+                    if (baseStats) {
+                        insect.maxHealth = baseStats.maxHealth;
+                        insect.health = (insect.lifespan / 100) * baseStats.maxHealth;
+                        insect.maxStamina = baseStats.maxStamina;
+                        insect.stamina = baseStats.maxStamina;
+                        insect.genome = generateRandomInsectGenome();
+                        delete insect.lifespan;
+                    }
+                }
             }
             return Promise.resolve();
         });
