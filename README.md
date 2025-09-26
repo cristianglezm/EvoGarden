@@ -12,6 +12,9 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 ## ✨ Features
 
 -   **Dynamic Weather & Seasons**: Experience a living environment with four distinct seasons (Spring, Summer, Autumn, Winter) that cyclically affect temperature and humidity. Be prepared for unpredictable weather events like heatwaves, cold snaps, heavy rain, and droughts that create new evolutionary pressures.
+-   **Intelligent Insects with Genetic AI**: Insects no longer move randomly. Each insect has a unique genetic code (genome) that determines its preferences for different flower traits. They actively seek out flowers that best match their genes, creating complex and emergent behaviors.
+-   **Insect Evolution**: When insects reproduce, their offspring inherit a mix of their parents' genomes, with a chance for random mutation. This creates a dynamic evolutionary loop where insects adapt to the garden's flower population over generations.
+-   **Stamina-Based Actions & Health**: Insects now manage health and stamina. Actions like moving and attacking cost stamina, and they must rest to recover. Their health slowly decays, and if it runs out, they die and decompose into a nutrient, completing the ecosystem's cycle of life.
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
 -   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), and genetic evolution (*Poison Garden*).
 -   **Seed Bank**: Automatically saves the genomes of "champion" flowers—the longest-lived, most toxic, and most healing—to a persistent database. These champions are then used to repopulate the garden after a collapse, ensuring genetic resilience. Users can view these champions, download their genomes, or clear the bank to start fresh.
@@ -56,11 +59,11 @@ The garden is no longer static. It features a fully dynamic climate system that 
     -   **Lifecycle**: They consume stamina, then health. They heal by absorbing nutrients. If their health reaches zero, they wither.
     -   **Reproduction**: Mature flowers can reproduce in three ways: Proximity Pollination, Insect Pollination, and Wind Pollination.
 -   **Insects** (`🦋`, `🐛`, `🐌`, `🐞`, `🐝`):
+    -   **Genetic AI & Movement**: Insects use a Quadtree to find nearby flowers and then use their unique **genome** to calculate a "desirability score" for each one. This intelligent targeting leads them to flowers that best suit their evolved preferences, rather than just the closest one.
+    -   **Lifecycle & Stamina**: Insects have `health` that slowly depletes, and a `stamina` bar that is consumed by actions like moving and attacking. They must rest to regenerate stamina. If an insect's health reaches zero, it dies and decomposes into a nutrient.
     -   **Dormancy**: Insects are now sensitive to cold. If the `currentTemperature` drops below a certain threshold, they become dormant, ceasing all activity and halting their aging process until the weather warms up.
-    -   **AI & Movement**: Insects use a Quadtree to find the nearest flower, with a degree of randomness in their pathfinding to create more realistic pollination patterns.
-    -   **Interaction**: They are now affected by a flower's toxicity. They will damage non-carnivorous flowers, be damaged *by* carnivorous flowers, or be healed by healing flowers. They carry pollen to other flowers to trigger reproduction.
-    -   **Reproduction**: Two insects of the same species on the same cell may lay an egg.
-    -   **Lifecycle**: Insects have a limited lifespan and decompose into a nutrient upon death.
+    -   **Interaction**: They are now affected by a flower's toxicity. They will damage non-carnivorous flowers (gaining some health back), be damaged *by* carnivorous flowers, or be healed by healing flowers. They carry pollen to other flowers to trigger reproduction.
+    -   **Reproduction & Evolution**: Two insects of the same species on the same cell may lay an egg. The offspring inherits a combination of its parents' genomes, with a small chance for mutation, allowing the insect population to evolve over time.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.
 -   **Birds** (`🐦`): The predators of the garden.
     -   **AI & Movement**: Birds use a Quadtree to efficiently scan for prey. They prioritize hunting unprotected insects but will eat stationary eggs. When not hunting, they exhibit a smarter patrolling AI, flying towards flowers to search for prey.
@@ -106,7 +109,7 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation. Its main loop (`calculateNextTick`) coordinates the different managers and systems. It is instantiated and run exclusively within the web worker.
     -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns for spawning, and decides when to introduce new birds, eagles, or herbicide planes based on population trends.
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`. It handles the queue of requested flowers, provides `FlowerSeed` placeholders to the engine, and returns fully-formed `Flower` objects once they have been computed by the WASM module.
-    -   `src/lib/EcosystemManager.ts`: **Global Rules.** A module that contains functions for system-wide behaviors that don't belong to a single actor, such as nutrient healing and insect reproduction.
+    -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors that don't belong to a single actor, such as nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.

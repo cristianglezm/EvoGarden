@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SimulationEngine } from './simulationEngine';
-import { DEFAULT_SIM_PARAMS, SEED_HEALTH } from '../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA, SEED_HEALTH } from '../constants';
 import type { FEService, Flower, Grid, CellContent, ActorUpdateDelta, ActorAddDelta, FlowerSeed } from '../types';
 
 vi.mock('../services/db', () => ({
@@ -54,8 +54,16 @@ describe('SimulationEngine', () => {
 
     describe('Initialization and Setup', () => {
         it('initializeGridWithActors should correctly populate the grid', () => {
+            const baseInsectStats = INSECT_DATA.get('🦋')!;
             const mockActors: CellContent[] = [
-                { id: 'insect-1', type: 'insect', x: 0, y: 0, lifespan: 100, emoji: '🦋', pollen: null },
+                {
+                    id: 'insect-1', type: 'insect', x: 0, y: 0, emoji: '🦋', pollen: null,
+                    health: baseInsectStats.maxHealth,
+                    maxHealth: baseInsectStats.maxHealth,
+                    stamina: baseInsectStats.maxStamina,
+                    maxStamina: baseInsectStats.maxStamina,
+                    genome: []
+                },
                 { ...mockFlower, id: 'flower-1', x: 2, y: 3 }
             ];
             
