@@ -181,13 +181,19 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` hook, and handles save/load logic.
 -   **`SimulationView.tsx`**: Hosts the rendering engine's canvases and forwards user clicks.
 -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
+-   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
 -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower.
+-   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect, including its stats, status, and a visualization of its genetic preferences.
+-   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become.
+-   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.).
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
 -   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
 -   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
 -   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
 -   **Header Components**:
+    -   `StatusPanel.tsx`: A new container component in the header that orchestrates the `EnvironmentDisplay`, `WorkerStatusDisplay`, and `EventLog`.
     -   `EnvironmentDisplay`: A new real-time display in the header showing the current season, temperature, humidity, and any active weather events.
+    -   `WorkerStatusDisplay.tsx`: A new real-time display in the status bar showing the number of pending genetics tasks in the `flower.worker.ts`.
     -   `EventLog.tsx`: A non-intrusive, terminal-style log that displays a real-time feed of events.
 -   **Notification Components**:
     -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events.
@@ -229,7 +235,11 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
     -   `src/components/Controls.tsx`: UI for changing simulation parameters.
+    -   `src/components/ActorSelectionPanel.tsx`: A panel that appears when a user clicks a cell containing multiple actors.
     -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
+    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect.
+    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg.
+    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
     -   `src/components/Modal.tsx`: A generic modal component.
     -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
@@ -237,6 +247,10 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
     -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
     -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank. Allows users to view a 3D model of the champions, download their genomes, and clear the database.
+    -   `src/components/StatusPanel.tsx`: The main container in the header for status information.
+    -   `src/components/EnvironmentDisplay.tsx`: A component within the `StatusPanel` showing current weather and season.
+    -   `src/components/WorkerStatusDisplay.tsx`: A component within the `StatusPanel` showing the genetics worker's status.
+    -   `src/components/EventLog.tsx`: A component within the `StatusPanel` showing the latest event.
     -   `src/components/Toast.tsx`: Renders a single toast notification with a message and icon.
     -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.

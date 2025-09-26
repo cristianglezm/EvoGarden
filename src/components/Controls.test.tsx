@@ -81,4 +81,55 @@ describe('Controls component', () => {
             gridWidth: 15
         }));
     });
+
+    it('updates multiple local state values and applies them', () => {
+        render(<Controls {...defaultProps} />);
+    
+        fireEvent.change(screen.getByLabelText(/Flowers/i), { target: { value: '50' } });
+        fireEvent.change(screen.getByLabelText(/Insects/i), { target: { value: '25' } });
+        fireEvent.change(screen.getByLabelText(/Base Temperature/i), { target: { value: '30' } });
+        
+        fireEvent.click(screen.getByRole('button', { name: /Apply & Reset/i }));
+    
+        expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
+            initialFlowers: 50,
+            initialInsects: 25,
+            temperature: 30,
+        }));
+    });
+    
+    it('updates select input value and applies it', () => {
+        render(<Controls {...defaultProps} />);
+        
+        fireEvent.change(screen.getByLabelText(/Wind Direction/i), { target: { value: 'NW' } });
+        
+        fireEvent.click(screen.getByRole('button', { name: /Apply & Reset/i }));
+        
+        expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
+            windDirection: 'NW'
+        }));
+    });
+    
+    it('disables Save button when simulation is running', () => {
+        render(<Controls {...defaultProps} isRunning={true} />);
+        expect(screen.getByRole('button', { name: /Save/i })).toBeDisabled();
+    });
+    
+    it('disables Load button when there is no saved state', () => {
+        render(<Controls {...defaultProps} hasSavedState={false} />);
+        expect(screen.getByRole('button', { name: /Load/i })).toBeDisabled();
+    });
+    
+    it('enables Load button when there is a saved state', () => {
+        render(<Controls {...defaultProps} hasSavedState={true} />);
+        expect(screen.getByRole('button', { name: /Load/i })).toBeEnabled();
+    });
+    
+    it('shows loading state on Save button when isSaving is true', () => {
+        render(<Controls {...defaultProps} isSaving={true} />);
+        const saveButton = screen.getByRole('button', { name: /Saving/i });
+        expect(saveButton).toBeInTheDocument();
+        expect(saveButton).toBeDisabled();
+        expect(screen.getByText('Saving...')).toBeInTheDocument();
+    });
 });

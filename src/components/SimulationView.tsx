@@ -1,18 +1,18 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import type { Flower, SimulationParams, CellContent } from '../types';
+import type { SimulationParams, CellContent } from '../types';
 import { RenderingEngine } from '../lib/renderingEngine';
 
 const CELL_SIZE_PX = 64;
 
 interface SimulationViewProps {
     params: SimulationParams;
-    onSelectFlower: (flower: Flower | null) => void;
-    selectedFlowerId: string | null;
+    onCellClick: (actors: CellContent[]) => void;
+    selectedActorId: string | null;
     actors: Map<string, CellContent>;
     onFrameRendered: (renderTimeMs: number) => void;
 }
 
-export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelectFlower, selectedFlowerId, actors, onFrameRendered }) => {
+export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellClick, selectedActorId, actors, onFrameRendered }) => {
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const engineRef = useRef<RenderingEngine | null>(null);
@@ -42,11 +42,11 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelect
     useEffect(() => {
         if (isEngineReady && engineRef.current) {
             const renderStartTime = performance.now();
-            engineRef.current.draw(actors, selectedFlowerId);
+            engineRef.current.draw(actors, selectedActorId);
             const renderEndTime = performance.now();
             onFrameRendered(renderEndTime - renderStartTime);
         }
-    }, [actors, selectedFlowerId, isEngineReady, onFrameRendered]);
+    }, [actors, selectedActorId, isEngineReady, onFrameRendered]);
 
 
     const handleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -59,17 +59,16 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onSelect
 
         const gridX = Math.floor(x / CELL_SIZE_PX);
         const gridY = Math.floor(y / CELL_SIZE_PX);
-
-        let clickedFlower: Flower | null = null;
-        // Find if a flower exists at the clicked coordinates from the actors map
+        
+        const actorsInCell: CellContent[] = [];
         for (const actor of actors.values()) {
-            if (actor.type === 'flower' && actor.x === gridX && actor.y === gridY) {
-                clickedFlower = actor;
-                break;
+            if (actor.x === gridX && actor.y === gridY) {
+                actorsInCell.push(actor);
             }
         }
-        onSelectFlower(clickedFlower);
-    }, [actors, onSelectFlower]);
+        
+        onCellClick(actorsInCell);
+    }, [actors, onCellClick]);
 
     const canvasWidth = params.gridWidth * CELL_SIZE_PX;
     const canvasHeight = params.gridHeight * CELL_SIZE_PX;

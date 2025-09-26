@@ -27,8 +27,8 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isFloat = name === 'humidity' || name === 'herbicideFlowerDensityThreshold' || name === 'humidityAmplitude' || name === 'weatherEventChance' || name === 'heavyRainHumidityIncrease' || name === 'droughtHumidityDecrease';
-        const isString = name === 'windDirection' || name === 'notificationMode';
+        const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount'].includes(name);
+        const isString = ['windDirection', 'notificationMode'].includes(name);
         
         setLocalParams(prev => {
             let processedValue: string | number | boolean = value;
@@ -150,21 +150,8 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         <span className="text-secondary text-sm">Wind Strength: {localParams.windStrength} cells</span>
                         <input type="range" name="windStrength" min="1" max="15" value={localParams.windStrength} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
-                     <label className="block">
-                        <span className="text-secondary text-sm">Herbicide Threshold: {Math.round(localParams.herbicideFlowerDensityThreshold * 100)}%</span>
-                        <input type="range" name="herbicideFlowerDensityThreshold" min="0.1" max="1" step="0.01" value={localParams.herbicideFlowerDensityThreshold} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
-                    </label>
                 </CollapsibleSection>
-
-                <CollapsibleSection title="Radius">
-                    <label className="block">
-                        <span className="text-secondary text-sm">Flower Detail</span>
-                        <select name="flowerDetailRadius" value={localParams.flowerDetailRadius} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
-                            {FLOWER_DETAIL_OPTIONS.map(val => <option key={val} value={val}>x{val}</option>)}
-                        </select>
-                    </label>
-                </CollapsibleSection>
-
+                
                 <CollapsibleSection title="Initial Population">
                     <label className="block">
                         <span className="text-secondary text-sm">Flowers: {localParams.initialFlowers}</span>
@@ -179,8 +166,60 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         <input type="range" name="initialBirds" min="0" max="20" value={localParams.initialBirds} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
                 </CollapsibleSection>
-                <CollapsibleSection title="UI Settings" defaultOpen={false}>
+
+                <CollapsibleSection title="Ecosystem Rules" defaultOpen={false}>
                     <label className="block">
+                        <span className="text-secondary text-sm">Herbicide Damage: {localParams.herbicideDamage}</span>
+                        <input type="range" name="herbicideDamage" min="5" max="100" value={localParams.herbicideDamage} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Herbicide Cooldown: {localParams.herbicideCooldown} ticks</span>
+                        <input type="range" name="herbicideCooldown" min="10" max="500" value={localParams.herbicideCooldown} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Herbicide Threshold: {Math.round(localParams.herbicideFlowerDensityThreshold * 100)}%</span>
+                        <input type="range" name="herbicideFlowerDensityThreshold" min="0.1" max="1" step="0.01" value={localParams.herbicideFlowerDensityThreshold} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                </CollapsibleSection>
+                
+                <CollapsibleSection title="Evolution & Reproduction" defaultOpen={false}>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Reproduction Cooldown: {localParams.reproductionCooldown} ticks</span>
+                        <input type="range" name="reproductionCooldown" min="0" max="50" value={localParams.reproductionCooldown} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Mutation Chance: {Math.round(localParams.mutationChance * 100)}%</span>
+                        <input type="range" name="mutationChance" min="0" max="1" step="0.01" value={localParams.mutationChance} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                     <label className="block">
+                        <span className="text-secondary text-sm">Mutation Amount: ±{Math.round(localParams.mutationAmount * 100)}%</span>
+                        <input type="range" name="mutationAmount" min="0" max="1" step="0.01" value={localParams.mutationAmount} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="Weather Events" defaultOpen={false}>
+                     <label className="block">
+                        <span className="text-secondary text-sm">Event Chance: {(localParams.weatherEventChance * 100).toFixed(1)}%</span>
+                        <input type="range" name="weatherEventChance" min="0" max="0.1" step="0.001" value={localParams.weatherEventChance} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Min Event Duration: {localParams.weatherEventMinDuration} ticks</span>
+                        <input type="range" name="weatherEventMinDuration" min="5" max="100" value={localParams.weatherEventMinDuration} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Max Event Duration: {localParams.weatherEventMaxDuration} ticks</span>
+                        <input type="range" name="weatherEventMaxDuration" min="10" max="200" value={localParams.weatherEventMaxDuration} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="Graphics & UI" defaultOpen={false}>
+                    <label className="block">
+                        <span className="text-secondary text-sm">Flower Detail</span>
+                        <select name="flowerDetailRadius" value={localParams.flowerDetailRadius} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
+                            {FLOWER_DETAIL_OPTIONS.map(val => <option key={val} value={val}>x{val}</option>)}
+                        </select>
+                    </label>
+                     <label className="block">
                         <span className="text-secondary text-sm">Notification Mode</span>
                         <select name="notificationMode" value={localParams.notificationMode} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
                             <option value="log">Event Log Only</option>
