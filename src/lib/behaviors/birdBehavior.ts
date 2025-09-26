@@ -1,6 +1,6 @@
 import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, AppEvent, Flower } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { NUTRIENT_FROM_PREY_LIFESPAN, BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
+import { BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
 import { findCellForStationaryActor } from '../simulationUtils';
 
 const BIRD_VISION_RANGE = 7;
@@ -89,7 +89,9 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                 
                 if (targetActor.type === 'insect') {
                     const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;
-                    const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: NUTRIENT_FROM_PREY_LIFESPAN };
+                    // Nutrient lifespan is proportional to the insect's max health
+                    const nutrientLifespan = 2 + Math.floor((targetActor as Insect).maxHealth / 30);
+                    const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: nutrientLifespan };
                     nextActorState.set(nutrientId, nutrient);
                     events.push({ message: '🐦 An insect was eaten!', type: 'info', importance: 'low' });
                     incrementInsectsEaten();
