@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processInsectTick } from './insectBehavior';
 import type { Insect, Flower, Grid, CellContent, AppEvent, FlowerSeed } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_HEALTH_DECAY_PER_TICK, INSECT_MOVE_COST, INSECT_ATTACK_COST, INSECT_STAMINA_REGEN_PER_TICK, INSECT_DATA, INSECT_HEAL_FROM_HEALING_FLOWER, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, FLOWER_STAT_INDICES, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_HEALTH_DECAY_PER_TICK, INSECT_MOVE_COST, INSECT_ATTACK_COST, INSECT_STAMINA_REGEN_PER_TICK, INSECT_DATA, INSECT_HEAL_FROM_HEALING_FLOWER, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, FLOWER_STAT_INDICES, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP, INSECT_POLLINATION_CHANCE } from '../../constants';
 import { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 vi.mock('../asyncFlowerFactory');
@@ -98,7 +98,7 @@ describe('insectBehavior', () => {
         processInsectTick(insect, setupContext(), newActorQueue);
 
         // Should move towards the healthy flower at (8,8)
-        // Starts at (5,5), speed is 2. Moves 2 units along the vector: (5,5) -> (6,6)
+        // Starts at (5,5), speed is 2. Moves 2 units along the vector: (5,5) -> (6.41, 6.41), which rounds to (6,6)
         expect(insect.x).toBe(6);
         expect(insect.y).toBe(6);
     });
@@ -183,5 +183,43 @@ describe('insectBehavior', () => {
         expect(events[0].message).toContain('died.');
         
         expect(incrementInsectsDiedOfOldAge).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not pollinate the same flower', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(INSECT_POLLINATION_CHANCE / 2);
+
+        // Place flower on the same cell as the insect
+        const targetFlower: Flower = { ...mockFlower, id: 'flower1', x: 5, y: 5, genome: 'g1', isMature: true };
+        grid[5][5].push(targetFlower);
+        nextActorState.set(targetFlower.id, targetFlower);
+        flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+
+        // Insect is carrying pollen from the flower it's currently on
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
+
+        processInsectTick(insect, setupContext(), newActorQueue);
+
+        expect(requestNewFlower).not.toHaveBeenCalled();
+
+        vi.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should not pollinate an immature flower', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(INSECT_POLLINATION_CHANCE / 2);
+        
+        // Place immature flower on the same cell
+        const targetFlower: Flower = { ...mockFlower, id: 'flower2', x: 5, y: 5, genome: 'g2', isMature: false };
+        grid[5][5].push(targetFlower);
+        nextActorState.set(targetFlower.id, targetFlower);
+        flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+
+        // Insect has pollen from another flower
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
+
+        processInsectTick(insect, setupContext(), newActorQueue);
+
+        expect(requestNewFlower).not.toHaveBeenCalled();
+
+        vi.spyOn(Math, 'random').mockRestore();
     });
 });
