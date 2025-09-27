@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processInsectTick } from './insectBehavior';
 import type { Insect, Flower, Grid, CellContent, AppEvent, FlowerSeed } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_HEALTH_DECAY_PER_TICK, INSECT_MOVE_COST, INSECT_ATTACK_COST, INSECT_STAMINA_REGEN_PER_TICK, INSECT_DATA, INSECT_HEAL_FROM_HEALING_FLOWER, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, FLOWER_STAT_INDICES, NUTRIENT_FROM_OLD_AGE_LIFESPAN, INSECT_DORMANCY_TEMP, INSECT_POLLINATION_CHANCE } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_HEALTH_DECAY_PER_TICK, INSECT_MOVE_COST, INSECT_ATTACK_COST, INSECT_STAMINA_REGEN_PER_TICK, INSECT_DATA, INSECT_HEAL_FROM_HEALING_FLOWER, TOXIC_FLOWER_THRESHOLD, INSECT_DAMAGE_FROM_TOXIC_FLOWER, FLOWER_STAT_INDICES, CORPSE_DECAY_TIME, INSECT_DORMANCY_TEMP, INSECT_POLLINATION_CHANCE, INSECT_WANDER_CHANCE } from '../../constants';
 import { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 vi.mock('../asyncFlowerFactory');
@@ -80,6 +80,9 @@ describe('insectBehavior', () => {
     });
 
     it('should move towards the flower with the highest genetic score', () => {
+        // Mock Math.random to ensure the insect doesn't wander and instead targets the flower
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1); 
+
         // Genome prefers health (index 0) and dislikes toxicity (index 2)
         insect.genome = Array(Object.keys(FLOWER_STAT_INDICES).length).fill(0);
         insect.genome[FLOWER_STAT_INDICES.HEALTH] = 1.0;
@@ -101,6 +104,8 @@ describe('insectBehavior', () => {
         // Starts at (5,5), speed is 2. Moves 2 units along the vector: (5,5) -> (6.41, 6.41), which rounds to (6,6)
         expect(insect.x).toBe(6);
         expect(insect.y).toBe(6);
+
+        randomSpy.mockRestore(); // Clean up the mock
     });
 
     it('should attack a flower, lose stamina, gain health, and pick up pollen', () => {
@@ -166,18 +171,19 @@ describe('insectBehavior', () => {
         randomSpy.mockRestore();
     });
 
-    it('should die when health reaches zero, creating a nutrient', () => {
+    it('should die when health reaches zero, creating a corpse', () => {
         insect.health = INSECT_HEALTH_DECAY_PER_TICK; // It will be 0 after decay
         
         processInsectTick(insect, setupContext(), newActorQueue);
         
         expect(nextActorState.has(insect.id)).toBe(false);
         
-        const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
-        expect(nutrient).toBeDefined();
-        expect(nutrient?.x).toBe(insect.x);
-        expect(nutrient?.y).toBe(insect.y);
-        expect((nutrient as any).lifespan).toBe(NUTRIENT_FROM_OLD_AGE_LIFESPAN);
+        const corpse = Array.from(nextActorState.values()).find(a => a.type === 'corpse');
+        expect(corpse).toBeDefined();
+        expect(corpse?.x).toBe(insect.x);
+        expect(corpse?.y).toBe(insect.y);
+        expect((corpse as any).decayTimer).toBe(CORPSE_DECAY_TIME);
+        expect((corpse as any).originalEmoji).toBe(insect.emoji);
         
         expect(events.length).toBe(1);
         expect(events[0].message).toContain('died.');
