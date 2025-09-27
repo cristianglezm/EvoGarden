@@ -6,6 +6,7 @@ import type { CellContent, Flower, SimulationParams, Grid, Insect } from './type
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
+import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
 import { flowerService } from './services/flowerService';
 import { eventService } from './services/eventService';
@@ -93,6 +94,7 @@ export default function App(): React.ReactNode {
 
 
   const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary } = useSimulation({ setIsLoading });
+  const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
 
   useEffect(() => {
     if (workerError) {
@@ -167,7 +169,6 @@ export default function App(): React.ReactNode {
       }
   }, [params.flowerDetailRadius, isServiceInitialized]);
 
-
   const handleFrameRendered = useCallback((renderTimeMs: number) => {
       if (latestSummaryRef.current) {
           useAnalyticsStore.getState().addDataPoint({
@@ -193,6 +194,7 @@ export default function App(): React.ReactNode {
   };
 
   const handleActorSelection = useCallback((actor: CellContent | null) => {
+      if (trackedActorId) return; // Ignore selection changes while tracking
       setSelectedActor(actor);
       setActorsInSelectedCell([]); // Clear the list view once a final selection is made
       
@@ -204,25 +206,29 @@ export default function App(): React.ReactNode {
               setIsRunning(true);
           }
       }
-  }, [isRunning, setIsRunning]);
+  }, [isRunning, setIsRunning, trackedActorId]);
 
-  const handleCellClick = useCallback((actors: CellContent[]) => {
-      if (actors.length === 0) {
+  const handleCellClick = useCallback((actorsInCell: CellContent[]) => {
+      if (trackedActorId) return; // If tracking, ignore cell clicks
+
+      if (actorsInCell.length === 0) {
           handleActorSelection(null);
-      } else if (actors.length === 1) {
-          handleActorSelection(actors[0]);
+      } else if (actorsInCell.length === 1) {
+          handleActorSelection(actorsInCell[0]);
       } else {
           // Multiple actors, show selection panel
           wasRunningBeforeSelectionRef.current = isRunning;
           setIsRunning(false);
-          setActorsInSelectedCell(actors);
+          setActorsInSelectedCell(actorsInCell);
           setSelectedActor(null);
       }
-  }, [handleActorSelection, isRunning, setIsRunning]);
+  }, [handleActorSelection, isRunning, setIsRunning, trackedActorId]);
 
   // Effect to handle clicking outside of the details panel to close it.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+        if (trackedActorId) return; // Ignore clicks when tracking
+
         if (!selectedActor && actorsInSelectedCell.length === 0) return;
 
         const isClickInsideDetails = detailsPanelRef.current?.contains(event.target as Node);
@@ -241,7 +247,7 @@ export default function App(): React.ReactNode {
     return () => {
         document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [selectedActor, actorsInSelectedCell, handleActorSelection]);
+  }, [selectedActor, actorsInSelectedCell, handleActorSelection, trackedActorId]);
 
   const handleSaveSimulation = useCallback(async () => {
     if (!workerRef.current || isSaving) return;
@@ -379,7 +385,7 @@ export default function App(): React.ReactNode {
   }
 
   const renderDetailsPanel = () => {
-    if (actorsInSelectedCell.length > 0) {
+    if (actorsInSelectedCell.length > 0 && !trackedActorId) {
         return <ActorSelectionPanel actors={actorsInSelectedCell} onSelect={handleActorSelection} onClose={() => handleActorSelection(null)} />;
     }
     if (selectedActor) {
@@ -387,7 +393,13 @@ export default function App(): React.ReactNode {
             case 'flower':
                 return <FlowerDetailsPanel flower={selectedActor} isRunning={isRunning} setIsRunning={setIsRunning} onClose={() => handleActorSelection(null)} />;
             case 'insect':
-                return <InsectDetailsPanel insect={selectedActor} onClose={() => handleActorSelection(null)} />;
+                return <InsectDetailsPanel 
+                            insect={selectedActor} 
+                            onClose={() => handleActorSelection(null)} 
+                            onTrackActor={handleTrackActor}
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                        />;
             case 'egg':
                 return <EggDetailsPanel egg={selectedActor} onClose={() => handleActorSelection(null)} />;
             case 'bird':
