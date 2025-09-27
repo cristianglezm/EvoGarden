@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Insect } from '../types';
-import { XIcon } from './icons';
+import { XIcon, SearchIcon } from './icons';
 import { INSECT_DATA, FLOWER_STAT_INDICES } from '../constants';
 
 interface InsectDetailsPanelProps {
     insect: Insect | null;
     onClose: () => void;
+    onTrackActor: (id: string, actorType: string) => void;
+    onStopTracking: () => void;
+    trackedActorId: string | null;
 }
 
 const StatBar: React.FC<{ value: number, max: number, label: string, colorClass: string }> = ({ value, max, label, colorClass }) => (
@@ -54,17 +57,66 @@ const GenomeVisualizer: React.FC<{ genome: number[] }> = ({ genome }) => {
 };
 
 
-export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, onClose }) => {
+export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, onClose, onTrackActor, onStopTracking, trackedActorId }) => {
+    const [searchInput, setSearchInput] = useState('');
+
+    useEffect(() => {
+        if (insect && !trackedActorId) {
+            // Pre-fill with the short ID when a new insect is selected and we're not tracking.
+            setSearchInput(insect.id.substring(7, 12));
+        }
+    }, [insect, trackedActorId]);
+
+
     if (!insect) return null;
 
     const baseStats = INSECT_DATA.get(insect.emoji);
+    const isTrackingThisInsect = trackedActorId && trackedActorId === insect.id;
+
+    const handleCloseClick = () => {
+        if (isTrackingThisInsect) {
+            onStopTracking();
+        } else {
+            onClose();
+        }
+    };
 
     return (
         <div className="bg-surface border-2 border-tertiary rounded-lg shadow-lg h-full flex flex-col">
-            <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px]">
-                <h2 className="font-bold text-lg">Insect Details</h2>
+            <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px] min-h-[48px]">
+                {isTrackingThisInsect ? (
+                    <div className="flex items-center gap-2">
+                        <h2 className="font-bold text-lg truncate">Tracking: <span className="font-mono text-accent-yellow">{insect.id.substring(7, 12)}</span></h2>
+                        <button onClick={onStopTracking} className="px-2 py-1 bg-accent-red/80 hover:bg-accent-red text-white text-xs font-semibold rounded-md transition-colors">Stop</button>
+                    </div>
+                ) : (
+                    <>
+                        <h2 className="font-bold text-lg">Insect Details</h2>
+                        <form 
+                            onSubmit={(e) => { e.preventDefault(); onTrackActor(searchInput, 'insect'); }} 
+                            className="flex items-center gap-1 ml-auto mr-2"
+                        >
+                            <input 
+                                type="text" 
+                                value={searchInput} 
+                                onChange={(e) => setSearchInput(e.target.value)} 
+                                placeholder="Find by ID..."
+                                className="bg-surface-hover/50 border border-border/50 text-xs rounded px-2 py-1 w-28 focus:ring-1 focus:ring-accent-yellow focus:outline-none"
+                                aria-label="Insect ID search"
+                            />
+                            <button 
+                                type="submit" 
+                                className="p-1 text-primary-light hover:bg-black/20 rounded-full" 
+                                aria-label="Track insect by ID"
+                                title="Track insect by ID"
+                            >
+                                <SearchIcon className="w-5 h-5" />
+                            </button>
+                        </form>
+                    </>
+                )}
                  <button 
-                    onClick={onClose} 
+                    onClick={handleCloseClick} 
                     className="p-1 text-primary-light hover:bg-black/20 rounded-full"
                     aria-label="Close details panel"
                 >

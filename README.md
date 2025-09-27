@@ -24,6 +24,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
     -   **Centralized Header**: A retro, terminal-style header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
     -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history.
     -   **Configurable Notifications**: Take control of the UI with three notification modes: log only, important toasts, or all toasts.
+-   **Real-time Actor Tracking**: Select any insect, click the "Track" button, and watch the simulation follow it in real-time. The details panel provides live updates on its health, stamina, and status.
 -   **Real-time Performance Insights**: A status indicator in the header shows the number of pending genetics tasks, giving users a live look at the simulation's computational load.
 -   **Dynamic Insect Lifecycle**: Insects reproduce by laying eggs, which have a gestation period to hatch, creating a more realistic population model.
 -   **Layered Actor System**: Actors like insects and birds can occupy the same grid cell as flowers, allowing for more realistic interactions.
@@ -36,7 +37,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Automated Ecosystem Balancing**: The simulation engine dynamically spawns predators (birds) or apex predators (eagles) in response to insect population booms and busts. An herbicide plane is also automatically deployed when flower density becomes too high.
 -   **WASM-Powered Genetics**: A high-performance WebAssembly module handles complex genetic operations.
 -   **Interactive Simulation**: Control world parameters like climate and population, pause/play the world, and reset with new initial conditions.
--   **Inspect Individuals**: Click on any cell to inspect its occupants. If multiple entities are present, a selection panel allows you to choose. View detailed, real-time stats for any actor, including a flower's genetics, an insect's preferences and status, or an egg's hatch timer.
+-   **Inspect Individuals**: Click on any cell to inspect its occupants. If multiple entities are present, a selection panel allows you to choose. View detailed, real-time stats for any actor, including a flower's genetics, an insect's preferences and status, an egg's hatch timer, and even track an insect's entire lifecycle.
 -   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer.
 
 ## 🔬 Simulation Deep Dive
@@ -104,6 +105,7 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/index.tsx`: The main entry point for the React application.
     -   `src/App.tsx`: The root React component. Manages global state and layout.
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
+    -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and hosts the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
     -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module.
     -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class orchestrates the simulation's main loop, delegating tasks to specialized managers. It is instantiated and run exclusively within the web worker.
