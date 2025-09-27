@@ -169,10 +169,12 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`flowerQtree`**: Contains only flowers, used by insects and idle birds.
 -   **`insectQtree`**: Contains only insects, used for efficient reproduction checks.
 
-### 5.4. UI/Worker Communication (`src/hooks/useSimulation.ts`)
+### 5.4. UI/Worker Communication & State Management Hooks (`src/hooks/`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
     -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset) to the simulation worker, and listens for incoming messages.
     -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas to reconstruct the new grid state. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
+-   **`useActorTracker` Hook**: A reusable hook that encapsulates the logic for tracking a specific actor.
+    -   **Responsibilities**: Manages the ID of the tracked actor, handles starting and stopping the tracking mode, and ensures the simulation continues to run while tracking is active. It also synchronizes the `selectedActor` state to keep the UI panel updated with the tracked actor's latest data. This makes the feature easily extensible to other actor types in the future.
 
 ### 5.5. Centralized Event & Notification System
 -   **`eventService.ts`**: A singleton service on the main thread that acts as a central hub for all notifications.
@@ -180,12 +182,12 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **Routing Logic**: Based on the user's `notificationMode` setting and the event's `importance`, the service decides whether to send the event to the `eventLogStore`, the `toastStore`, or both.
 
 ## 6. Component Architecture (`src/components/`)
--   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` hook, and handles save/load logic.
+-   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` and `useActorTracker` hooks, and handles save/load logic.
 -   **`SimulationView.tsx`**: Hosts the rendering engine's canvases and forwards user clicks.
 -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
 -   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
 -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower.
--   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect, including its stats, status, and a visualization of its genetic preferences.
+-   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect. It includes a search bar and "Track" button that utilizes the `useActorTracker` hook to initiate real-time tracking of the selected insect.
 -   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become.
 -   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.).
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
@@ -226,6 +228,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/index.tsx`: The main entry point for the React application.
     -   `src/App.tsx`: The root React component. Manages global state and layout.
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
+    -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
     -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
     -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating specific tasks to specialized managers.
