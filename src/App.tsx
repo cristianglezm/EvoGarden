@@ -396,6 +396,7 @@ export default function App(): React.ReactNode {
             case 'herbicidePlane':
             case 'herbicideSmoke':
             case 'flowerSeed':
+            case 'corpse':
                 return <GenericActorDetailsPanel actor={selectedActor} onClose={() => handleActorSelection(null)} />;
             default:
                 // Fallback for any unhandled type

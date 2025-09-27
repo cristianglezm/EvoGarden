@@ -51,6 +51,7 @@ export const FLOWER_EXPANSION_CHANCE = 0.001;
 export const NUTRIENT_LIFESPAN = 2; // ticks
 export const NUTRIENT_FROM_PREY_LIFESPAN = 4;
 export const NUTRIENT_FROM_OLD_AGE_LIFESPAN = 5;
+export const CORPSE_DECAY_TIME = 15; // ticks
 
 // --- BIRD CONSTANTS ---
 export const BIRD_DROP_NUTRIENT_CHANCE = 0.05;
@@ -70,6 +71,7 @@ export const INSECT_ATTACK_COST = 4;
 export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
 export const MUTATION_CHANCE = 0.05; // 5% chance per gene
 export const MUTATION_AMOUNT = 0.2;  // Mutate by +/- 20%
+export const INSECT_WANDER_CHANCE = 0.1;
 
 // --- GENETIC ALGORITHM CONSTANTS ---
 export const FLOWER_STAT_INDICES = {
