@@ -1,4 +1,4 @@
-import type { Insect, SimulationParams, Grid, Flower, CellContent, Nutrient, AppEvent } from '../../types';
+import type { Insect, SimulationParams, Grid, Flower, CellContent, AppEvent, Corpse } from '../../types';
 import { 
     INSECT_POLLINATION_CHANCE, 
     INSECT_DORMANCY_TEMP, 
@@ -11,14 +11,14 @@ import {
     INSECT_ATTACK_COST,
     FLOWER_STAT_INDICES,
     INSECT_DATA,
-    NUTRIENT_FROM_OLD_AGE_LIFESPAN
+    CORPSE_DECAY_TIME,
+    INSECT_WANDER_CHANCE
 } from '../../constants';
 import { findCellForFlowerSpawn, neighborVectors } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
 import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 const INSECT_VISION_RANGE = 5;
-const INSECT_WANDER_CHANCE = 0.2; // 20% chance to wander even if a target is found
 
 export interface InsectContext {
     params: SimulationParams;
@@ -66,9 +66,16 @@ export const processInsectTick = (
     insect.health -= INSECT_HEALTH_DECAY_PER_TICK;
     if (insect.health <= 0) {
         nextActorState.delete(insect.id);
-        const nutrientId = `nutrient-${insect.x}-${insect.y}-${Date.now()}`;
-        const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: insect.x, y: insect.y, lifespan: NUTRIENT_FROM_OLD_AGE_LIFESPAN };
-        nextActorState.set(nutrientId, nutrient);
+        const corpseId = `corpse-${insect.x}-${insect.y}-${Date.now()}`;
+        const corpse: Corpse = { 
+            id: corpseId, 
+            type: 'corpse', 
+            x: insect.x, 
+            y: insect.y, 
+            originalEmoji: insect.emoji,
+            decayTimer: CORPSE_DECAY_TIME 
+        };
+        nextActorState.set(corpseId, corpse);
         events.push({ message: `💀 A ${insect.emoji} died.`, type: 'info', importance: 'low' });
         incrementInsectsDiedOfOldAge();
         return;
@@ -120,8 +127,8 @@ export const processInsectTick = (
         const wander = () => {
             const moves = neighborVectors.sort(() => Math.random() - 0.5);
             for (const [dx, dy] of moves) {
-                const potentialX = Math.round(x + dx * baseStats.speed); 
-                const potentialY = Math.round(y + dy * baseStats.speed);
+                const potentialX = x + dx;
+                const potentialY = y + dy;
                 if (potentialX >= 0 && potentialX < gridWidth && potentialY >= 0 && potentialY < gridHeight) {
                     insect.x = potentialX;
                     insect.y = potentialY;

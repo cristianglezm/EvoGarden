@@ -19,6 +19,7 @@ const getActorName = (actor: CellContent): string => {
         case 'herbicidePlane': return `✈️ Herbicide Plane`;
         case 'herbicideSmoke': return `💨 Herbicide Smoke`;
         case 'flowerSeed': return `🌱 Seed`;
+        case 'corpse': return `💀 Corpse`;
         default: return 'Unknown Entity';
     }
 };
