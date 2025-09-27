@@ -105,6 +105,12 @@ export interface Egg extends Actor {
     genome: number[];
 }
 
+export interface Corpse extends Actor {
+    type: 'corpse';
+    originalEmoji: string;
+    decayTimer: number;
+}
+
 export interface HerbicidePlane extends Actor {
     type: 'herbicidePlane';
     dx: number; // Current direction x
@@ -130,8 +136,8 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
-export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse;
+export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse;
 
 export type ActorAddDelta = {
     type: 'add';

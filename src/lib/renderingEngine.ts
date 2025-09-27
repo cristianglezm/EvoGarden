@@ -1,4 +1,4 @@
-import type { CellContent, Flower, FlowerSeed, Insect, SimulationParams } from '../types';
+import type { CellContent, Corpse, Flower, FlowerSeed, Insect, SimulationParams } from '../types';
 
 const CELL_SIZE_PX = 64;
 const GRID_COLOR = 'hsla(120, 100%, 50%, 0.2)';
@@ -23,6 +23,7 @@ export class RenderingEngine {
     private fgCtx: CanvasRenderingContext2D;
     private params: SimulationParams;
     private imageCache = new Map<string, HTMLImageElement>();
+    private corpseImageCache = new Map<string, HTMLCanvasElement>();
     
     // State for change detection
     private lastStaticActorIds = new Set<string>();
@@ -67,6 +68,43 @@ export class RenderingEngine {
                 this.bgCtx.strokeRect(x * CELL_SIZE_PX, y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
             }
         }
+    }
+
+    private drawCorpse(ctx: CanvasRenderingContext2D, actor: Corpse) {
+        const cachedCanvas = this.corpseImageCache.get(actor.originalEmoji);
+        if (cachedCanvas) {
+            ctx.drawImage(cachedCanvas, actor.x * CELL_SIZE_PX, actor.y * CELL_SIZE_PX);
+            return;
+        }
+
+        // Create an offscreen canvas for rendering the composite emoji
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = CELL_SIZE_PX;
+        offscreenCanvas.height = CELL_SIZE_PX;
+        const offscreenCtx = offscreenCanvas.getContext('2d')!;
+
+        const centerX = CELL_SIZE_PX / 2;
+        const centerY = CELL_SIZE_PX / 2;
+
+        offscreenCtx.save();
+        offscreenCtx.textAlign = 'center';
+        offscreenCtx.textBaseline = 'middle';
+
+        // Draw original emoji (faded)
+        offscreenCtx.globalAlpha = 0.6;
+        offscreenCtx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
+        offscreenCtx.fillText(actor.originalEmoji, centerX, centerY);
+        
+        // Draw skull on top
+        offscreenCtx.globalAlpha = 1.0;
+        offscreenCtx.font = `${CELL_SIZE_PX * 0.4}px sans-serif`;
+        offscreenCtx.fillText('💀', centerX, centerY);
+        
+        offscreenCtx.restore();
+
+        // Cache the result and draw it to the main canvas
+        this.corpseImageCache.set(actor.originalEmoji, offscreenCanvas);
+        ctx.drawImage(offscreenCanvas, actor.x * CELL_SIZE_PX, actor.y * CELL_SIZE_PX);
     }
 
     private drawEmoji(ctx: CanvasRenderingContext2D, actor: CellContent) {
@@ -186,7 +224,11 @@ export class RenderingEngine {
         }
         
         for (const actor of dynamicActors) {
-            this.drawEmoji(this.fgCtx, actor);
+            if (actor.type === 'corpse') {
+                this.drawCorpse(this.fgCtx, actor as Corpse);
+            } else {
+                this.drawEmoji(this.fgCtx, actor);
+            }
         }
     }
 }
