@@ -39,6 +39,7 @@ Define the core data structures for the simulation state.
     -   `HerbicideSmoke`: Includes position, a `lifespan`, and a `canBeExpanded`.
     -   `Nutrient`: Includes position and a `lifespan` in ticks.
     -   `Egg`: Includes position, `hatchTimer`, the `insectEmoji` it will spawn, and the `genome` inherited from its parents.
+    -   `Corpse`: Includes position, `originalEmoji`, and a `decayTimer` in ticks.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
 -   **Service Interfaces**:
     -   `FEService`: Defines the contract for the WASM service wrapper, ensuring all methods are typed correctly, especially `getFlowerStats` which returns `Promise<FlowerGenomeStats>`.
@@ -128,7 +129,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
     -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
-        -   **Health and Stamina System**: Insects have `health` which decays slowly each tick. If health reaches zero, the insect dies and is replaced by a nutrient. Actions like moving and attacking cost `stamina`, while idling regenerates it. An insect cannot act if it lacks sufficient stamina.
+        -   **Health and Stamina System**: Insects have `health` which decays slowly each tick. If health reaches zero, the insect dies and is replaced by a `Corpse` actor. Actions like moving and attacking cost `stamina`, while idling regenerates it. An insect cannot act if it lacks sufficient stamina.
         -   **Genetic Algorithm-based AI**: Insects no longer target the nearest flower. Instead, they use their unique `genome` (an array of weights) to calculate a "desirability score" for all visible flowers based on the flower's stats (health, toxicity, etc.). This drives them towards flowers that are evolutionarily advantageous for them. A small degree of randomness prevents unnatural swarming.
         -   **Dormancy**: The `processInsectTick` function now checks the `currentTemperature` from the context. If it is below a certain threshold (`INSECT_DORMANCY_TEMP`), the function returns immediately, causing the insect to skip its turn and effectively become dormant.
         -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's health is restored. If the rate is above a positive threshold (toxic/carnivorous), the insect's health is reduced. Otherwise, the insect damages the flower as normal, gaining a small amount of health back.
@@ -137,7 +138,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey (unprotected insects or eggs). When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it.
-        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping.
+        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping. The eaten insect does not leave a corpse and is instead converted directly into a nutrient.
     
     -   **`eagleBehavior`**: The apex predator, spawned as a regulatory mechanism.
         -   **AI**: Uses the main `qtree` to find the nearest bird.
@@ -154,9 +155,10 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Expansion**: On its first tick, it expands by creating new smoke actors in adjacent cells.
         -   **Lifecycle**: It has a short `lifespan` and is removed when the timer expires.
 
-    -   **`eggBehavior` & `nutrientBehavior`**: Simple state-machine behaviors.
+    -   **`eggBehavior`, `nutrientBehavior`, & `corpseBehavior`**: Simple state-machine behaviors.
         -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed and a new insect is spawned.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires.
+        -   `corpseBehavior`: Decrements a `decayTimer`. When the timer expires, it is removed and replaced by a `Nutrient`.
 
 -   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 

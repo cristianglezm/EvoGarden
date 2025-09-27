@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CellContent, Bird, Eagle, Nutrient } from '../types';
+import type { CellContent, Bird, Eagle, Nutrient, Corpse } from '../types';
 import { XIcon } from './icons';
 
 interface GenericActorDetailsPanelProps {
@@ -58,6 +58,17 @@ const getActorDisplayInfo = (actor: CellContent) => {
                     Age: `${actor.age} ticks`,
                 }
             };
+        case 'corpse': {
+            const corpse = actor as Corpse;
+            return {
+                emoji: corpse.originalEmoji,
+                title: 'Insect Corpse',
+                stats: {
+                    'Decay In': `${corpse.decayTimer} ticks`,
+                    'Original Type': `${corpse.originalEmoji}`
+                }
+            };
+        }
         default:
             return {
                 emoji: '❓',
@@ -87,8 +98,9 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
                 </button>
             </header>
             <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto">
-                <div className="flex items-center gap-4">
+                <div className="relative flex items-center gap-4">
                     <span className="text-5xl">{emoji}</span>
+                     {actor.type === 'corpse' && <span className="absolute top-1/2 left-[24px] -translate-x-1/2 -translate-y-1/2 text-2xl text-black/80">💀</span>}
                     <div>
                         <h3 className="text-xl font-bold text-primary-light capitalize">{actor.type.replace(/([A-Z])/g, ' $1')}</h3>
                         <p className="text-xs text-secondary font-mono">{actor.id}</p>

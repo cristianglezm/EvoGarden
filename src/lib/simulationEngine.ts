@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
@@ -9,6 +9,7 @@ import { processNutrientTick } from './behaviors/nutrientBehavior';
 import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
+import { processCorpseTick } from './behaviors/corpseBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -232,27 +233,23 @@ export class SimulationEngine {
                 case 'herbicideSmoke':
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
                     break;
-                case 'insect': {
-                    const insect = actor as Insect;
-                    processInsectTick(insect, insectContext, newActorQueue);
-                    if (insect.health <= 0) nextActorState.delete(insect.id);
+                case 'insect':
+                    processInsectTick(actor as Insect, insectContext, newActorQueue);
                     break;
-                }
-                case 'flower': {
-                    const flower = actor as Flower;
-                    processFlowerTick(flower, flowerContext, newActorQueue);
-                    if (flower.health <= 0) nextActorState.delete(flower.id);
+                case 'flower':
+                    processFlowerTick(actor as Flower, flowerContext, newActorQueue);
                     break;
-                }
-                case 'flowerSeed': {
+                case 'flowerSeed':
                     processFlowerSeedTick(actor as FlowerSeed, flowerContext);
                     break;
-                }
                 case 'egg':
                     processEggTick(actor as Egg, { nextActorState, events, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params });
                     break;
                 case 'nutrient':
                     processNutrientTick(actor as Nutrient, { nextActorState });
+                    break;
+                case 'corpse':
+                    processCorpseTick(actor as Corpse, { nextActorState });
                     break;
             }
         }
