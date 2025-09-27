@@ -12,14 +12,20 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 ## ✨ Features
 
 -   **Dynamic Weather & Seasons**: Experience a living environment with four distinct seasons (Spring, Summer, Autumn, Winter) that cyclically affect temperature and humidity. Be prepared for unpredictable weather events like heatwaves, cold snaps, heavy rain, and droughts that create new evolutionary pressures.
+-   **Intelligent Insects with Genetic AI**: Insects no longer move randomly. Each insect has a unique genetic code (genome) that determines its preferences for different flower traits. They actively seek out flowers that best match their genes, creating complex and emergent behaviors.
+-   **Insect Evolution**: When insects reproduce, their offspring inherit a mix of their parents' genomes, with a chance for random mutation. This creates a dynamic evolutionary loop where insects adapt to the garden's flower population over generations.
+-   **Stamina-Based Actions & Health**: Insects now manage health and stamina. Actions like moving and attacking cost stamina, and they must rest to recover. Their health slowly decays, and if it runs out, they die and decompose into a nutrient, completing the ecosystem's cycle of life.
+-   **Corpse & Decay System**: When insects die of old age or from toxic flowers, they leave behind a corpse that slowly decays. Once fully decayed, the corpse transforms into a nutrient, enriching the soil and completing another link in the ecosystem's cycle of life.
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
 -   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), and genetic evolution (*Poison Garden*).
 -   **Seed Bank**: Automatically saves the genomes of "champion" flowers—the longest-lived, most toxic, and most healing—to a persistent database. These champions are then used to repopulate the garden after a collapse, ensuring genetic resilience. Users can view these champions, download their genomes, or clear the bank to start fresh.
 -   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics, key ecosystem events, the average expression of genetic traits, application performance, and a new **Environment chart** that visualizes the history of temperature and humidity changes.
--   **Advanced Notification System**:
-    -   **Real-time Event Log & Environment Display**: A retro, terminal-style log in the header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
+-   **Advanced Notification System & Status Display**:
+    -   **Centralized Header**: A retro, terminal-style header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
     -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history.
     -   **Configurable Notifications**: Take control of the UI with three notification modes: log only, important toasts, or all toasts.
+-   **Real-time Actor Tracking**: Select any insect, click the "Track" button, and watch the simulation follow it in real-time. The details panel provides live updates on its health, stamina, and status.
+-   **Real-time Performance Insights**: A status indicator in the header shows the number of pending genetics tasks, giving users a live look at the simulation's computational load.
 -   **Dynamic Insect Lifecycle**: Insects reproduce by laying eggs, which have a gestation period to hatch, creating a more realistic population model.
 -   **Layered Actor System**: Actors like insects and birds can occupy the same grid cell as flowers, allowing for more realistic interactions.
 -   **Simulation State Persistence**: Save your garden's state to your browser's local storage and load it back in a future session.
@@ -31,7 +37,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Automated Ecosystem Balancing**: The simulation engine dynamically spawns predators (birds) or apex predators (eagles) in response to insect population booms and busts. An herbicide plane is also automatically deployed when flower density becomes too high.
 -   **WASM-Powered Genetics**: A high-performance WebAssembly module handles complex genetic operations.
 -   **Interactive Simulation**: Control world parameters like climate and population, pause/play the world, and reset with new initial conditions.
--   **Inspect Individuals**: Click on any flower to view its detailed real-time stats, including health, age, genetic traits, and its raw genome.
+-   **Inspect Individuals**: Click on any cell to inspect its occupants. If multiple entities are present, a selection panel allows you to choose. View detailed, real-time stats for any actor, including a flower's genetics, an insect's preferences and status, an egg's hatch timer, and even track an insect's entire lifecycle.
 -   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer.
 
 ## 🔬 Simulation Deep Dive
@@ -56,11 +62,11 @@ The garden is no longer static. It features a fully dynamic climate system that 
     -   **Lifecycle**: They consume stamina, then health. They heal by absorbing nutrients. If their health reaches zero, they wither.
     -   **Reproduction**: Mature flowers can reproduce in three ways: Proximity Pollination, Insect Pollination, and Wind Pollination.
 -   **Insects** (`🦋`, `🐛`, `🐌`, `🐞`, `🐝`):
+    -   **Genetic AI & Movement**: Insects use a Quadtree to find nearby flowers and then use their unique **genome** to calculate a "desirability score" for each one. This intelligent targeting leads them to flowers that best suit their evolved preferences, rather than just the closest one.
+    -   **Lifecycle & Stamina**: Insects have `health` that slowly depletes, and a `stamina` bar that is consumed by actions like moving and attacking. They must rest to regenerate stamina. If an insect's health reaches zero, it dies and leaves behind a `Corpse` which will eventually decompose into a nutrient.
     -   **Dormancy**: Insects are now sensitive to cold. If the `currentTemperature` drops below a certain threshold, they become dormant, ceasing all activity and halting their aging process until the weather warms up.
-    -   **AI & Movement**: Insects use a Quadtree to find the nearest flower, with a degree of randomness in their pathfinding to create more realistic pollination patterns.
-    -   **Interaction**: They are now affected by a flower's toxicity. They will damage non-carnivorous flowers, be damaged *by* carnivorous flowers, or be healed by healing flowers. They carry pollen to other flowers to trigger reproduction.
-    -   **Reproduction**: Two insects of the same species on the same cell may lay an egg.
-    -   **Lifecycle**: Insects have a limited lifespan and decompose into a nutrient upon death.
+    -   **Interaction**: They are now affected by a flower's toxicity. They will damage non-carnivorous flowers (gaining some health back), be damaged *by* carnivorous flowers, or be healed by healing flowers. They carry pollen to other flowers to trigger reproduction.
+    -   **Reproduction & Evolution**: Two insects of the same species on the same cell may lay an egg. The offspring inherits a combination of its parents' genomes, with a small chance for mutation, allowing the insect population to evolve over time.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.
 -   **Birds** (`🐦`): The predators of the garden.
     -   **AI & Movement**: Birds use a Quadtree to efficiently scan for prey. They prioritize hunting unprotected insects but will eat stationary eggs. When not hunting, they exhibit a smarter patrolling AI, flying towards flowers to search for prey.
@@ -70,7 +76,7 @@ The garden is no longer static. It features a fully dynamic climate system that 
 -   **Herbicide Plane** (`✈️`) & **Smoke** (`💨`): A regulatory mechanism to prevent flower overgrowth. The plane flies in a straight line, leaving a trail of temporary, damaging smoke clouds that expand to create a wider path of effect.
 
 ### Nutrients & The Ecosystem Loop
-Nutrients (`💩`) are the simulation's core resource, created from predated insects, insects that die of old age, or random bird droppings. They provide an area-of-effect heal to all flowers in a 3x3 area before being consumed. This creates a dynamic resource cycle: predators consume prey -> deaths create nutrients -> nutrients heal flowers -> healthy flowers support more prey -> more prey supports more predators.
+Nutrients (`💩`) are the simulation's core resource, created from predated insects, insects that die of old age and leave a corpse that decays, or random bird droppings. They provide an area-of-effect heal to all flowers in a 3x3 area before being consumed. This creates a dynamic resource cycle: predators consume prey -> deaths create nutrients -> nutrients heal flowers -> healthy flowers support more prey -> more prey supports more predators.
 
 ### Ecosystem Balance & Dynamic Population Control
 The garden is a self-regulating system. A dedicated **`PopulationManager`** actively monitors population trends to prevent ecological collapse.
@@ -94,40 +100,42 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
 ## 📁 Project Structure
 -   `index.html`: The single-page entry point. It contains the `<div id="root">` where the React app is mounted.
 -   `package.json`: Defines project metadata, scripts (`dev`, `build`), and dependencies.
-    -   **`dependencies`**: Includes `react`, `zustand`, `@cristianglezm/flower-evolver-wasm`, and the `@react-three/*` libraries.
-    -   **`devDependencies`**: Includes `vite`, `typescript`, `tailwindcss`, `postcss`, `autoprefixer` for the development environment and build process.
 -   `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`: Configuration files for the Vite build tool and the Tailwind CSS styling pipeline.
 -   `src/`: Contains all the application source code.
     -   `src/index.tsx`: The main entry point for the React application.
     -   `src/App.tsx`: The root React component. Manages global state and layout.
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
-    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
-    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
-    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation. Its main loop (`calculateNextTick`) coordinates the different managers and systems. It is instantiated and run exclusively within the web worker.
-    -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns for spawning, and decides when to introduce new birds, eagles, or herbicide planes based on population trends.
-    -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`. It handles the queue of requested flowers, provides `FlowerSeed` placeholders to the engine, and returns fully-formed `Flower` objects once they have been computed by the WASM module.
-    -   `src/lib/EcosystemManager.ts`: **Global Rules.** A module that contains functions for system-wide behaviors that don't belong to a single actor, such as nutrient healing and insect reproduction.
-    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
-    -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
+    -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
+    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and hosts the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
+    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module.
+    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class orchestrates the simulation's main loop, delegating tasks to specialized managers. It is instantiated and run exclusively within the web worker.
+    -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control, dynamically spawning predators.
+    -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`.
+    -   `src/lib/EcosystemManager.ts`: A module for system-wide behaviors like nutrient healing and insect reproduction.
+    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.).
+    -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
-    -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
+    -   `src/components/SimulationView.tsx`: Hosts the canvas elements and orchestrates the `RenderingEngine`.
     -   `src/components/Controls.tsx`: UI for changing simulation parameters.
-    -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
+    -   `src/components/ActorSelectionPanel.tsx`: A panel that appears when a user clicks a cell containing multiple actors.
+    -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower.
+    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect.
+    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg.
+    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
     -   `src/components/Modal.tsx`: A generic modal component.
-    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
-    -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress from the `challengeStore`.
-    -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
+    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank.
+    -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress.
+    -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts.
     -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
-    -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank. Allows users to view a 3D model of the champions, download their genomes, and clear the database.
-    -   `src/components/Toast.tsx`: Renders a single toast notification with a message and icon.
+    -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
+    -   `src/components/StatusPanel.tsx`: The main container in the header for status information.
+    -   `src/components/Toast.tsx`: Renders a single toast notification.
     -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
-    -   `src/stores/toastStore.ts`: A global Zustand store for managing toast notifications.
-    -   `src/stores/challengeStore.ts`: A Zustand store with `persist` middleware for tracking challenge progress across sessions.
-    -   `src/stores/analyticsStore.ts`: A Zustand store with `persist` middleware for storing historical simulation data for the charts.
+    -   `src/stores/`: Contains all Zustand global state management stores.
     -   `src/utils.ts`: A module for shared utility functions.
-    -   `src/constants.ts`: Global constants for the simulation (tick rate, damage values, etc.).
+    -   `src/constants.ts`: Global constants for the simulation.
     -   `src/types.ts`: Shared TypeScript types for the simulation.
 
 ## 🚀 Getting Started

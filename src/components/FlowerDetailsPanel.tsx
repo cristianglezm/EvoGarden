@@ -88,7 +88,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                  <button 
                     onClick={onClose} 
                     className="p-1 text-primary-light hover:bg-black/20 rounded-full"
-                    aria-label="Close flower details panel"
+                    aria-label="Close details panel"
                 >
                     <XIcon className="w-6 h-6" />
                 </button>

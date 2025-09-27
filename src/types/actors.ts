@@ -1,4 +1,3 @@
-
 import type { Coord } from './base';
 
 export interface Actor extends Coord {
@@ -57,14 +56,29 @@ export interface FlowerSeed extends Actor {
     age: number;
 }
 
+export interface InsectStats {
+    attack: number;
+    maxHealth: number;
+    maxStamina: number;
+    speed: number;
+    role: 'pollinator' | 'attacker' | 'tank' | 'balanced';
+    eggHatchTime: number;
+    reproductionCost: number; // stamina cost
+}
+
 export interface Insect extends Actor {
     type: 'insect';
     pollen: {
         genome: string;
         sourceFlowerId: string;
-    } | null; // Genome and source ID of last visited flower
+    } | null;
     emoji: string;
-    lifespan: number;
+    health: number;
+    maxHealth: number;
+    stamina: number;
+    maxStamina: number;
+    genome: number[];
+    lifespan?: number; // Kept for backwards compatibility with old saves
     reproductionCooldown?: number;
 }
 
@@ -88,6 +102,13 @@ export interface Egg extends Actor {
     type: 'egg';
     hatchTimer: number;
     insectEmoji: string;
+    genome: number[];
+}
+
+export interface Corpse extends Actor {
+    type: 'corpse';
+    originalEmoji: string;
+    decayTimer: number;
 }
 
 export interface HerbicidePlane extends Actor {
@@ -115,8 +136,8 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
-export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse;
+export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse;
 
 export type ActorAddDelta = {
     type: 'add';

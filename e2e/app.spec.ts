@@ -200,15 +200,39 @@ test.describe('Full Environment Parameter Test', () => {
   test('should set all parameters and apply', async ({ page }) => {
     const controls = new ControlPanelController(page);
     await controls.open();
+
+    // World Parameters
     await controls.getGridWidthInput().fill('15');
     await controls.getGridHeightInput().fill('15');
     await controls.getTemperatureInput().fill('20');
     await controls.getHumidityInput().fill('0.5');
     await controls.setWindDirection('NE');
     await controls.getWindStrengthInput().fill('5');
+    
+    // Initial Population
     await controls.getFlowersInput().fill('10');
     await controls.getInsectsInput().fill('5');
     await controls.getBirdsInput().fill('3');
+
+    // Open closed sections and set values
+    await controls.openEcosystemRulesSection();
+    await controls.getHerbicideDamageInput().fill('30');
+    await controls.getHerbicideCooldownInput().fill('100');
+    await controls.getHerbicideThresholdInput().fill('0.8');
+
+    await controls.openEvolutionReproductionSection();
+    await controls.getReproductionCooldownInput().fill('5');
+    await controls.getMutationChanceInput().fill('0.1');
+    await controls.getMutationAmountInput().fill('0.25');
+
+    await controls.openWeatherEventsSection();
+    await controls.getWeatherEventChanceInput().fill('0.01');
+    await controls.getWeatherMinDurationInput().fill('25');
+    await controls.getWeatherMaxDurationInput().fill('55');
+
+    await controls.openGraphicsUISection();
+    await controls.setNotificationMode('log');
+
     await controls.getApplyAndReset().click();
   });
 });

@@ -3,10 +3,12 @@ import { Page, Locator, expect } from '@playwright/test';
 export class FlowerPanelController {
   readonly page: Page;
   readonly detailsPanel: Locator;
+  readonly actorSelectionPanel: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.detailsPanel = page.locator('aside:has-text("Flower Details")');
+    this.actorSelectionPanel = page.locator('aside:has-text("Select an Actor")');
   }
 
   async waitCanvasStable(canvas: Locator) {
@@ -25,15 +27,29 @@ export class FlowerPanelController {
 
     const DENSITY = 8; // higher density click grid
     for (let i = 1; i <= DENSITY; i++) {
-      for (let j = 1; j <= DENSITY; j++) {
-        const x = box.width * (i / (DENSITY + 1));
-        const y = box.height * (j / (DENSITY + 1));
-        await canvas.click({ position: { x, y } });
-        if (await this.detailsPanel.isVisible({ timeout: 500 })) return true;
-      }
+        for (let j = 1; j <= DENSITY; j++) {
+            const x = box.width * (i / (DENSITY + 1));
+            const y = box.height * (j / (DENSITY + 1));
+            await canvas.click({ position: { x, y } });
+
+            // After clicking, check if either the details panel or selection panel appeared.
+            const detailsVisible = await this.detailsPanel.isVisible({ timeout: 250 });
+            if (detailsVisible) return true; // Direct selection, success.
+            
+            const selectionVisible = await this.actorSelectionPanel.isVisible({ timeout: 250 });
+            if (selectionVisible) {
+                // Multi-actor selection panel appeared. Try to click a flower in it.
+                const flowerButton = this.actorSelectionPanel.getByRole('button', { name: /Flower/ });
+                if (await flowerButton.isVisible()) {
+                    await flowerButton.click();
+                    return true; // Clicked flower in selection, success.
+                }
+            }
+        }
     }
-    return false;
-  }
+    return false; // Failed to find and select a flower after trying all grid points.
+}
+
 
   async waitForDetails() {
     await expect(this.detailsPanel).toBeVisible();
@@ -79,7 +95,7 @@ export class FlowerPanelController {
     await expect(modal).not.toBeVisible();
   }
   async closeDetails() {
-    const closeButton = this.detailsPanel.getByRole('button', { name: 'Close flower details panel' });
+    const closeButton = this.detailsPanel.getByRole('button', { name: 'Close details panel' });
     await expect(closeButton).toBeVisible();
     await closeButton.click();
     await expect(this.detailsPanel).not.toBeVisible({ timeout: 2000 });

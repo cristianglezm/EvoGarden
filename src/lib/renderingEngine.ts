@@ -1,8 +1,9 @@
-import type { CellContent, Flower, FlowerSeed, Insect, SimulationParams } from '../types';
+import type { CellContent, Corpse, Flower, FlowerSeed, Insect, SimulationParams } from '../types';
 
 const CELL_SIZE_PX = 64;
 const GRID_COLOR = 'hsla(120, 100%, 50%, 0.2)';
-const SELECTED_CELL_COLOR = 'hsla(120, 100%, 50%, 0.4)';
+const SELECTED_CELL_BORDER_COLOR = 'hsl(120, 100%, 50%)'; // Opaque bright green
+const SELECTED_CELL_BORDER_WIDTH = 4; // in pixels
 
 /**
  * Helper function to efficiently check if the members of two sets are different.
@@ -22,10 +23,10 @@ export class RenderingEngine {
     private fgCtx: CanvasRenderingContext2D;
     private params: SimulationParams;
     private imageCache = new Map<string, HTMLImageElement>();
+    private corpseImageCache = new Map<string, HTMLCanvasElement>();
     
     // State for change detection
     private lastStaticActorIds = new Set<string>();
-    private lastSelectedId: string | null = null;
     
     constructor(bgCanvas: HTMLCanvasElement, fgCanvas: HTMLCanvasElement, params: SimulationParams) {
         this.bgCanvas = bgCanvas;
@@ -48,7 +49,6 @@ export class RenderingEngine {
         this.updateCanvasSize();
         // Force a full redraw of static elements on the next frame
         this.lastStaticActorIds.clear(); 
-        this.lastSelectedId = null;
     }
 
     private updateCanvasSize() {
@@ -68,6 +68,43 @@ export class RenderingEngine {
                 this.bgCtx.strokeRect(x * CELL_SIZE_PX, y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
             }
         }
+    }
+
+    private drawCorpse(ctx: CanvasRenderingContext2D, actor: Corpse) {
+        const cachedCanvas = this.corpseImageCache.get(actor.originalEmoji);
+        if (cachedCanvas) {
+            ctx.drawImage(cachedCanvas, actor.x * CELL_SIZE_PX, actor.y * CELL_SIZE_PX);
+            return;
+        }
+
+        // Create an offscreen canvas for rendering the composite emoji
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = CELL_SIZE_PX;
+        offscreenCanvas.height = CELL_SIZE_PX;
+        const offscreenCtx = offscreenCanvas.getContext('2d')!;
+
+        const centerX = CELL_SIZE_PX / 2;
+        const centerY = CELL_SIZE_PX / 2;
+
+        offscreenCtx.save();
+        offscreenCtx.textAlign = 'center';
+        offscreenCtx.textBaseline = 'middle';
+
+        // Draw original emoji (faded)
+        offscreenCtx.globalAlpha = 0.6;
+        offscreenCtx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
+        offscreenCtx.fillText(actor.originalEmoji, centerX, centerY);
+        
+        // Draw skull on top
+        offscreenCtx.globalAlpha = 1.0;
+        offscreenCtx.font = `${CELL_SIZE_PX * 0.4}px sans-serif`;
+        offscreenCtx.fillText('💀', centerX, centerY);
+        
+        offscreenCtx.restore();
+
+        // Cache the result and draw it to the main canvas
+        this.corpseImageCache.set(actor.originalEmoji, offscreenCanvas);
+        ctx.drawImage(offscreenCanvas, actor.x * CELL_SIZE_PX, actor.y * CELL_SIZE_PX);
     }
 
     private drawEmoji(ctx: CanvasRenderingContext2D, actor: CellContent) {
@@ -120,7 +157,7 @@ export class RenderingEngine {
     }
 
 
-    public draw(actors: Map<string, CellContent>, selectedFlowerId: string | null) {
+    public draw(actors: Map<string, CellContent>, selectedActorId: string | null) {
         const staticActors = new Map<string, Flower | FlowerSeed>();
         const dynamicActors: CellContent[] = [];
 
@@ -132,19 +169,15 @@ export class RenderingEngine {
             }
         }
 
-        // --- Change Detection ---
         const currentStaticActorIds = new Set(staticActors.keys());
         const staticActorsChanged = haveSetsChanged(this.lastStaticActorIds, currentStaticActorIds);
-        const selectionChanged = this.lastSelectedId !== selectedFlowerId;
 
-        // Only redraw the expensive static layer if something has actually changed.
-        if (staticActorsChanged || selectionChanged) {
-            this.drawStaticLayer(staticActors, selectedFlowerId);
+        if (staticActorsChanged) {
+            this.drawStaticLayer(staticActors);
             this.lastStaticActorIds = currentStaticActorIds;
-            this.lastSelectedId = selectedFlowerId;
         }
 
-        this.drawDynamicLayer(dynamicActors);
+        this.drawDynamicLayer(dynamicActors, selectedActorId, actors);
     }
 
     private _collectGarbage(currentStaticActors: Map<string, Flower | FlowerSeed>) {
@@ -161,36 +194,41 @@ export class RenderingEngine {
         }
     }
     
-    /**
-     * Performs a full, clean redraw of the static background layer.
-     * This is an expensive operation and should only be called when necessary.
-     */
-    private drawStaticLayer(currentStaticActors: Map<string, Flower | FlowerSeed>, selectedFlowerId: string | null) {
-        // 1. Clear canvas and redraw grid lines
+    private drawStaticLayer(currentStaticActors: Map<string, Flower | FlowerSeed>) {
         this.drawGrid();
 
-        // 2. Draw all current static actors
         for (const actor of currentStaticActors.values()) {
             this.drawImage(actor);
         }
-
-        // 3. Draw selection highlight on top
-        if (selectedFlowerId) {
-            const selectedActor = currentStaticActors.get(selectedFlowerId);
-            if (selectedActor) {
-                this.bgCtx.fillStyle = SELECTED_CELL_COLOR;
-                this.bgCtx.fillRect(selectedActor.x * CELL_SIZE_PX, selectedActor.y * CELL_SIZE_PX, CELL_SIZE_PX, CELL_SIZE_PX);
-            }
-        }
         
-        // 4. Clean up the image cache
         this._collectGarbage(currentStaticActors);
     }
 
-    private drawDynamicLayer(dynamicActors: CellContent[]) {
+    private drawDynamicLayer(dynamicActors: CellContent[], selectedActorId: string | null, allActors: Map<string, CellContent>) {
         this.fgCtx.clearRect(0, 0, this.fgCanvas.width, this.fgCanvas.height);
+
+        // Draw selection highlight first, so it's underneath the actors
+        if (selectedActorId) {
+            const selectedActor = allActors.get(selectedActorId);
+            if (selectedActor) {
+                this.fgCtx.strokeStyle = SELECTED_CELL_BORDER_COLOR;
+                this.fgCtx.lineWidth = SELECTED_CELL_BORDER_WIDTH;
+                const offset = SELECTED_CELL_BORDER_WIDTH / 2;
+                this.fgCtx.strokeRect(
+                    selectedActor.x * CELL_SIZE_PX + offset, 
+                    selectedActor.y * CELL_SIZE_PX + offset, 
+                    CELL_SIZE_PX - SELECTED_CELL_BORDER_WIDTH, 
+                    CELL_SIZE_PX - SELECTED_CELL_BORDER_WIDTH
+                );
+            }
+        }
+        
         for (const actor of dynamicActors) {
-            this.drawEmoji(this.fgCtx, actor);
+            if (actor.type === 'corpse') {
+                this.drawCorpse(this.fgCtx, actor as Corpse);
+            } else {
+                this.drawEmoji(this.fgCtx, actor);
+            }
         }
     }
 }

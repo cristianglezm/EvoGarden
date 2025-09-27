@@ -2,30 +2,39 @@ import React from 'react';
 import type { TickSummary, WeatherEventType } from '../types';
 import { SunIcon, CloudRainIcon, SnowflakeIcon, WindIcon } from './icons';
 
-const eventIcons: Record<WeatherEventType, React.ReactNode> = {
-    heatwave: <SunIcon className="w-4 h-4 text-accent-yellow" />,
-    coldsnap: <SnowflakeIcon className="w-4 h-4 text-accent-blue" />,
-    heavyrain: <CloudRainIcon className="w-4 h-4 text-blue-300" />,
-    drought: <WindIcon className="w-4 h-4 text-yellow-500" />,
-    none: null,
+const eventInfo: Record<WeatherEventType, { icon: React.ReactNode; text: string; colorClass: string }> = {
+    heatwave: { icon: <SunIcon className="w-4 h-4" />, text: 'Heatwave', colorClass: 'text-accent-yellow' },
+    coldsnap: { icon: <SnowflakeIcon className="w-4 h-4" />, text: 'Coldsnap', colorClass: 'text-accent-blue' },
+    heavyrain: { icon: <CloudRainIcon className="w-4 h-4" />, text: 'Heavy Rain', colorClass: 'text-blue-300' },
+    drought: { icon: <WindIcon className="w-4 h-4" />, text: 'Drought', colorClass: 'text-yellow-500' },
+    none: { icon: null, text: '', colorClass: '' },
 };
 
-export const EnvironmentDisplay: React.FC<{ summary: TickSummary | null }> = ({ summary }) => {
+interface EnvironmentDisplayProps {
+    summary: TickSummary | null;
+}
+
+export const EnvironmentDisplay: React.FC<EnvironmentDisplayProps> = ({ summary }) => {
     if (!summary) {
-        return <div className="h-5"></div>; // Placeholder to prevent layout shift
+        return (
+            <div className="bg-background px-3 py-1.5 rounded-md text-xs text-secondary font-mono">
+                Loading environment...
+            </div>
+        );
     }
 
     const { season, currentTemperature, currentHumidity, weatherEvent } = summary;
+    const eventDetails = eventInfo[weatherEvent];
 
     return (
-        <div className="flex items-center space-x-3 text-xs text-secondary mt-1">
+        <div className="bg-background px-3 py-1.5 rounded-md text-xs text-secondary font-mono flex items-center justify-between gap-3">
             <span>{season}</span>
             <span className="font-semibold text-primary">{currentTemperature.toFixed(1)}°C</span>
             <span>{(currentHumidity * 100).toFixed(0)}% Hum.</span>
-            {weatherEvent !== 'none' && (
-                <div className="flex items-center space-x-1 capitalize p-1 bg-surface-hover/50 rounded">
-                    {eventIcons[weatherEvent]}
-                    <span>{weatherEvent}</span>
+            {weatherEvent !== 'none' && eventDetails && (
+                <div className={`flex items-center space-x-1.5 capitalize p-1 bg-surface-hover/50 rounded ${eventDetails.colorClass}`}>
+                    {eventDetails.icon}
+                    <span className="font-semibold">{eventDetails.text}</span>
                 </div>
             )}
         </div>

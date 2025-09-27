@@ -1,53 +1,37 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useEventLogStore } from '../stores/eventLogStore';
 import { TerminalIcon } from './icons';
+
+interface EventLogProps {
+    onClick: () => void;
+}
 
 const importanceToColorClass: Record<string, string> = {
     high: 'text-accent-yellow',
     low: 'text-tertiary',
 };
 
-interface EventLogProps {
-  onClick: () => void;
-}
-
 export const EventLog: React.FC<EventLogProps> = ({ onClick }) => {
-    const logEntries = useEventLogStore(state => state.entries);
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    // Auto-scroll to the top (most recent) entry whenever a new one is added.
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = 0;
-        }
-    }, [logEntries]);
+    const latestEvent = useEventLogStore(state => state.entries[0]);
 
     return (
-        <div 
-            className="h-full bg-black/80 rounded-md p-2 flex flex-col font-mono text-xs overflow-hidden cursor-pointer hover:bg-black/70 transition-colors"
+        <div
+            className="bg-black/80 px-3 py-1.5 rounded-md text-xs text-secondary font-mono flex items-center gap-2 cursor-pointer hover:bg-black/70 transition-colors"
             onClick={onClick}
             title="Open Full Event Log"
-            aria-label="Open Full Event Log"
         >
-            <div className="flex items-center shrink-0 text-secondary border-b border-border/30 pb-1 mb-1">
-                <TerminalIcon className="w-4 h-4 mr-2" />
-                <span>Event Log</span>
+            <div className="flex items-center gap-2 shrink-0">
+                <TerminalIcon className="w-4 h-4" />
+                <span className="font-semibold text-primary-light">Event Log:</span>
             </div>
-            <div ref={scrollRef} className="grow overflow-y-auto pr-2">
-                {logEntries.length === 0 && (
-                    <div className="h-full flex items-center justify-center text-secondary/50">
-                        <p>No events yet...</p>
-                    </div>
-                )}
-                <div className="flex flex-col-reverse items-start">
-                    {logEntries.map(entry => (
-                        <p key={entry.id} className={`whitespace-nowrap ${importanceToColorClass[entry.importance] || 'text-tertiary'}`}>
-                            <span className="text-secondary/60 mr-2">[T:{(entry.tick ?? 0).toString().padStart(4, '0')}]</span>
-                            {entry.message}
-                        </p>
-                    ))}
-                </div>
-            </div>
+            {latestEvent ? (
+                <p className={`truncate ${importanceToColorClass[latestEvent.importance] || 'text-tertiary'}`}>
+                    <span className="text-secondary/60 mr-2">[T:{(latestEvent.tick ?? 0).toString().padStart(4, '0')}]</span>
+                    {latestEvent.message}
+                </p>
+            ) : (
+                <p className="text-secondary/50">No events yet...</p>
+            )}
         </div>
     );
 };

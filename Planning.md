@@ -31,13 +31,15 @@ Define the core data structures for the simulation state.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
-    -   `Insect`: Includes `emoji`, position, `lifespan`, and `pollen` (tracking the genome and source ID of the last flower visited).
+    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files.
+    -   `InsectStats`: A new interface defining the base stats for each insect type (`attack`, `maxHealth`, `maxStamina`, `speed`, `role`, `eggHatchTime`, `reproductionCost`).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
     -   `HerbicidePlane`: Includes position, a `path` vector, and an `end` coordinate.
     -   `HerbicideSmoke`: Includes position, a `lifespan`, and a `canBeExpanded`.
     -   `Nutrient`: Includes position and a `lifespan` in ticks.
-    -   `Egg`: Includes position, `hatchTimer`, and the `insectEmoji` it will spawn.
+    -   `Egg`: Includes position, `hatchTimer`, the `insectEmoji` it will spawn, and the `genome` inherited from its parents.
+    -   `Corpse`: Includes position, `originalEmoji`, and a `decayTimer` in ticks.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
 -   **Service Interfaces**:
     -   `FEService`: Defines the contract for the WASM service wrapper, ensuring all methods are typed correctly, especially `getFlowerStats` which returns `Promise<FlowerGenomeStats>`.
@@ -117,7 +119,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   **Role**: To group functions that operate on the entire actor state rather than a single actor, cleaning up the main engine loop.
     -   **Responsibilities**:
         -   `processNutrientHealing`: Scans for all nutrients and applies their healing effect to nearby flowers.
-        -   `handleInsectReproduction`: Scans for pairs of insects on the same cell and initiates reproduction.
+        -   `handleInsectReproduction`: Scans for pairs of insects of the same species on the same cell, initiating reproduction. It handles the creation of a new `Egg` with a `genome` created by crossing over the parents' genomes with a chance of mutation, then puts the parents on a `reproductionCooldown`.
 
 -   **Behavior System (`lib/behaviors/`)**: This is a modular pattern for separating actor logic. The engine calls a dedicated function for each actor type, passing the actor's state and a `context` object with necessary global information. Crucially, behaviors no longer create UI notifications directly; they now push structured `AppEvent` objects into the context's `events` array.
 
@@ -127,16 +129,16 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
     -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
+        -   **Health and Stamina System**: Insects have `health` which decays slowly each tick. If health reaches zero, the insect dies and is replaced by a `Corpse` actor. Actions like moving and attacking cost `stamina`, while idling regenerates it. An insect cannot act if it lacks sufficient stamina.
+        -   **Genetic Algorithm-based AI**: Insects no longer target the nearest flower. Instead, they use their unique `genome` (an array of weights) to calculate a "desirability score" for all visible flowers based on the flower's stats (health, toxicity, etc.). This drives them towards flowers that are evolutionarily advantageous for them. A small degree of randomness prevents unnatural swarming.
         -   **Dormancy**: The `processInsectTick` function now checks the `currentTemperature` from the context. If it is below a certain threshold (`INSECT_DORMANCY_TEMP`), the function returns immediately, causing the insect to skip its turn and effectively become dormant.
-        -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's lifespan is extended. If the rate is above a positive threshold (toxic/carnivorous), the insect's lifespan is reduced. Otherwise, the insect damages the flower as normal.
-        -   **Lifecycle**: Insects have a limited `lifespan`. Each tick, it decrements. If it reaches zero, the insect dies and is replaced by a nutrient.
-        -   **AI**: Uses the `flowerQtree` to find the nearest flower and moves towards it, with a degree of randomness to prevent unnatural swarming.
+        -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's health is restored. If the rate is above a positive threshold (toxic/carnivorous), the insect's health is reduced. Otherwise, the insect damages the flower as normal, gaining a small amount of health back.
         -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event.
 
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey (unprotected insects or eggs). When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it.
-        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping.
+        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping. The eaten insect does not leave a corpse and is instead converted directly into a nutrient.
     
     -   **`eagleBehavior`**: The apex predator, spawned as a regulatory mechanism.
         -   **AI**: Uses the main `qtree` to find the nearest bird.
@@ -153,9 +155,10 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Expansion**: On its first tick, it expands by creating new smoke actors in adjacent cells.
         -   **Lifecycle**: It has a short `lifespan` and is removed when the timer expires.
 
-    -   **`eggBehavior` & `nutrientBehavior`**: Simple state-machine behaviors.
+    -   **`eggBehavior`, `nutrientBehavior`, & `corpseBehavior`**: Simple state-machine behaviors.
         -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed and a new insect is spawned.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires.
+        -   `corpseBehavior`: Decrements a `decayTimer`. When the timer expires, it is removed and replaced by a `Nutrient`.
 
 -   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 
@@ -166,10 +169,12 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`flowerQtree`**: Contains only flowers, used by insects and idle birds.
 -   **`insectQtree`**: Contains only insects, used for efficient reproduction checks.
 
-### 5.4. UI/Worker Communication (`src/hooks/useSimulation.ts`)
+### 5.4. UI/Worker Communication & State Management Hooks (`src/hooks/`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
     -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset) to the simulation worker, and listens for incoming messages.
     -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas to reconstruct the new grid state. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
+-   **`useActorTracker` Hook**: A reusable hook that encapsulates the logic for tracking a specific actor.
+    -   **Responsibilities**: Manages the ID of the tracked actor, handles starting and stopping the tracking mode, and ensures the simulation continues to run while tracking is active. It also synchronizes the `selectedActor` state to keep the UI panel updated with the tracked actor's latest data. This makes the feature easily extensible to other actor types in the future.
 
 ### 5.5. Centralized Event & Notification System
 -   **`eventService.ts`**: A singleton service on the main thread that acts as a central hub for all notifications.
@@ -177,16 +182,22 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **Routing Logic**: Based on the user's `notificationMode` setting and the event's `importance`, the service decides whether to send the event to the `eventLogStore`, the `toastStore`, or both.
 
 ## 6. Component Architecture (`src/components/`)
--   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` hook, and handles save/load logic.
+-   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` and `useActorTracker` hooks, and handles save/load logic.
 -   **`SimulationView.tsx`**: Hosts the rendering engine's canvases and forwards user clicks.
 -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
+-   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
 -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower.
+-   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect. It includes a search bar and "Track" button that utilizes the `useActorTracker` hook to initiate real-time tracking of the selected insect.
+-   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become.
+-   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.).
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
 -   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
 -   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
 -   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
 -   **Header Components**:
+    -   `StatusPanel.tsx`: A new container component in the header that orchestrates the `EnvironmentDisplay`, `WorkerStatusDisplay`, and `EventLog`.
     -   `EnvironmentDisplay`: A new real-time display in the header showing the current season, temperature, humidity, and any active weather events.
+    -   `WorkerStatusDisplay.tsx`: A new real-time display in the status bar showing the number of pending genetics tasks in the `flower.worker.ts`.
     -   `EventLog.tsx`: A non-intrusive, terminal-style log that displays a real-time feed of events.
 -   **Notification Components**:
     -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events.
@@ -217,18 +228,23 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/index.tsx`: The main entry point for the React application.
     -   `src/App.tsx`: The root React component. Manages global state and layout.
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
+    -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
     -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
     -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating specific tasks to specialized managers.
     -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
-    -   `src/lib/EcosystemManager.ts`: **Global Rules.** A module that contains functions for system-wide behaviors like nutrient healing and insect reproduction.
+    -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
     -   `src/components/Controls.tsx`: UI for changing simulation parameters.
+    -   `src/components/ActorSelectionPanel.tsx`: A panel that appears when a user clicks a cell containing multiple actors.
     -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked.
+    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect.
+    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg.
+    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
     -   `src/components/Modal.tsx`: A generic modal component.
     -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
@@ -236,6 +252,10 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
     -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
     -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank. Allows users to view a 3D model of the champions, download their genomes, and clear the database.
+    -   `src/components/StatusPanel.tsx`: The main container in the header for status information.
+    -   `src/components/EnvironmentDisplay.tsx`: A component within the `StatusPanel` showing current weather and season.
+    -   `src/components/WorkerStatusDisplay.tsx`: A component within the `StatusPanel` showing the genetics worker's status.
+    -   `src/components/EventLog.tsx`: A component within the `StatusPanel` showing the latest event.
     -   `src/components/Toast.tsx`: Renders a single toast notification with a message and icon.
     -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.

@@ -1,6 +1,6 @@
-import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower } from '../types';
+import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower, Egg } from '../types';
 import { Quadtree, Rectangle } from './Quadtree';
-import { FLOWER_NUTRIENT_HEAL, INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
+import { FLOWER_NUTRIENT_HEAL, MUTATION_CHANCE, MUTATION_AMOUNT, INSECT_DATA, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
 import { findCellForStationaryActor } from './simulationUtils';
 
 export const processNutrientHealing = (nextActorState: Map<string, CellContent>, qtree: Quadtree<CellContent>): void => {
@@ -23,6 +23,20 @@ export const processNutrientHealing = (nextActorState: Map<string, CellContent>,
     }
 };
 
+const createOffspringGenome = (genome1: number[], genome2: number[]): number[] => {
+    const newGenome = genome1.map((gene, i) => {
+        return Math.random() < 0.5 ? gene : genome2[i];
+    });
+
+    // Mutation
+    for (let i = 0; i < newGenome.length; i++) {
+        if (Math.random() < MUTATION_CHANCE) {
+            newGenome[i] *= 1 + (Math.random() * MUTATION_AMOUNT * 2) - MUTATION_AMOUNT;
+        }
+    }
+    return newGenome;
+};
+
 export const handleInsectReproduction = (
     nextActorState: Map<string, CellContent>,
     params: SimulationParams,
@@ -31,7 +45,6 @@ export const handleInsectReproduction = (
     let eggsLaidThisTick = 0;
     const { gridWidth, gridHeight } = params;
 
-    // Create a temporary grid based on the current state of this tick's actors
     const currentTickGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
     for (const actor of nextActorState.values()) {
         if (actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
@@ -55,17 +68,28 @@ export const handleInsectReproduction = (
     for (const insect of allInsects) {
         if (reproducedInsects.has(insect.id) || insect.reproductionCooldown) continue;
 
+        const baseStats = INSECT_DATA.get(insect.emoji);
+        if (!baseStats) continue;
+
         const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
         const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id) && !other.reproductionCooldown);
 
-        if (partners.length > 0 && Math.random() < INSECT_REPRODUCTION_CHANCE) {
-            // Use the temporary, up-to-date grid for placement checks
-            const spot = findCellForStationaryActor(currentTickGrid, params, 'egg', { x: insect.x, y: insect.y });
+        if (partners.length > 0 && insect.stamina >= baseStats.reproductionCost) {
             const partner = partners[0];
+            const spot = findCellForStationaryActor(currentTickGrid, params, 'egg', { x: insect.x, y: insect.y });
+            
             if (spot) {
                 const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
-                nextActorState.set(eggId, { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji });
+                const offspringGenome = createOffspringGenome(insect.genome, partner.genome);
+                const newEgg: Egg = { 
+                    id: eggId, type: 'egg', x: spot.x, y: spot.y, 
+                    hatchTimer: baseStats.eggHatchTime, 
+                    insectEmoji: insect.emoji, 
+                    genome: offspringGenome 
+                };
+                nextActorState.set(eggId, newEgg);
                 
+                insect.stamina -= baseStats.reproductionCost;
                 insect.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
                 partner.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
 

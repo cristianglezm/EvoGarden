@@ -47,6 +47,10 @@ export interface SimulationParams {
     droughtHumidityDecrease: number;
     weatherEventMinDuration: number;
     weatherEventMaxDuration: number;
+    // Insect Evolution
+    reproductionCooldown: number;
+    mutationChance: number;
+    mutationAmount: number;
 }
 
 export interface Coord {
