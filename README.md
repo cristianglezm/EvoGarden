@@ -24,8 +24,9 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
     -   **Centralized Header**: A retro, terminal-style header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
     -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history.
     -   **Configurable Notifications**: Take control of the UI with three notification modes: log only, important toasts, or all toasts.
--   **Real-time Actor Tracking**: Select any insect, click the "Track" button, and watch the simulation follow it in real-time. The details panel provides live updates on its health, stamina, and status.
+-   **Real-time Actor Tracking & Global Search**: Track any actor in real-time. Use the global search in the header to find an actor by its ID, highlight it on the grid, and then track it. The search is powered by a Trie data structure for instant, prefix-based matching. Alternatively, start tracking any actor with a single click from its details panel. The header control intelligently transforms to a "Stop Tracking" button for easy access.
 -   **Real-time Performance Insights**: A status indicator in the header shows the number of pending genetics tasks, giving users a live look at the simulation's computational load.
+-   **Polished & Refined UI**: The interface is designed for clarity and ease of use, featuring collapsible control panels, a clean status header, and subtle visual cues like inset shadows on scrollable content to improve usability.
 -   **Dynamic Insect Lifecycle**: Insects reproduce by laying eggs, which have a gestation period to hatch, creating a more realistic population model.
 -   **Layered Actor System**: Actors like insects and birds can occupy the same grid cell as flowers, allowing for more realistic interactions.
 -   **Simulation State Persistence**: Save your garden's state to your browser's local storage and load it back in a future session.
@@ -37,7 +38,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Automated Ecosystem Balancing**: The simulation engine dynamically spawns predators (birds) or apex predators (eagles) in response to insect population booms and busts. An herbicide plane is also automatically deployed when flower density becomes too high.
 -   **WASM-Powered Genetics**: A high-performance WebAssembly module handles complex genetic operations.
 -   **Interactive Simulation**: Control world parameters like climate and population, pause/play the world, and reset with new initial conditions.
--   **Inspect Individuals**: Click on any cell to inspect its occupants. If multiple entities are present, a selection panel allows you to choose. View detailed, real-time stats for any actor, including a flower's genetics, an insect's preferences and status, an egg's hatch timer, and even track an insect's entire lifecycle.
+-   **Inspect Individuals**: Click on any cell to inspect its occupants. A selection panel appears if multiple actors are present. View detailed, real-time stats for any actor and start tracking them directly from their dedicated details panel.
 -   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer.
 
 ## 🔬 Simulation Deep Dive
@@ -48,6 +49,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Delta-Based State Updates**: The simulation worker sends only a small list of changes ("deltas") to the UI each tick, minimizing data transfer and ensuring a fluid experience.
 -   **Layered Canvas & Change Detection**: The simulation is rendered across two stacked canvas layers (a static background for flowers/grid, a dynamic foreground for mobile actors) to eliminate the bottleneck of re-drawing hundreds of complex SVGs every frame.
 -   **Multi-Quadtree Optimization**: The simulation uses multiple Quadtree data structures each tick for high-performance spatial querying, avoiding slow, full-grid scans.
+-   **Trie-based Actor Search**: A Trie data structure is used for the global actor search, providing instant, prefix-based ID matching even with hundreds of actors on the grid.
 
 ### Dynamic Environment
 The garden is no longer static. It features a fully dynamic climate system that directly impacts the survival and evolution of its inhabitants.
