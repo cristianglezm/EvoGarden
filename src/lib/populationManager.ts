@@ -123,6 +123,17 @@ export class PopulationManager {
             this.herbicideCooldown = this.params.herbicideCooldown;
         }
 
+        // Birds leave when there's no food
+        const { insectCount, birdCount } = summary;
+        if (insectCount === 0 && birdCount > 0) {
+            const birds = Array.from(nextActorState.values()).filter(a => a.type === 'bird') as Bird[];
+            if (birds.length > 0) {
+                const birdToRemove = birds[0]; // Remove the first one found
+                nextActorState.delete(birdToRemove.id);
+                events.push({ message: '🐦 With no insects to hunt, a bird has left the garden.', type: 'info', importance: 'low' });
+            }
+        }
+
         return newActors;
     }
     
