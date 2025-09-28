@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef } from 'react';
 import type { Flower } from '../types';
-import { CopyIcon, CheckIcon, LoaderIcon, DownloadIcon, XIcon } from './icons';
+import { CopyIcon, CheckIcon, LoaderIcon, DownloadIcon, XIcon, SearchIcon } from './icons';
 import { flowerService } from '../services/flowerService';
 import { Modal } from './Modal';
 import { Flower3DViewer } from './Flower3DViewer';
@@ -11,6 +11,9 @@ interface FlowerDetailsPanelProps {
     isRunning: boolean;
     setIsRunning: (running: boolean) => void;
     onClose: () => void;
+    onTrackActor: (id: string) => void;
+    onStopTracking: () => void;
+    trackedActorId: string | null;
 }
 
 const StatBar: React.FC<{ value: number, max: number, label: string, colorClass: string }> = ({ value, max, label, colorClass }) => (
@@ -25,7 +28,7 @@ const StatBar: React.FC<{ value: number, max: number, label: string, colorClass:
     </div>
 );
 
-export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning, onClose }) => {
+export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning, onClose, onTrackActor, onStopTracking, trackedActorId }) => {
     const [copied, setCopied] = useState(false);
     const [is3DViewerOpen, setIs3DViewerOpen] = useState(false);
     const [gltfString, setGltfString] = useState<string | null>(null);
@@ -80,20 +83,51 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
         setIsRunning(wasRunningRef.current); // Resume to previous state
     };
 
+    const isTrackingThisFlower = trackedActorId && flower && trackedActorId === flower.id;
 
     const panelContent = flower ? (
         <>
-            <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px]">
-                <h2 className="font-bold text-lg">Flower Details</h2>
-                 <button 
-                    onClick={onClose} 
-                    className="p-1 text-primary-light hover:bg-black/20 rounded-full"
-                    aria-label="Close details panel"
-                >
-                    <XIcon className="w-6 h-6" />
-                </button>
+            <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px] min-h-[48px]">
+                <h2 className="font-bold text-lg truncate">
+                    {isTrackingThisFlower ? 'Tracking: ' : 'Flower Details'}
+                    {isTrackingThisFlower && <span className="font-mono text-accent-yellow">{flower.id.substring(7, 12)}</span>}
+                </h2>
+                <div className="flex items-center gap-2">
+                    {isTrackingThisFlower && (
+                        <button 
+                            onClick={onStopTracking} 
+                            className="px-2 py-1 bg-accent-red/80 hover:bg-accent-red text-white text-xs font-semibold rounded-md transition-colors"
+                            title="Stop Tracking"
+                        >
+                            Stop
+                        </button>
+                    )}
+                    <button 
+                        onClick={onClose} 
+                        className="p-1 text-primary-light hover:bg-black/20 rounded-full"
+                        aria-label="Close details panel"
+                    >
+                        <XIcon className="w-6 h-6" />
+                    </button>
+                </div>
             </header>
-            <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto">
+            <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
+                <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-black/50 rounded flex items-center justify-center p-1 shrink-0">
+                         <img src={flower.imageData} alt={`Flower ${flower.id}`} className="w-full h-full object-contain"/>
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="text-xl font-bold text-primary-light truncate">Flower</h3>
+                        <div className="flex items-center gap-2">
+                            <p className="text-xs text-secondary font-mono truncate">{flower.id}</p>
+                            {!isTrackingThisFlower && (
+                                <button onClick={() => onTrackActor(flower.id)} title="Track this flower" className="p-1 text-secondary hover:text-primary-light rounded-full transition-colors">
+                                    <SearchIcon className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
                 <div className="space-y-3">
                     <StatBar value={flower.health} max={flower.maxHealth} label="Health" colorClass="bg-accent-red" />
                     <StatBar value={flower.stamina} max={flower.maxStamina} label="Stamina" colorClass="bg-accent-blue" />

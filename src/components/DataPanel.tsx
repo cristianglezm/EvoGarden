@@ -68,7 +68,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose, isRunning
                             </button>
                         </nav>
                     </div>
-                    <div className="grow overflow-y-auto">
+                    <div className="grow overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                         {activeTab === 'challenges' && <ChallengesPanel />}
                         {activeTab === 'analytics' && <ChartsPanel />}
                         {activeTab === 'seedBank' && <SeedBankPanel isRunning={isRunning} setIsRunning={setIsRunning} />}
