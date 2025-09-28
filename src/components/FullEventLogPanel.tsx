@@ -39,7 +39,7 @@ export const FullEventLogPanel: React.FC<FullEventLogPanelProps> = ({ isOpen, on
                             <XIcon className="w-6 h-6" />
                         </button>
                     </header>
-                    <div className="grow overflow-y-auto p-4 font-mono text-sm">
+                    <div className="grow overflow-y-auto p-4 font-mono text-sm shadow-[inset_0_1px_1px_0_#000]">
                         {logEntries.length === 0 && (
                              <div className="h-full flex items-center justify-center text-secondary/50">
                                 <p>No events recorded.</p>

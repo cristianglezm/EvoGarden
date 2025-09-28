@@ -207,6 +207,19 @@ export default function App(): React.ReactNode {
           }
       }
   }, [isRunning, setIsRunning, trackedActorId]);
+  
+  const handleHighlightActorById = useCallback((id: string | null) => {
+    if (trackedActorId) return; 
+    if (id === null) {
+        if (actorsInSelectedCell.length === 0) {
+            setSelectedActor(null);
+        }
+        return;
+    }
+    const actor = actors.get(id);
+    setSelectedActor(actor || null);
+}, [actors, trackedActorId, actorsInSelectedCell.length]);
+
 
   const handleCellClick = useCallback((actorsInCell: CellContent[]) => {
       if (trackedActorId) return; // If tracking, ignore cell clicks
@@ -391,17 +404,31 @@ export default function App(): React.ReactNode {
     if (selectedActor) {
         switch(selectedActor.type) {
             case 'flower':
-                return <FlowerDetailsPanel flower={selectedActor} isRunning={isRunning} setIsRunning={setIsRunning} onClose={() => handleActorSelection(null)} />;
-            case 'insect':
-                return <InsectDetailsPanel 
-                            insect={selectedActor} 
-                            onClose={() => handleActorSelection(null)} 
+                return <FlowerDetailsPanel 
+                            flower={selectedActor} 
+                            isRunning={isRunning} 
+                            setIsRunning={setIsRunning} 
+                            onClose={() => handleActorSelection(null)}
                             onTrackActor={handleTrackActor}
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
                         />;
+            case 'insect':
+                return <InsectDetailsPanel 
+                            insect={selectedActor} 
+                            onClose={() => handleActorSelection(null)} 
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                            onTrackActor={handleTrackActor}
+                        />;
             case 'egg':
-                return <EggDetailsPanel egg={selectedActor} onClose={() => handleActorSelection(null)} />;
+                return <EggDetailsPanel 
+                            egg={selectedActor} 
+                            onClose={() => handleActorSelection(null)}
+                            onTrackActor={handleTrackActor}
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                        />;
             case 'bird':
             case 'eagle':
             case 'nutrient':
@@ -409,7 +436,13 @@ export default function App(): React.ReactNode {
             case 'herbicideSmoke':
             case 'flowerSeed':
             case 'corpse':
-                return <GenericActorDetailsPanel actor={selectedActor} onClose={() => handleActorSelection(null)} />;
+                return <GenericActorDetailsPanel 
+                            actor={selectedActor} 
+                            onClose={() => handleActorSelection(null)}
+                            onTrackActor={handleTrackActor}
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                        />;
             default:
                 // Fallback for any unhandled type
                 handleActorSelection(null);
@@ -430,14 +463,24 @@ const detailsPanel = renderDetailsPanel();
             </div>
             
             <div className="flex-grow min-w-0 mx-4">
-                <StatusPanel summary={latestSummary} onLogClick={handleOpenFullLog} />
+                <StatusPanel 
+                    summary={latestSummary} 
+                    onLogClick={handleOpenFullLog}
+                    actors={actors}
+                    onTrackActor={handleTrackActor}
+                    onStopTracking={handleStopTracking}
+                    trackedActorId={trackedActorId}
+                    isRunning={isRunning}
+                    setIsRunning={setIsRunning}
+                    onHighlightActor={handleHighlightActorById}
+                />
             </div>
 
             <a 
                 href="https://github.com/cristianglezm/EvoGarden" 
                 target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center pt-2"
+                rel="noopener"
+                className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center pt-2 m-auto"
                 aria-label="View on GitHub"
                 title="View on GitHub"
             >
@@ -511,7 +554,7 @@ const detailsPanel = renderDetailsPanel();
                     <XIcon className="w-6 h-6" />
                 </button>
             </header>
-            <div className="p-4 overflow-y-auto">
+            <div className="p-4 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                 <Controls 
                     params={params} 
                     onParamsChange={handleParamsChange} 

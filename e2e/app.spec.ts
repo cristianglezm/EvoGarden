@@ -3,6 +3,8 @@ import { ControlPanelController } from './controllers/ControlPanelController';
 import { FlowerPanelController } from './controllers/FlowerPanelController';
 import { DataPanelController } from './controllers/DataPanelController';
 import { EventLogPanelController } from './controllers/EventLogPanelController';
+import { GlobalSearchController } from './controllers/GlobalSearchController';
+import { InsectDetailsPanelController } from './controllers/InsectDetailsPanelController';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -188,6 +190,48 @@ test.describe('Canvas and Flower Details Panel', () => {
     expect(pausedCanvasScreenshot.equals(resumedCanvasScreenshot)).toBe(false);
   });
 });
+
+test.describe('Global Search', () => {
+    test('should find, highlight, and then track an actor by its ID', async ({ page }) => {
+        const controls = new ControlPanelController(page);
+        const actors = new FlowerPanelController(page); // Generic actor selector
+        const search = new GlobalSearchController(page);
+        const insects = new InsectDetailsPanelController(page);
+
+        // 1. Run simulation to ensure there are insects
+        await controls.runSimulation(3);
+
+        // 2. Select an insect to get its ID
+        const selected = await actors.selectActor('insect');
+        expect(selected).toBe(true);
+        
+        await insects.waitForPanel();
+        const insectId = await insects.getActorId();
+        const partialId = insectId.substring(0, 10);
+        
+        // 3. Close the details panel to start fresh
+        await insects.closePanel();
+        await expect(insects.panel).not.toBeVisible();
+
+        // 4. Search for the insect using its partial ID
+        await search.searchFor(partialId);
+
+        // 5. Select the suggestion, which should highlight it and open the panel
+        await search.selectSuggestion(insectId);
+
+        // 6. Verify that the details panel is now visible (highlighted)
+        await insects.waitForPanel();
+        const highlightedId = await insects.getActorId();
+        expect(highlightedId).toBe(insectId);
+
+        // 7. Click the track button to start tracking
+        await search.clickTrackButton();
+
+        // 8. Verify it's in tracking mode
+        await expect(page.getByText(`Tracking: ${insectId.substring(7, 12)}`)).toBeVisible();
+    });
+});
+
 
 test.describe('Full Environment Parameter Test', () => {
   test('should set Flower Detail multiplier', async ({ page }) => {
