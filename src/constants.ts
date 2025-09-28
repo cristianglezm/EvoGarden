@@ -51,7 +51,7 @@ export const FLOWER_EXPANSION_CHANCE = 0.001;
 export const NUTRIENT_LIFESPAN = 2; // ticks
 export const NUTRIENT_FROM_PREY_LIFESPAN = 4;
 export const NUTRIENT_FROM_OLD_AGE_LIFESPAN = 5;
-export const CORPSE_DECAY_TIME = 15; // ticks
+export const CORPSE_DECAY_TIME = 50; // ticks
 
 // --- BIRD CONSTANTS ---
 export const BIRD_DROP_NUTRIENT_CHANCE = 0.05;
