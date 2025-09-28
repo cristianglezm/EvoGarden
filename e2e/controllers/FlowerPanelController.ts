@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import type { CellContent } from '../../src/types';
 
 export class FlowerPanelController {
   readonly page: Page;
@@ -20,11 +21,11 @@ export class FlowerPanelController {
     }).toPass({ timeout: 15000 });
   }
 
-  async selectFlower(): Promise<boolean> {
+  async selectActor(actorType: CellContent['type']): Promise<boolean> {
     const canvas = this.page.getByRole('grid', { name: 'EvoGarden simulation grid' });
     const box = await canvas.boundingBox();
     if (!box) return false;
-
+    
     const DENSITY = 8; // higher density click grid
     for (let i = 1; i <= DENSITY; i++) {
         for (let j = 1; j <= DENSITY; j++) {
@@ -32,23 +33,26 @@ export class FlowerPanelController {
             const y = box.height * (j / (DENSITY + 1));
             await canvas.click({ position: { x, y } });
 
-            // After clicking, check if either the details panel or selection panel appeared.
-            const detailsVisible = await this.detailsPanel.isVisible({ timeout: 250 });
-            if (detailsVisible) return true; // Direct selection, success.
+            const targetPanel = this.page.locator(`aside:has-text("${actorType} Details")`);
+            const targetVisible = await targetPanel.isVisible({ timeout: 250 });
+            if (targetVisible) return true;
             
             const selectionVisible = await this.actorSelectionPanel.isVisible({ timeout: 250 });
             if (selectionVisible) {
-                // Multi-actor selection panel appeared. Try to click a flower in it.
-                const flowerButton = this.actorSelectionPanel.getByRole('button', { name: /Flower/ });
-                if (await flowerButton.isVisible()) {
-                    await flowerButton.click();
-                    return true; // Clicked flower in selection, success.
+                const actorButton = this.actorSelectionPanel.getByRole('button', { name: new RegExp(actorType, 'i') });
+                if (await actorButton.isVisible()) {
+                    await actorButton.click();
+                    return true;
                 }
             }
         }
     }
-    return false; // Failed to find and select a flower after trying all grid points.
+    return false;
 }
+
+  async selectFlower(): Promise<boolean> {
+    return this.selectActor('flower');
+  }
 
 
   async waitForDetails() {
