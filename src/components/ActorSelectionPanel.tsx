@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CellContent } from '../types';
+import type { CellContent, Cockroach } from '../types';
 import { XIcon } from './icons';
 
 interface ActorSelectionPanelProps {
@@ -20,6 +20,7 @@ const getActorName = (actor: CellContent): string => {
         case 'herbicideSmoke': return `💨 Herbicide Smoke`;
         case 'flowerSeed': return `🌱 Seed`;
         case 'corpse': return `💀 Corpse`;
+        case 'cockroach': return `${(actor as Cockroach).emoji} Cockroach`;
         default: return 'Unknown Entity';
     }
 };
