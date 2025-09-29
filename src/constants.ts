@@ -51,7 +51,10 @@ export const FLOWER_EXPANSION_CHANCE = 0.001;
 export const NUTRIENT_LIFESPAN = 2; // ticks
 export const NUTRIENT_FROM_PREY_LIFESPAN = 4;
 export const NUTRIENT_FROM_OLD_AGE_LIFESPAN = 5;
-export const CORPSE_DECAY_TIME = 50; // ticks
+export const NUTRIENT_FROM_COCKROACH_LIFESPAN = 2; // Lower quality nutrient
+export const NUTRIENT_FROM_FLOWER_DEATH_LIFESPAN = 3; // From a flower killed by a cockroach
+export const CORPSE_DECAY_TIME = 25; // ticks
+
 
 // --- BIRD CONSTANTS ---
 export const BIRD_DROP_NUTRIENT_CHANCE = 0.05;
@@ -72,6 +75,15 @@ export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
 export const MUTATION_CHANCE = 0.05; // 5% chance per gene
 export const MUTATION_AMOUNT = 0.2;  // Mutate by +/- 20%
 export const INSECT_WANDER_CHANCE = 0.1;
+
+// --- COCKROACH CONSTANTS ---
+export const COCKROACH_VISION_RANGE = 4;
+export const COCKROACH_HEALTH_DECAY_PER_TICK = 0.5;
+export const COCKROACH_STAMINA_REGEN_PER_TICK = 3;
+export const COCKROACH_MOVE_STAMINA_COST = 1;
+export const COCKROACH_MIN_STAMINA_TO_MOVE = 2;
+export const CORPSE_NUTRITION_VALUE = 10; // Health/stamina restored to cockroach
+
 
 // --- GENETIC ALGORITHM CONSTANTS ---
 export const FLOWER_STAT_INDICES = {
@@ -99,6 +111,8 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     ['🐞', { role: 'balanced', attack: 4, maxHealth: 120, maxStamina: 35, speed: 1, eggHatchTime: 18, reproductionCost: 5 }],
     // Bees are fast pollinators with slightly more damage than butterflies
     ['🐝', { role: 'pollinator', attack: 3, maxHealth: 110, maxStamina: 50, speed: 2, eggHatchTime: 12, reproductionCost: 5 }],
+    // Cockroaches are scavengers that can also attack weak flowers
+    ['🪳', { role: 'scavenger', attack: 2, maxHealth: 50, maxStamina: 50, speed: 1, eggHatchTime: 30, reproductionCost: 2 }],
 ]);
 
 
@@ -106,5 +120,8 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
 export const POPULATION_TREND_WINDOW = 5;
 export const POPULATION_GROWTH_THRESHOLD_INSECT = 0.02;
 export const POPULATION_DECLINE_THRESHOLD_INSECT = 0.04;
+export const POPULATION_GROWTH_THRESHOLD_CORPSE = 0.02;
+export const POPULATION_DECLINE_THRESHOLD_CORPSE = 0.04;
 export const BIRD_SPAWN_COOLDOWN = 5;
 export const EAGLE_SPAWN_COOLDOWN = 8;
+export const COCKROACH_SPAWN_COOLDOWN = 15;

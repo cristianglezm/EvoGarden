@@ -43,7 +43,7 @@ export const ChartsPanel: React.FC = () => {
     
     // State to hold legend visibility for each chart
     const [performanceLegend, setPerformanceLegend] = useState<Record<string, boolean>>({ 'Tick Time (Worker)': true, 'Render Time (UI)': true, 'Pending Requests': true });
-    const [populationLegend, setPopulationLegend] = useState<Record<string, boolean>>({ 'Flowers': true, 'Insects': true, 'Birds': true, 'Eagles': true, 'Herbicide Planes': true, 'Herbicide Smokes': true, 'Eggs': true });
+    const [populationLegend, setPopulationLegend] = useState<Record<string, boolean>>({ 'Flowers': true, 'Insects': true, 'Birds': true, 'Eagles': true, 'Herbicide Planes': true, 'Herbicide Smokes': true, 'Eggs': true, 'Corpses': true, 'Cockroaches': true });
     const [eventsLegend, setEventsLegend] = useState<Record<string, boolean>>({ 'Reproductions': true, 'Insects Eaten': true, 'Eggs Laid': true, 'Insects Born': true, 'Eggs Eaten': true, 'Died of Old Age': true });
     const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true });
     const [effectsLegend, setEffectsLegend] = useState<Record<string, boolean>>({ 'Avg Vitality': true, 'Avg Agility': true, 'Avg Strength': true, 'Avg Intelligence': true, 'Avg Luck': true });
@@ -117,7 +117,7 @@ export const ChartsPanel: React.FC = () => {
         return {
             ...baseChartOptions,
             title: { text: 'Population Dynamics', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes'], top: 35, textStyle: { color: '#bbf7d0' }, selected: populationLegend },
+            legend: { data: ['Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses', 'Cockroaches'], top: 35, textStyle: { color: '#bbf7d0' }, selected: populationLegend },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
                 { name: 'Flowers', type: 'line', data: history.map(h => h.flowers), color: '#48bb78' },
@@ -127,6 +127,8 @@ export const ChartsPanel: React.FC = () => {
                 { name: 'Eggs', type: 'line', data: history.map(h => h.eggCount), color: '#a0aec0' },
                 { name: 'Herbicide Planes', type: 'line', data: history.map(h => h.herbicidePlanes || 0), color: '#cbd5e0' },
                 { name: 'Herbicide Smokes', type: 'line', data: history.map(h => h.herbicideSmokes || 0), color: '#718096' },
+                { name: 'Corpses', type: 'line', data: history.map(h => h.corpses || 0), color: '#a0aec0' },
+                { name: 'Cockroaches', type: 'line', data: history.map(h => h.cockroaches || 0), color: '#7a4a2a' },
             ],
         };
     }, [history, populationLegend]);
