@@ -30,7 +30,7 @@
     "dexie": "^4.2.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.45.3",
+    "@playwright/test": "^1.55.1",
     "@tailwindcss/vite": "^4.1.13",
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.0.0",
