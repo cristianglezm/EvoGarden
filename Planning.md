@@ -128,12 +128,9 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **State**: Handles aging, maturation, and energy consumption (stamina, then health).
         -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
-    -   **`insectBehavior`**: Governs insect AI and its interaction with flowers.
-        -   **Health and Stamina System**: Insects have `health` which decays slowly each tick. If health reaches zero, the insect dies and is replaced by a `Corpse` actor. Actions like moving and attacking cost `stamina`, while idling regenerates it. An insect cannot act if it lacks sufficient stamina.
-        -   **Genetic Algorithm-based AI**: Insects no longer target the nearest flower. Instead, they use their unique `genome` (an array of weights) to calculate a "desirability score" for all visible flowers based on the flower's stats (health, toxicity, etc.). This drives them towards flowers that are evolutionarily advantageous for them. A small degree of randomness prevents unnatural swarming.
-        -   **Dormancy**: The `processInsectTick` function now checks the `currentTemperature` from the context. If it is below a certain threshold (`INSECT_DORMANCY_TEMP`), the function returns immediately, causing the insect to skip its turn and effectively become dormant.
-        -   **Toxicity/Healing Interaction**: When an insect lands on a flower, it checks the flower's `toxicityRate`. If the rate is negative (healing), the insect's health is restored. If the rate is above a positive threshold (toxic/carnivorous), the insect's health is reduced. Otherwise, the insect damages the flower as normal, gaining a small amount of health back.
-        -   **Pollination**: If it is carrying pollen and lands on a *different*, mature flower, it triggers a sexual reproduction event.
+    -   **`insectBehavior`**: A dispatcher that routes to specialized behaviors.
+        -   **`DefaultInsectBehavior`**: Governs standard insect AI (pollinators, attackers, etc.), including genetic-based flower targeting, pollination, and dormancy.
+        -   **`CockroachBehavior`**: Manages scavenger AI. Cockroaches hunt for `Corpse` actors. If none are found, they will attack weak flowers. They produce a low-quality nutrient upon eating.
 
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey (unprotected insects or eggs). When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
@@ -187,7 +184,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
 -   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
 -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower. Includes a "Track" button that utilizes the `useActorTracker` hook.
--   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect. Includes a "Track" button that utilizes the `useActorTracker` hook.
+-   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect or cockroach. Includes a "Track" button that utilizes the `useActorTracker` hook.
 -   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become. Includes a "Track" button that utilizes the `useActorTracker` hook.
 -   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.). Includes a "Track" button that utilizes the `useActorTracker` hook.
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
@@ -232,7 +229,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
     -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
     -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
-    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating specific tasks to specialized managers.
+    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating tasks to specialized managers.
     -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
     -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
@@ -244,9 +241,9 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/components/Controls.tsx`: UI for changing simulation parameters.
     -   `src/components/ActorSelectionPanel.tsx`: A panel that appears when a user clicks a cell containing multiple actors.
     -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked and includes a button to initiate tracking.
-    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect, including a button to initiate tracking.
-    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg, including a button to initiate tracking.
-    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors, including a button to initiate tracking.
+    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect.
+    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg.
+    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors.
     -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
     -   `src/components/Modal.tsx`: A generic modal component.
     -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
@@ -261,5 +258,5 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
     -   `src/stores/`: Contains all Zustand global state management stores.
     -   `src/utils.ts`: A module for shared utility functions.
-    -   `src/constants.ts`: Global constants for the simulation (tick rate, damage values, etc.).
+    -   `src/constants.ts`: Global constants for the simulation.
     -   `src/types.ts`: Shared TypeScript types for the simulation.

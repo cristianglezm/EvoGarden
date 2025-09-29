@@ -69,6 +69,7 @@ export const INSECT_DORMANCY_TEMP = 5; // 5°C
 // New Insect Mechanics
 export const INSECT_HEALTH_DECAY_PER_TICK = 0.2;
 export const INSECT_STAMINA_REGEN_PER_TICK = 2;
+export const INSECT_STAMINA_GAIN_FROM_EATING = 4;
 export const INSECT_MOVE_COST = 2;
 export const INSECT_ATTACK_COST = 4;
 export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
