@@ -1,10 +1,10 @@
 import React from 'react';
-import type { Insect } from '../types';
+import type { Insect, Cockroach } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { INSECT_DATA, FLOWER_STAT_INDICES } from '../constants';
 
 interface InsectDetailsPanelProps {
-    insect: Insect | null;
+    insect: (Insect | Cockroach) | null;
     onClose: () => void;
     onStopTracking: () => void;
     onTrackActor: (id: string) => void;
@@ -129,7 +129,9 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
 
                  <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Status</h3>
-                    <p><strong>Carrying Pollen:</strong> {insect.pollen ? `Yes (from #${insect.pollen.sourceFlowerId.substring(7,12)})` : 'No'}</p>
+                    {insect.type === 'insect' && (
+                        <p><strong>Carrying Pollen:</strong> {insect.pollen ? `Yes (from #${insect.pollen.sourceFlowerId.substring(7,12)})` : 'No'}</p>
+                    )}
                     <p><strong>Reproduction Cooldown:</strong> {insect.reproductionCooldown || 0} ticks</p>
                 </div>
             </div>

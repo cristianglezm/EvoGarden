@@ -115,7 +115,8 @@ export class RenderingEngine {
             actor.type === 'nutrient' ? '💩' :
             actor.type === 'egg' ? '🥚' :
             actor.type === 'herbicidePlane' ? '✈️' :
-            actor.type === 'herbicideSmoke' ? '💨' : '';
+            actor.type === 'herbicideSmoke' ? '💨' :
+            actor.type === 'cockroach' ? '🪳':'';
         
         if (emoji) {
             ctx.save();
