@@ -10,7 +10,6 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { processCorpseTick } from './behaviors/corpseBehavior';
-import { processCockroachTick } from './behaviors/cockroachBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -207,9 +206,11 @@ export class SimulationEngine {
         };
         const insectContext = {
             ...flowerContext,
+            qtree,
             flowerQtree,
             events,
             incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; },
+            newActorQueue,
         };
         
         for (const currentActor of actorsToProcess) {
@@ -235,7 +236,8 @@ export class SimulationEngine {
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
                     break;
                 case 'insect':
-                    processInsectTick(actor as Insect, insectContext, newActorQueue);
+                case 'cockroach':
+                    processInsectTick(actor as Insect | Cockroach, insectContext);
                     break;
                 case 'flower':
                     processFlowerTick(actor as Flower, flowerContext, newActorQueue);
@@ -251,9 +253,6 @@ export class SimulationEngine {
                     break;
                 case 'corpse':
                     processCorpseTick(actor as Corpse, { nextActorState });
-                    break;
-                case 'cockroach':
-                    processCockroachTick(actor as Cockroach, { params: this.params, qtree, flowerQtree, nextActorState });
                     break;
             }
         }
