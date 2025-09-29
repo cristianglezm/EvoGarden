@@ -1,5 +1,5 @@
-import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect, Bird, PopulationTrend } from '../types';
-import { POPULATION_TREND_WINDOW } from '../constants';
+import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect, Bird, PopulationTrend, Flower, Cockroach } from '../types';
+import { POPULATION_TREND_WINDOW, FLOWER_STAT_INDICES } from '../constants';
 import { Quadtree, Rectangle } from './Quadtree';
 
 export const windVectors: Record<WindDirection, {dx: number, dy: number}> = {
@@ -56,7 +56,7 @@ export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, ori
     return suitableCells[Math.floor(Math.random() * suitableCells.length)];
 };
 
-export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle', origin?: Coord, claimedCells?: Set<string>): Coord | null => {
+export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle' | 'cockroach', origin?: Coord, claimedCells?: Set<string>): Coord | null => {
     const isSuitable = (cell: CellContent[], x: number, y: number) =>
         (!claimedCells || !claimedCells.has(`${x},${y}`)) &&
         !cell.some(c => c.type === type);
@@ -158,4 +158,23 @@ export const buildQuadtrees = (actors: CellContent[], params: { gridWidth: numbe
         }
     }
     return { qtree, flowerQtree };
+};
+
+export const scoreFlower = (insect: Insect | Cockroach, flower: Flower): number => {
+    const genome = insect.genome;
+    let score = 0;
+    score += (flower.health / flower.maxHealth) * genome[FLOWER_STAT_INDICES.HEALTH];
+    score += (flower.stamina / flower.maxStamina) * genome[FLOWER_STAT_INDICES.STAMINA];
+    score += flower.toxicityRate * genome[FLOWER_STAT_INDICES.TOXICITY]; // Negative toxicity is healing, so a negative weight here is good
+    score += flower.nutrientEfficiency * genome[FLOWER_STAT_INDICES.NUTRIENT_EFFICIENCY];
+    score += flower.effects.vitality * genome[FLOWER_STAT_INDICES.VITALITY];
+    score += flower.effects.agility * genome[FLOWER_STAT_INDICES.AGILITY];
+    score += flower.effects.strength * genome[FLOWER_STAT_INDICES.STRENGTH];
+    score += flower.effects.intelligence * genome[FLOWER_STAT_INDICES.INTELLIGENCE];
+    score += flower.effects.luck * genome[FLOWER_STAT_INDICES.LUCK];
+    // Add a small distance penalty to prefer closer flowers among equally good options
+    const dist = Math.hypot(insect.x - flower.x, insect.y - flower.y);
+    score -= dist * 0.1;
+
+    return score;
 };

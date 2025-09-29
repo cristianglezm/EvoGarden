@@ -84,6 +84,8 @@ export interface TickSummary {
     eggCount: number;
     herbicidePlaneCount: number;
     herbicideSmokeCount: number;
+    corpseCount: number;
+    cockroachCount: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative

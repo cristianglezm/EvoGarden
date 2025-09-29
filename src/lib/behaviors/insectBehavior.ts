@@ -9,12 +9,11 @@ import {
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     INSECT_ATTACK_COST,
-    FLOWER_STAT_INDICES,
     INSECT_DATA,
     CORPSE_DECAY_TIME,
     INSECT_WANDER_CHANCE
 } from '../../constants';
-import { findCellForFlowerSpawn, neighborVectors } from '../simulationUtils';
+import { findCellForFlowerSpawn, neighborVectors, scoreFlower } from '../simulationUtils';
 import { Quadtree, Rectangle } from '../Quadtree';
 import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
@@ -30,25 +29,6 @@ export interface InsectContext {
     incrementInsectsDiedOfOldAge: () => void;
     currentTemperature: number;
 }
-
-const scoreFlower = (insect: Insect, flower: Flower): number => {
-    const genome = insect.genome;
-    let score = 0;
-    score += (flower.health / flower.maxHealth) * genome[FLOWER_STAT_INDICES.HEALTH];
-    score += (flower.stamina / flower.maxStamina) * genome[FLOWER_STAT_INDICES.STAMINA];
-    score += flower.toxicityRate * genome[FLOWER_STAT_INDICES.TOXICITY]; // Negative toxicity is healing, so a negative weight here is good
-    score += flower.nutrientEfficiency * genome[FLOWER_STAT_INDICES.NUTRIENT_EFFICIENCY];
-    score += flower.effects.vitality * genome[FLOWER_STAT_INDICES.VITALITY];
-    score += flower.effects.agility * genome[FLOWER_STAT_INDICES.AGILITY];
-    score += flower.effects.strength * genome[FLOWER_STAT_INDICES.STRENGTH];
-    score += flower.effects.intelligence * genome[FLOWER_STAT_INDICES.INTELLIGENCE];
-    score += flower.effects.luck * genome[FLOWER_STAT_INDICES.LUCK];
-    // Add a small distance penalty to prefer closer flowers among equally good options
-    const dist = Math.hypot(insect.x - flower.x, insect.y - flower.y);
-    score -= dist * 0.1;
-
-    return score;
-};
 
 export const processInsectTick = (
     insect: Insect,

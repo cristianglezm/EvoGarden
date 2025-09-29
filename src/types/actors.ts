@@ -2,6 +2,7 @@ import type { Coord } from './base';
 
 export interface Actor extends Coord {
     id: string;
+    emoji?: string;
 }
 
 // Raw genetic effects from WASM
@@ -61,7 +62,7 @@ export interface InsectStats {
     maxHealth: number;
     maxStamina: number;
     speed: number;
-    role: 'pollinator' | 'attacker' | 'tank' | 'balanced';
+    role: 'pollinator' | 'attacker' | 'tank' | 'balanced' | 'scavenger';
     eggHatchTime: number;
     reproductionCost: number; // stamina cost
 }
@@ -111,6 +112,17 @@ export interface Corpse extends Actor {
     decayTimer: number;
 }
 
+export interface Cockroach extends Actor {
+    type: 'cockroach';
+    health: number;
+    maxHealth: number;
+    stamina: number;
+    maxStamina: number;
+    genome: number[];
+    emoji: string;
+    reproductionCooldown?: number;
+}
+
 export interface HerbicidePlane extends Actor {
     type: 'herbicidePlane';
     dx: number; // Current direction x
@@ -136,8 +148,8 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse;
-export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach;
+export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach;
 
 export type ActorAddDelta = {
     type: 'add';

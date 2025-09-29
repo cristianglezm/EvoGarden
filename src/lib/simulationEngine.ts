@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
@@ -10,6 +10,7 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { processCorpseTick } from './behaviors/corpseBehavior';
+import { processCockroachTick } from './behaviors/cockroachBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -251,13 +252,16 @@ export class SimulationEngine {
                 case 'corpse':
                     processCorpseTick(actor as Corpse, { nextActorState });
                     break;
+                case 'cockroach':
+                    processCockroachTick(actor as Cockroach, { params: this.params, qtree, flowerQtree, nextActorState });
+                    break;
             }
         }
     }
     
     private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
         let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, eggCount = 0;
-        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0;
+        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0, corpseCount = 0, cockroachCount = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
@@ -287,15 +291,21 @@ export class SimulationEngine {
                 herbicideSmokeCount++;
             } else if (actor.type === 'nutrient') {
                 nutrientCount++;
+            } else if (actor.type === 'corpse') {
+                corpseCount++;
+            } else if (actor.type === 'cockroach') {
+                cockroachCount++;
             }
         }
 
         const flowerDensity = (flowerCountForStats + seedCount) / (this.params.gridWidth * this.params.gridHeight);
+        const totalInsectCount = insectCount + cockroachCount;
 
         return {
             tick: this.tick,
             flowerCount: flowerCountForStats + seedCount,
-            insectCount, birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount,
+            insectCount: totalInsectCount,
+            birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.populationManager.totalBirdsHunted, totalHerbicidePlanesSpawned: this.populationManager.totalHerbicidePlanesSpawned,
@@ -584,20 +594,22 @@ export class SimulationEngine {
                     .then(result => { if (result?.image) entity.imageData = result.image; })
                     .catch(err => console.error(`Failed to regenerate image for flower ${entity.id}`, err));
             }
-            if (entity.type === 'insect') {
-                const insect = entity as Insect;
-                if (!insect.emoji) insect.emoji = getInsectEmoji(insect.id);
+            if (entity.type === 'insect' || entity.type === 'cockroach') {
+                const insect = entity as Insect | Cockroach;
+                if (!insect.emoji) {
+                     insect.emoji = entity.type === 'cockroach' ? '🪳' : getInsectEmoji(insect.id);
+                }
                 
                 // Backward compatibility for saves from before the health/stamina update
-                if (insect.lifespan !== undefined && insect.health === undefined) {
+                if ((insect as any).lifespan !== undefined && insect.health === undefined) {
                     const baseStats = INSECT_DATA.get(insect.emoji);
                     if (baseStats) {
                         insect.maxHealth = baseStats.maxHealth;
-                        insect.health = (insect.lifespan / 100) * baseStats.maxHealth;
+                        insect.health = ((insect as any).lifespan / 100) * baseStats.maxHealth;
                         insect.maxStamina = baseStats.maxStamina;
                         insect.stamina = baseStats.maxStamina;
                         insect.genome = generateRandomInsectGenome();
-                        delete insect.lifespan;
+                        delete (insect as any).lifespan;
                     }
                 }
             }

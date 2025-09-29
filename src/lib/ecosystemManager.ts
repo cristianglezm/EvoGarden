@@ -71,6 +71,7 @@ export const handleInsectReproduction = (
         const baseStats = INSECT_DATA.get(insect.emoji);
         if (!baseStats) continue;
 
+        // Check for partners on the same cell
         const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
         const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id) && !other.reproductionCooldown);
 
