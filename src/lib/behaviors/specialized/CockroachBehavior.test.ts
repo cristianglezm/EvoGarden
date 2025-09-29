@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { processCockroachTick } from './cockroachBehavior';
-import type { Cockroach, Corpse, CellContent, Nutrient, SimulationParams, Flower } from '../../types';
-import { Quadtree, Rectangle } from '../Quadtree';
+import { CockroachBehavior } from './CockroachBehavior';
+import type { Cockroach, Corpse, CellContent, Nutrient, SimulationParams, Flower, AppEvent } from '../../../types';
+import { Quadtree, Rectangle } from '../../Quadtree';
 import { 
     INSECT_DATA, 
     NUTRIENT_FROM_COCKROACH_LIFESPAN, 
@@ -12,11 +12,15 @@ import {
     COCKROACH_STAMINA_REGEN_PER_TICK,
     COCKROACH_MOVE_STAMINA_COST,
     FLOWER_STAT_INDICES
-} from '../../constants';
+} from '../../../constants';
+import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
 const COCKROACH_DATA = INSECT_DATA.get('🪳')!;
 
-describe('cockroachBehavior', () => {
+vi.mock('../../asyncFlowerFactory');
+
+describe('CockroachBehavior', () => {
+    let behavior: CockroachBehavior;
     let cockroach: Cockroach;
     let nextActorState: Map<string, CellContent>;
     let qtree: Quadtree<CellContent>;
@@ -24,6 +28,7 @@ describe('cockroachBehavior', () => {
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 10, gridHeight: 10 };
 
     beforeEach(() => {
+        behavior = new CockroachBehavior();
         cockroach = {
             id: 'roach1', type: 'cockroach', x: 5, y: 5, emoji: '🪳', genome: [],
             health: COCKROACH_DATA.maxHealth, maxHealth: COCKROACH_DATA.maxHealth,
@@ -41,6 +46,13 @@ describe('cockroachBehavior', () => {
         qtree,
         flowerQtree,
         nextActorState,
+        // Mocked properties to satisfy the context type
+        grid: [],
+        asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
+        events: [] as AppEvent[],
+        incrementInsectsDiedOfOldAge: vi.fn(),
+        currentTemperature: params.temperature,
+        newActorQueue: [] as CellContent[],
     });
 
     it('should search for and move towards the nearest corpse', () => {
@@ -51,7 +63,7 @@ describe('cockroachBehavior', () => {
         qtree.insert({ x: corpse1.x, y: corpse1.y, data: corpse1 });
         qtree.insert({ x: corpse2.x, y: corpse2.y, data: corpse2 });
 
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
 
         // Cockroach at (5,5) should move towards corpse1 at (8,8) as it is closer.
         // dx=1, dy=1. speed=1. new pos is (6,6).
@@ -65,12 +77,12 @@ describe('cockroachBehavior', () => {
         cockroach.health = 10;
         cockroach.stamina = 10;
         
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
 
         expect(nextActorState.has(corpse.id)).toBe(false);
-        // Health check: 10 (initial) - 0.1 (decay) + 20 (nutrition) = 29.9
+        // Health check: 10 (initial) - 0.5 (decay) + 10 (nutrition) = 19.5
         expect(cockroach.health).toBeCloseTo(10 - COCKROACH_HEALTH_DECAY_PER_TICK + CORPSE_NUTRITION_VALUE);
-        // Stamina check: 10 (initial) + 3 (regen) + 20 (nutrition) = 33
+        // Stamina check: 10 (initial) + 3 (regen) + 10 (nutrition) = 23
         const expectedStamina = Math.min(cockroach.maxStamina, 10 + COCKROACH_STAMINA_REGEN_PER_TICK + CORPSE_NUTRITION_VALUE);
         expect(cockroach.stamina).toBe(expectedStamina);
         
@@ -87,7 +99,7 @@ describe('cockroachBehavior', () => {
         const initialY = cockroach.y;
         cockroach.stamina = COCKROACH_MIN_STAMINA_TO_MOVE - 1; // Starts with 1 stamina
         
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
         
         // The cockroach should move because it regenerates stamina before the movement check.
         expect(cockroach.x).not.toBe(initialX);
@@ -103,7 +115,7 @@ describe('cockroachBehavior', () => {
     it('should regenerate stamina when idle', () => {
         const initialStamina = 10;
         cockroach.stamina = initialStamina;
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
         // Wanders randomly as there's no target, costing 1 stamina, but regenerating 3.
         const expectedStamina = initialStamina + COCKROACH_STAMINA_REGEN_PER_TICK - COCKROACH_MOVE_STAMINA_COST;
         expect(cockroach.stamina).toBe(expectedStamina);
@@ -111,7 +123,7 @@ describe('cockroachBehavior', () => {
 
     it('should die and be removed when health reaches zero', () => {
         cockroach.health = COCKROACH_HEALTH_DECAY_PER_TICK; // It will be 0 after decay
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
         expect(nextActorState.has(cockroach.id)).toBe(false);
     });
 
@@ -136,7 +148,7 @@ describe('cockroachBehavior', () => {
         flowerQtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
         flowerQtree.insert({ x: strongFlower.x, y: strongFlower.y, data: strongFlower });
 
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
         
         // Cockroach at (5,5) should move towards weakFlower at (8,8)
         expect(cockroach.x).toBe(6);
@@ -156,12 +168,12 @@ describe('cockroachBehavior', () => {
         const initialFlowerHealth = flower.health;
         const initialStamina = cockroach.stamina;
 
-        processCockroachTick(cockroach, setupContext());
+        behavior.update(cockroach, setupContext());
         
         const updatedFlower = nextActorState.get(flower.id) as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth - COCKROACH_DATA.attack);
         
-        // Stamina check: 50 (initial) + 3 (regen) - 2 (attack cost) = 51, capped at 50, then -2 = 48
+        // Stamina check: 50 (initial) + 3 (regen) = 53 (capped at 50), then -2 (attack cost) = 48
         const expectedStamina = Math.min(initialStamina + COCKROACH_STAMINA_REGEN_PER_TICK, cockroach.maxStamina) - COCKROACH_DATA.reproductionCost;
         expect(cockroach.stamina).toBe(expectedStamina);
     });
