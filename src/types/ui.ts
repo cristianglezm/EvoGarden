@@ -1,5 +1,3 @@
-
-
 import type { TickSummary, Season, WeatherEventType } from './base';
 
 export interface AppEvent {
@@ -50,6 +48,8 @@ export interface AnalyticsDataPoint {
     eggCount: number;
     herbicidePlanes: number;
     herbicideSmokes: number;
+    corpses: number;
+    cockroaches: number;
     reproductions: number;
     insectsEaten: number;
     eggsEaten: number;

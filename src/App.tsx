@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
-import type { CellContent, Flower, SimulationParams, Grid, Insect } from './types';
+import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
@@ -288,7 +288,7 @@ export default function App(): React.ReactNode {
 
         const fullState = stateFromWorker as { params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten: number };
         const flowersToSave: Flower[] = [];
-        const insectsToSave: Insect[] = [];
+        const insectsToSave: (Insect | Cockroach)[] = [];
 
         // Create a "skeleton" grid with placeholders for flowers and insects
         const skeletonGrid = fullState.grid.map(row => 
@@ -298,9 +298,9 @@ export default function App(): React.ReactNode {
                         flowersToSave.push(actor as Flower);
                         return { id: actor.id, type: 'flower', x: actor.x, y: actor.y };
                     }
-                    if (actor.type === 'insect') {
-                        insectsToSave.push(actor as Insect);
-                        return { id: actor.id, type: 'insect', x: actor.x, y: actor.y };
+                    if (actor.type === 'insect' || actor.type === 'cockroach') {
+                        insectsToSave.push(actor as (Insect | Cockroach));
+                        return { id: actor.id, type: actor.type, x: actor.x, y: actor.y };
                     }
                     return actor;
                 })
@@ -317,7 +317,7 @@ export default function App(): React.ReactNode {
             await db.savedFlowers.clear();
             await db.savedInsects.clear();
             await db.savedFlowers.bulkAdd(flowersToSave);
-            await db.savedInsects.bulkAdd(insectsToSave);
+            await db.savedInsects.bulkAdd(insectsToSave as any); // Cast because Dexie types are strict
         });
 
         localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
@@ -414,8 +414,9 @@ export default function App(): React.ReactNode {
                             trackedActorId={trackedActorId}
                         />;
             case 'insect':
+            case 'cockroach':
                 return <InsectDetailsPanel 
-                            insect={selectedActor} 
+                            insect={selectedActor as (Insect | Cockroach)} 
                             onClose={() => handleActorSelection(null)} 
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
