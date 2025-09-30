@@ -189,7 +189,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.). Includes a "Track" button that utilizes the `useActorTracker` hook.
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
 -   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
--   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
+-   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations.
 -   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
 -   **Header Components**:
     -   `StatusPanel.tsx`: A new container component in the header that orchestrates the `EnvironmentDisplay`, `WorkerStatusDisplay`, `EventLog`, and the `GlobalSearch` widget.
