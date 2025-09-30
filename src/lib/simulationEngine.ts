@@ -58,6 +58,7 @@ export class SimulationEngine {
     // Tick-specific counters
     private insectsEatenThisTick = 0;
     private eggsEatenThisTick = 0;
+    private cocoonsEatenThisTick = 0;
     private insectsDiedOfOldAgeThisTick = 0;
     private eggsLaidThisTick = 0;
     private insectsBornThisTick = 0;
@@ -122,7 +123,7 @@ export class SimulationEngine {
                 imageData: imageData,
                 sex: flower.sex,
             });
-            events.push({ message: `☠️ New champion saved! Most Toxic: ${(flower.toxicityRate * 100).toFixed(0)}%.`, type: 'success', importance: 'high' });
+            events.push({ message: `🏆 New champion saved! Most Toxic: ${(flower.toxicityRate * 100).toFixed(0)}%.`, type: 'success', importance: 'high' });
             newChampion = true;
         }
         
@@ -136,7 +137,7 @@ export class SimulationEngine {
                 imageData: imageData,
                 sex: flower.sex,
             });
-            events.push({ message: `🌿 New champion saved! Most Healing: ${(flower.toxicityRate * -100).toFixed(0)}%.`, type: 'success', importance: 'high' });
+            events.push({ message: `🏆 New champion saved! Most Healing: ${(flower.toxicityRate * -100).toFixed(0)}%.`, type: 'success', importance: 'high' });
             newChampion = true;
         }
 
@@ -182,6 +183,7 @@ export class SimulationEngine {
     private _resetTickCounters() {
         this.insectsEatenThisTick = 0;
         this.eggsEatenThisTick = 0;
+        this.cocoonsEatenThisTick = 0;
         this.insectsDiedOfOldAgeThisTick = 0;
         this.eggsLaidThisTick = 0;
         this.insectsBornThisTick = 0;
@@ -222,7 +224,8 @@ export class SimulationEngine {
                 case 'bird':
                     processBirdTick(actor as Bird, { grid: this.grid, params: this.params, qtree, flowerQtree, nextActorState, events,
                         incrementInsectsEaten: () => { this.insectsEatenThisTick++; this.totalInsectsEaten++; },
-                        incrementEggsEaten: () => { this.eggsEatenThisTick++; }
+                        incrementEggsEaten: () => { this.eggsEatenThisTick++; },
+                        incrementCocoonsEaten: () => { this.cocoonsEatenThisTick++; },
                     });
                     break;
                 case 'eagle':
@@ -269,7 +272,7 @@ export class SimulationEngine {
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
         let healingFlowerCount = 0, toxicFlowerCount = 0;
-        let caterpillarCount = 0, butterflyCount = 0;
+        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0;
 
 
         for (const actor of nextActorState.values()) {
@@ -295,6 +298,8 @@ export class SimulationEngine {
                     caterpillarCount++;
                 } else if (insect.emoji === '🦋') {
                     butterflyCount++;
+                } else if (insect.emoji === '🪲') {
+                    beetleCount++;
                 }
             } else if (actor.type === 'bird') {
                 birdCount++;
@@ -325,12 +330,13 @@ export class SimulationEngine {
             flowerCount: flowerCountForStats + seedCount,
             insectCount: totalInsectCount,
             birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
-            caterpillarCount, butterflyCount,
+            caterpillarCount, butterflyCount, beetleCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.populationManager.totalBirdsHunted, totalHerbicidePlanesSpawned: this.populationManager.totalHerbicidePlanesSpawned,
             nutrientCount, flowerDensity,
             eggsLaid: this.eggsLaidThisTick, insectsBorn: this.insectsBornThisTick, eggsEaten: this.eggsEatenThisTick,
+            cocoonsEaten: this.cocoonsEatenThisTick,
             insectsDiedOfOldAge: this.insectsDiedOfOldAgeThisTick,
             avgHealth: flowerCountForStats > 0 ? totalHealth / flowerCountForStats : 0,
             avgStamina: flowerCountForStats > 0 ? totalStamina / flowerCountForStats : 0,

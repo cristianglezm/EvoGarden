@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { getInsectEmoji } from './utils';
 
 describe('getInsectEmoji', () => {
-    const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🐝'];
+    const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🐝', '🪲'];
 
     it('should return a valid emoji from the list', () => {
         const emoji = getInsectEmoji('insect-123');

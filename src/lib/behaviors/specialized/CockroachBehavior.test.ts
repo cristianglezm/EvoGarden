@@ -11,7 +11,8 @@ import {
     COCKROACH_MIN_STAMINA_TO_MOVE,
     COCKROACH_STAMINA_REGEN_PER_TICK,
     COCKROACH_MOVE_STAMINA_COST,
-    FLOWER_STAT_INDICES
+    FLOWER_STAT_INDICES,
+    INSECT_ATTACK_COST
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -173,8 +174,7 @@ describe('CockroachBehavior', () => {
         const updatedFlower = nextActorState.get(flower.id) as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth - COCKROACH_DATA.attack);
         
-        // Stamina check: 50 (initial) + 3 (regen) = 53 (capped at 50), then -2 (attack cost) = 48
-        const expectedStamina = Math.min(initialStamina + COCKROACH_STAMINA_REGEN_PER_TICK, cockroach.maxStamina) - COCKROACH_DATA.reproductionCost;
+        const expectedStamina = Math.min(initialStamina + COCKROACH_STAMINA_REGEN_PER_TICK, cockroach.maxStamina) - INSECT_ATTACK_COST;
         expect(cockroach.stamina).toBe(expectedStamina);
     });
 });
