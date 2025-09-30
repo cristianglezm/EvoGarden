@@ -4,6 +4,8 @@ import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 import { InsectBehavior } from './base/InsectBehavior';
 import { DefaultInsectBehavior } from './specialized/DefaultInsectBehavior';
 import { CockroachBehavior } from './specialized/CockroachBehavior';
+import { CaterpillarBehavior } from './specialized/CaterpillarBehavior';
+import { ButterflyBehavior } from './specialized/ButterflyBehavior';
 
 // The context object passed to each behavior's update method
 export interface InsectBehaviorContext {
@@ -21,8 +23,8 @@ export interface InsectBehaviorContext {
 
 // Map insect emojis to their specific behavior handlers
 const behaviorMap: Map<string, InsectBehavior> = new Map<string, InsectBehavior>([
-    ['🦋', new DefaultInsectBehavior()],
-    ['🐛', new DefaultInsectBehavior()],
+    ['🦋', new ButterflyBehavior()],
+    ['🐛', new CaterpillarBehavior()],
     ['🐌', new DefaultInsectBehavior()],
     ['🐞', new DefaultInsectBehavior()],
     ['🐝', new DefaultInsectBehavior()],

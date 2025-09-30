@@ -32,9 +32,9 @@ describe('DefaultInsectBehavior', () => {
 
     beforeEach(() => {
         behavior = new DefaultInsectBehavior();
-        const baseStats = INSECT_DATA.get('🦋')!;
+        const baseStats = INSECT_DATA.get('🐞')!; // Changed from 🦋 to 🐞
         insect = { 
-            id: 'insect1', type: 'insect', x: 5, y: 5, pollen: null, emoji: '🦋', 
+            id: 'insect1', type: 'insect', x: 5, y: 5, pollen: null, emoji: '🐞', // Changed from 🦋 to 🐞
             health: baseStats.maxHealth,
             maxHealth: baseStats.maxHealth,
             stamina: baseStats.maxStamina,
@@ -126,7 +126,7 @@ describe('DefaultInsectBehavior', () => {
         behavior.update(insect, setupContext());
 
         // Should move towards the healthy flower at (8,8)
-        // Starts at (5,5), speed is 2. Moves 2 units along the vector: (5,5) -> (6.41, 6.41), which rounds to (6,6)
+        // Starts at (5,5), speed is 1 (for ladybug). Moves 1 unit along the vector: (5,5) -> (5.7, 5.7), which rounds to (6,6)
         expect(insect.x).toBe(6);
         expect(insect.y).toBe(6);
 

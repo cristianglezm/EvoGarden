@@ -69,7 +69,7 @@ export const handleInsectReproduction = (
         if (reproducedInsects.has(insect.id) || insect.reproductionCooldown) continue;
 
         const baseStats = INSECT_DATA.get(insect.emoji);
-        if (!baseStats) continue;
+        if (!baseStats || baseStats.reproductionCost === 0) continue; // Skip if no stats or cannot reproduce (e.g., caterpillar)
 
         // Check for partners on the same cell
         const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
@@ -80,12 +80,15 @@ export const handleInsectReproduction = (
             const spot = findCellForStationaryActor(currentTickGrid, params, 'egg', { x: insect.x, y: insect.y });
             
             if (spot) {
+                // Determine what the egg will hatch into
+                const offspringEmoji = insect.emoji === '🦋' ? '🐛' : insect.emoji;
+
                 const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
                 const offspringGenome = createOffspringGenome(insect.genome, partner.genome);
                 const newEgg: Egg = { 
                     id: eggId, type: 'egg', x: spot.x, y: spot.y, 
                     hatchTimer: baseStats.eggHatchTime, 
-                    insectEmoji: insect.emoji, 
+                    insectEmoji: offspringEmoji, 
                     genome: offspringGenome 
                 };
                 nextActorState.set(eggId, newEgg);

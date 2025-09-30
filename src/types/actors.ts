@@ -81,6 +81,7 @@ export interface Insect extends Actor {
     genome: number[];
     lifespan?: number; // Kept for backwards compatibility with old saves
     reproductionCooldown?: number;
+    healthEaten?: number; // For caterpillars
 }
 
 export interface Bird extends Actor {
@@ -110,6 +111,12 @@ export interface Corpse extends Actor {
     type: 'corpse';
     originalEmoji: string;
     decayTimer: number;
+}
+
+export interface Cocoon extends Actor {
+    type: 'cocoon';
+    hatchTimer: number;
+    butterflyGenome: number[];
 }
 
 export interface Cockroach extends Actor {
@@ -148,8 +155,8 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach;
-export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
+export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
 
 export type ActorAddDelta = {
     type: 'add';
