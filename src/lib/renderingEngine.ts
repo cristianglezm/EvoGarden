@@ -116,7 +116,8 @@ export class RenderingEngine {
             actor.type === 'egg' ? '🥚' :
             actor.type === 'herbicidePlane' ? '✈️' :
             actor.type === 'herbicideSmoke' ? '💨' :
-            actor.type === 'cockroach' ? '🪳':'';
+            actor.type === 'cockroach' ? '🪳' :
+            actor.type === 'cocoon' ? '⚪️' : '';
         
         if (emoji) {
             ctx.save();
@@ -124,7 +125,7 @@ export class RenderingEngine {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            if (emoji === '🥚') {
+            if (emoji === '🥚' || emoji === '⚪️') {
                 ctx.font = `${CELL_SIZE_PX * 0.4}px sans-serif`;
                 ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX * 0.3, actor.y * CELL_SIZE_PX + CELL_SIZE_PX * 0.3);
             } else {

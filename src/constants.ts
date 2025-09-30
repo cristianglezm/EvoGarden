@@ -68,7 +68,7 @@ export const INSECT_DORMANCY_TEMP = 5; // 5°C
 
 // New Insect Mechanics
 export const INSECT_HEALTH_DECAY_PER_TICK = 0.2;
-export const INSECT_STAMINA_REGEN_PER_TICK = 2;
+export const INSECT_STAMINA_REGEN_PER_TICK = 4;
 export const INSECT_STAMINA_GAIN_FROM_EATING = 4;
 export const INSECT_MOVE_COST = 2;
 export const INSECT_ATTACK_COST = 4;
@@ -76,6 +76,11 @@ export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
 export const MUTATION_CHANCE = 0.05; // 5% chance per gene
 export const MUTATION_AMOUNT = 0.2;  // Mutate by +/- 20%
 export const INSECT_WANDER_CHANCE = 0.1;
+
+// --- CATERPILLAR & COCOON CONSTANTS ---
+export const CATERPILLAR_EAT_AMOUNT_FOR_COCOON = 50;
+export const COCOON_HATCH_TIME = 40; // ticks
+
 
 // --- COCKROACH CONSTANTS ---
 export const COCKROACH_VISION_RANGE = 4;
@@ -102,10 +107,10 @@ export const INSECT_GENOME_LENGTH = Object.keys(FLOWER_STAT_INDICES).length;
 
 // Defines the base stats for each insect type
 export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
-    // Pollinators do minimal damage
+    // Butterfly is a pure pollinator with no attack
     ['🦋', { role: 'pollinator', attack: 0, maxHealth: 100, maxStamina: 40, speed: 2, eggHatchTime: 15, reproductionCost: 5 }],
-    // Attacker does more damage, but not enough to instantly kill flowers
-    ['🐛', { role: 'attacker', attack: 5, maxHealth: 150, maxStamina: 30, speed: 1, eggHatchTime: 20, reproductionCost: 6 }],
+    // Caterpillar is a voracious attacker
+    ['🐛', { role: 'attacker', attack: 8, maxHealth: 150, maxStamina: 30, speed: 1, eggHatchTime: 20, reproductionCost: 0 }], // Caterpillars don't reproduce
     // Tank is slow and sturdy, low damage
     ['🐌', { role: 'tank', attack: 3, maxHealth: 250, maxStamina: 20, speed: 1, eggHatchTime: 25, reproductionCost: 3 }],
     // Balanced is a jack-of-all-trades
