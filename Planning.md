@@ -133,9 +133,9 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **`CockroachBehavior`**: Manages scavenger AI. Cockroaches hunt for `Corpse` actors. If none are found, they will attack weak flowers. They produce a low-quality nutrient upon eating.
 
     -   **`birdBehavior`**: Governs predator AI and connects the food chain.
-        -   **AI**: Uses the main `qtree` to find prey (unprotected insects or eggs). When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
+        -   **AI**: Uses the main `qtree` to find prey. The prey priority is: unprotected insects, then defenseless cocoons, and finally stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it.
-        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping. The eaten insect does not leave a corpse and is instead converted directly into a nutrient.
+        -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping. Eating a cocoon also produces a small nutrient. The eaten insect does not leave a corpse and is instead converted directly into a nutrient.
     
     -   **`eagleBehavior`**: The apex predator, spawned as a regulatory mechanism.
         -   **AI**: Uses the main `qtree` to find the nearest bird.
@@ -189,7 +189,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.). Includes a "Track" button that utilizes the `useActorTracker` hook.
 -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
 -   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
--   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations.
+-   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
 -   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
 -   **Header Components**:
     -   `StatusPanel.tsx`: A new container component in the header that orchestrates the `EnvironmentDisplay`, `WorkerStatusDisplay`, `EventLog`, and the `GlobalSearch` widget.
