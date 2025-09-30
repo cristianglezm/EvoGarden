@@ -52,10 +52,10 @@ export interface AnalyticsDataPoint {
     cockroaches: number;
     reproductions: number;
     insectsEaten: number;
-    eggsEaten: number;
-    insectsDiedOfOldAge: number;
     eggsLaid: number;
     insectsBorn: number;
+    eggsEaten: number;
+    insectsDiedOfOldAge: number;
     totalBirdsHunted: number;
     totalHerbicidePlanesSpawned: number;
     nutrientCount: number;
@@ -79,6 +79,8 @@ export interface AnalyticsDataPoint {
     season?: Season;
     weatherEvent?: WeatherEventType;
     pendingFlowerRequests: number;
+    healingFlowerCount: number;
+    toxicFlowerCount: number;
 }
 
 export interface AnalyticsState {

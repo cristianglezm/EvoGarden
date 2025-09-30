@@ -39,9 +39,11 @@ export class FlowerPanelController {
             
             const selectionVisible = await this.actorSelectionPanel.isVisible({ timeout: 250 });
             if (selectionVisible) {
-                const actorButton = this.actorSelectionPanel.getByRole('button', { name: new RegExp(actorType, 'i') });
-                if (await actorButton.isVisible()) {
-                    await actorButton.click();
+                const actorButtons = this.actorSelectionPanel.getByRole('button', { name: new RegExp(actorType, 'i') });
+                // If there's at least one button matching the actor type, click the first one.
+                // This resolves strict mode violations when multiple actors of the same type are in one cell.
+                if (await actorButtons.count() > 0) {
+                    await actorButtons.first().click();
                     return true;
                 }
             }
