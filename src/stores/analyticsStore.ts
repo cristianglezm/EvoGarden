@@ -50,6 +50,8 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     season: summary.season,
                     weatherEvent: summary.weatherEvent,
                     pendingFlowerRequests: summary.pendingFlowerRequests,
+                    healingFlowerCount: summary.healingFlowerCount,
+                    toxicFlowerCount: summary.toxicFlowerCount,
                 };
                 
                 const newHistory = [...get().history, newPoint];

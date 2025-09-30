@@ -20,7 +20,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
 -   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), and genetic evolution (*Poison Garden*).
 -   **Seed Bank**: Automatically saves the genomes of "champion" flowers—the longest-lived, most toxic, and most healing—to a persistent database. These champions are then used to repopulate the garden after a collapse, ensuring genetic resilience. Users can view these champions, download their genomes, or clear the bank to start fresh.
--   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics, key ecosystem events, the average expression of genetic traits, application performance, and a new **Environment chart** that visualizes the history of temperature and humidity changes.
+-   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics (including specialized counts for **toxic** and **healing** flowers), key ecosystem events, the average expression of genetic traits, application performance, and a new Environment chart that visualizes the history of temperature and humidity changes.
 -   **Advanced Notification System & Status Display**:
     -   **Centralized Header**: A retro, terminal-style header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
     -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history.
@@ -131,7 +131,8 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/components/Modal.tsx`: A generic modal component.
     -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
     -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress.
-    -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
+    -   `src/components/ChartsPanel.tsx`: The main container for the analytics tab that renders the individual chart components.
+    -   `src/components/charts/`: A directory containing individual, specialized chart components (`PopulationChart`, `EnvironmentChart`, etc.), making the analytics section more modular.
     -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
     -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
     -   `src/components/StatusPanel.tsx`: The main container in the header for status information, including the global search widget.
