@@ -89,6 +89,7 @@ export interface TickSummary {
     caterpillarCount: number;
     butterflyCount: number;
     cocoonCount: number;
+    beetleCount: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative
@@ -100,6 +101,7 @@ export interface TickSummary {
     eggsLaid: number;
     insectsBorn: number;
     eggsEaten: number;
+    cocoonsEaten: number;
     insectsDiedOfOldAge: number;
     avgHealth: number;
     avgStamina: number;
