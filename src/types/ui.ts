@@ -50,6 +50,9 @@ export interface AnalyticsDataPoint {
     herbicideSmokes: number;
     corpses: number;
     cockroaches: number;
+    caterpillars: number;
+    butterflies: number;
+    cocoons: number;
     reproductions: number;
     insectsEaten: number;
     eggsLaid: number;
