@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Insect, Cockroach } from '../types';
 import { XIcon, SearchIcon } from './icons';
-import { INSECT_DATA, FLOWER_STAT_INDICES } from '../constants';
+import { INSECT_DATA, FLOWER_STAT_INDICES, CATERPILLAR_EAT_AMOUNT_FOR_COCOON } from '../constants';
 
 interface InsectDetailsPanelProps {
     insect: (Insect | Cockroach) | null;
@@ -62,6 +62,7 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
 
     const baseStats = INSECT_DATA.get(insect.emoji);
     const isTrackingThisInsect = trackedActorId && trackedActorId === insect.id;
+    const isCaterpillar = insect.emoji === '🐛';
 
     return (
         <div className="bg-surface border-2 border-tertiary rounded-lg shadow-lg h-full flex flex-col">
@@ -108,6 +109,9 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
                 <div className="space-y-3">
                     <StatBar value={insect.health} max={insect.maxHealth} label="Health" colorClass="bg-accent-red" />
                     <StatBar value={insect.stamina} max={insect.maxStamina} label="Stamina" colorClass="bg-accent-blue" />
+                    {isCaterpillar && (
+                        <StatBar value={(insect as Insect).healthEaten || 0} max={CATERPILLAR_EAT_AMOUNT_FOR_COCOON} label="Metamorphosis Progress" colorClass="bg-accent-purple" />
+                    )}
                 </div>
                 
                 {baseStats && (
@@ -130,7 +134,7 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
                  <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Status</h3>
                     {insect.type === 'insect' && (
-                        <p><strong>Carrying Pollen:</strong> {insect.pollen ? `Yes (from #${insect.pollen.sourceFlowerId.substring(7,12)})` : 'No'}</p>
+                        <p><strong>Carrying Pollen:</strong> {(insect as Insect).pollen ? `Yes (from #${(insect as Insect).pollen!.sourceFlowerId.substring(7,12)})` : 'No'}</p>
                     )}
                     <p><strong>Reproduction Cooldown:</strong> {insect.reproductionCooldown || 0} ticks</p>
                 </div>

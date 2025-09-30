@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CellContent, Bird, Eagle, Nutrient, Corpse } from '../types';
+import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon } from '../types';
 import { XIcon, SearchIcon } from './icons';
 
 interface GenericActorDetailsPanelProps {
@@ -69,6 +69,17 @@ const getActorDisplayInfo = (actor: CellContent) => {
                 stats: {
                     'Decay In': `${corpse.decayTimer} ticks`,
                     'Original Type': `${corpse.originalEmoji}`
+                }
+            };
+        }
+        case 'cocoon': {
+            const cocoon = actor as Cocoon;
+            return {
+                emoji: '⚪️',
+                title: 'Cocoon Details',
+                stats: {
+                    'Time to Hatch': `${cocoon.hatchTimer} ticks`,
+                    'Will become': '🦋 Butterfly',
                 }
             };
         }

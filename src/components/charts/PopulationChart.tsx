@@ -21,6 +21,9 @@ export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => 
         'Herbicide Smokes': true, 
         'Corpses': true, 
         'Cockroaches': true,
+        'Caterpillars': true,
+        'Butterflies': true,
+        'Cocoons': true,
     });
     const handlePopulationLegendChange = createLegendSelectHandler(setPopulationLegend);
 
@@ -30,7 +33,7 @@ export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => 
             ...baseChartOptions,
             title: { text: 'Population Dynamics', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
             legend: { 
-                data: ['Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses', 'Cockroaches', 'Healing Flowers', 'Toxic Flowers'], 
+                data: ['Total Flowers', 'Healing Flowers', 'Toxic Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses', 'Cockroaches', 'Caterpillars', 'Butterflies', 'Cocoons'], 
                 top: 35, 
                 textStyle: { color: '#bbf7d0' }, 
                 selected: populationLegend 
@@ -48,6 +51,9 @@ export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => 
                 { name: 'Herbicide Smokes', type: 'line', data: history.map(h => h.herbicideSmokes || 0), color: '#718096' },
                 { name: 'Corpses', type: 'line', data: history.map(h => h.corpses || 0), color: '#a0aec0' },
                 { name: 'Cockroaches', type: 'line', data: history.map(h => h.cockroaches || 0), color: '#7a4a2a' },
+                { name: 'Caterpillars', type: 'line', data: history.map(h => h.caterpillars || 0), color: '#84cc16' },
+                { name: 'Butterflies', type: 'line', data: history.map(h => h.butterflies || 0), color: '#f97316' },
+                { name: 'Cocoons', type: 'line', data: history.map(h => h.cocoons || 0), color: '#e5e7eb' },
             ],
         };
     }, [history, populationLegend]);

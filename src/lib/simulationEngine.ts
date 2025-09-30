@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
@@ -10,6 +10,7 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { processCorpseTick } from './behaviors/corpseBehavior';
+import { processCocoonTick } from './behaviors/cocoonBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -254,18 +255,22 @@ export class SimulationEngine {
                 case 'corpse':
                     processCorpseTick(actor as Corpse, { nextActorState });
                     break;
+                case 'cocoon':
+                    processCocoonTick(actor as Cocoon, { nextActorState, events });
+                    break;
             }
         }
     }
     
     private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
         let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, eggCount = 0;
-        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0, corpseCount = 0, cockroachCount = 0;
+        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0, corpseCount = 0, cockroachCount = 0, cocoonCount = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
-        let healingFlowerCount = 0;
-        let toxicFlowerCount = 0;
+        let healingFlowerCount = 0, toxicFlowerCount = 0;
+        let caterpillarCount = 0, butterflyCount = 0;
+
 
         for (const actor of nextActorState.values()) {
             if (actor.type === 'flower') {
@@ -285,6 +290,12 @@ export class SimulationEngine {
                 seedCount++;
             } else if (actor.type === 'insect') {
                 insectCount++;
+                const insect = actor as Insect;
+                if (insect.emoji === '🐛') {
+                    caterpillarCount++;
+                } else if (insect.emoji === '🦋') {
+                    butterflyCount++;
+                }
             } else if (actor.type === 'bird') {
                 birdCount++;
             } else if (actor.type === 'eagle') {
@@ -301,6 +312,8 @@ export class SimulationEngine {
                 corpseCount++;
             } else if (actor.type === 'cockroach') {
                 cockroachCount++;
+            } else if (actor.type === 'cocoon') {
+                cocoonCount++;
             }
         }
 
@@ -311,7 +324,8 @@ export class SimulationEngine {
             tick: this.tick,
             flowerCount: flowerCountForStats + seedCount,
             insectCount: totalInsectCount,
-            birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount,
+            birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
+            caterpillarCount, butterflyCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.populationManager.totalBirdsHunted, totalHerbicidePlanesSpawned: this.populationManager.totalHerbicidePlanesSpawned,
