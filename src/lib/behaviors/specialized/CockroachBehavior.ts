@@ -9,6 +9,7 @@ import {
     COCKROACH_MOVE_STAMINA_COST,
     NUTRIENT_FROM_FLOWER_DEATH_LIFESPAN,
     COCKROACH_HEALTH_DECAY_PER_TICK,
+    INSECT_ATTACK_COST,
 } from '../../../constants';
 import { Rectangle, type Point } from '../../Quadtree';
 import { InsectBehavior } from '../base/InsectBehavior';
@@ -62,9 +63,9 @@ export class CockroachBehavior extends InsectBehavior {
 
     private handleAttackFlower(cockroach: Cockroach, flower: Flower, context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get('🪳')!;
-        if (cockroach.stamina >= baseStats.reproductionCost) { // Using reproductionCost as attack cost for now
+        if (cockroach.stamina >= INSECT_ATTACK_COST) {
             flower.health = Math.max(0, flower.health - baseStats.attack);
-            cockroach.stamina -= baseStats.reproductionCost;
+            cockroach.stamina -= INSECT_ATTACK_COST;
             
             if (flower.health <= 0) {
                 const nutrientId = `nutrient-${cockroach.x}-${cockroach.y}-${Date.now()}`;
