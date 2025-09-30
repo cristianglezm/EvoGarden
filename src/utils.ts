@@ -1,6 +1,6 @@
 import { INSECT_GENOME_LENGTH } from "./constants";
 
-const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🐝'];
+const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🐝', '🪲'];
 
 export const getInsectEmoji = (insectId: string): string => {
     // Simple hash to get a consistent emoji for each insect

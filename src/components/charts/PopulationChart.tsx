@@ -10,9 +10,9 @@ interface PopulationChartProps {
 
 export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => {
     const [populationLegend, setPopulationLegend] = useState<Record<string, boolean>>({ 
-        'Total Flowers': true, 
+        'Total Flowers': true,
         'Healing Flowers': true,
-        'Toxic Flowers': true,
+        'Toxic Flowers': true, 
         'Insects': true, 
         'Birds': true, 
         'Eagles': true, 
@@ -24,6 +24,7 @@ export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => 
         'Caterpillars': true,
         'Butterflies': true,
         'Cocoons': true,
+        'Beetles': true,
     });
     const handlePopulationLegendChange = createLegendSelectHandler(setPopulationLegend);
 
@@ -33,7 +34,7 @@ export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => 
             ...baseChartOptions,
             title: { text: 'Population Dynamics', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
             legend: { 
-                data: ['Total Flowers', 'Healing Flowers', 'Toxic Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses', 'Cockroaches', 'Caterpillars', 'Butterflies', 'Cocoons'], 
+                data: ['Total Flowers', 'Healing Flowers', 'Toxic Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses', 'Cockroaches', 'Caterpillars', 'Butterflies', 'Cocoons', 'Beetles'], 
                 top: 35, 
                 textStyle: { color: '#bbf7d0' }, 
                 selected: populationLegend 
@@ -54,6 +55,7 @@ export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => 
                 { name: 'Caterpillars', type: 'line', data: history.map(h => h.caterpillars || 0), color: '#84cc16' },
                 { name: 'Butterflies', type: 'line', data: history.map(h => h.butterflies || 0), color: '#f97316' },
                 { name: 'Cocoons', type: 'line', data: history.map(h => h.cocoons || 0), color: '#e5e7eb' },
+                { name: 'Beetles', type: 'line', data: history.map(h => h.beetles || 0), color: '#966919' },
             ],
         };
     }, [history, populationLegend]);

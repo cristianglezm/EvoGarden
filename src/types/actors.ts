@@ -62,7 +62,7 @@ export interface InsectStats {
     maxHealth: number;
     maxStamina: number;
     speed: number;
-    role: 'pollinator' | 'attacker' | 'tank' | 'balanced' | 'scavenger';
+    role: 'pollinator' | 'attacker' | 'tank' | 'balanced' | 'scavenger' | 'support';
     eggHatchTime: number;
     reproductionCost: number; // stamina cost
 }
@@ -82,6 +82,7 @@ export interface Insect extends Actor {
     lifespan?: number; // Kept for backwards compatibility with old saves
     reproductionCooldown?: number;
     healthEaten?: number; // For caterpillars
+    isCarryingNutrient?: boolean;
 }
 
 export interface Bird extends Actor {

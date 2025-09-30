@@ -53,11 +53,13 @@ export interface AnalyticsDataPoint {
     caterpillars: number;
     butterflies: number;
     cocoons: number;
+    beetles: number;
     reproductions: number;
     insectsEaten: number;
     eggsLaid: number;
     insectsBorn: number;
     eggsEaten: number;
+    cocoonsEaten: number;
     insectsDiedOfOldAge: number;
     totalBirdsHunted: number;
     totalHerbicidePlanesSpawned: number;

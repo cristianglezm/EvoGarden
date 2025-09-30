@@ -81,6 +81,12 @@ export const INSECT_WANDER_CHANCE = 0.1;
 export const CATERPILLAR_EAT_AMOUNT_FOR_COCOON = 50;
 export const COCOON_HATCH_TIME = 40; // ticks
 
+// --- BEETLE CONSTANTS ---
+export const HEALTHY_FLOWER_THRESHOLD = 0.8;
+export const WEAK_FLOWER_THRESHOLD = 0.5;
+export const BEETLE_HEAL_AMOUNT = 20;
+export const BEETLE_COLLECT_STAMINA_COST = 5;
+export const BEETLE_DEPOSIT_STAMINA_COST = 5;
 
 // --- COCKROACH CONSTANTS ---
 export const COCKROACH_VISION_RANGE = 4;
@@ -119,6 +125,8 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     ['🐝', { role: 'pollinator', attack: 3, maxHealth: 110, maxStamina: 50, speed: 2, eggHatchTime: 12, reproductionCost: 5 }],
     // Cockroaches are scavengers that can also attack weak flowers
     ['🪳', { role: 'scavenger', attack: 2, maxHealth: 50, maxStamina: 50, speed: 1, eggHatchTime: 30, reproductionCost: 2 }],
+    // Beetles are support tanks
+    ['🪲', { role: 'support', attack: 1, maxHealth: 200, maxStamina: 50, speed: 1, eggHatchTime: 30, reproductionCost: 10 }],
 ]);
 
 
