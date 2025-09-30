@@ -14,7 +14,7 @@ import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
 import * as ecosystemManager from './ecosystemManager';
-import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA, TOXIC_FLOWER_THRESHOLD } from '../constants';
 import { Quadtree } from './Quadtree';
 import { updateEnvironment } from './environmentManager';
 
@@ -264,6 +264,8 @@ export class SimulationEngine {
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
+        let healingFlowerCount = 0;
+        let toxicFlowerCount = 0;
 
         for (const actor of nextActorState.values()) {
             if (actor.type === 'flower') {
@@ -274,6 +276,11 @@ export class SimulationEngine {
                 maxToxicitySoFar = Math.max(maxToxicitySoFar, f.toxicityRate);
                 totalVitality += f.effects.vitality; totalAgility += f.effects.agility; totalStrength += f.effects.strength;
                 totalIntelligence += f.effects.intelligence; totalLuck += f.effects.luck;
+                if (f.toxicityRate < 0) {
+                    healingFlowerCount++;
+                } else if (f.toxicityRate > TOXIC_FLOWER_THRESHOLD) {
+                    toxicFlowerCount++;
+                }
             } else if (actor.type === 'flowerSeed') {
                 seedCount++;
             } else if (actor.type === 'insect') {
@@ -327,6 +334,8 @@ export class SimulationEngine {
             season: this.environmentState.season,
             weatherEvent: this.environmentState.currentWeatherEvent.type,
             pendingFlowerRequests: this.asyncFlowerFactory.getPendingRequestCount(),
+            healingFlowerCount,
+            toxicFlowerCount,
         };
     }
     

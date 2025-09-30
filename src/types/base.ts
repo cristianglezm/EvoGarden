@@ -116,6 +116,8 @@ export interface TickSummary {
     season: Season;
     weatherEvent: WeatherEventType;
     pendingFlowerRequests: number;
+    healingFlowerCount: number;
+    toxicFlowerCount: number;
 }
 
 export interface FlowerCreationRequest {
