@@ -17,6 +17,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Stamina-Based Actions & Health**: Insects now manage health and stamina. Actions like moving and attacking cost stamina, and they must rest to recover. Their health slowly decays, and if it runs out, they die and decompose into a nutrient, completing the ecosystem's cycle of life.
 -   **Corpse & Decay System**: When insects die of old age or from toxic flowers, they leave behind a corpse that slowly decays. Once fully decayed, the corpse transforms into a nutrient, completing another link in the ecosystem's cycle of life.
 -   **Scavenger Pests (Cockroaches)**: When too many corpses pile up, cockroaches (`🪳`) emerge to clean the mess. They consume corpses and can even attack weak flowers, converting them into low-grade nutrients.
+-   **Slow & Slimy Snails**: Introducing the Snail (`🐌`), a slow but sturdy herbivore that leaves behind a trail of slime, slowing down other insects that cross its path.
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
 -   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), and genetic evolution (*Poison Garden*).
 -   **Seed Bank**: Automatically saves the genomes of "champion" flowers—the longest-lived, most toxic, and most healing—to a persistent database. These champions are then used to repopulate the garden after a collapse, ensuring genetic resilience. Users can view these champions, download their genomes, or clear the bank to start fresh.
@@ -82,7 +83,11 @@ The garden is no longer static. It features a fully dynamic climate system that 
     -   **Beetles (`🪲`)**: A "support" class insect that maintains the health of the garden.
         -   **Medic AI**: Beetles seek out healthy flowers to collect an abstract nutrient resource.
         -   **Healing**: After collecting, they search for weak or damaged flowers and deposit the resource, healing them.
-    -   **Default Insects (`🐌`, `🐝`)**: These insects follow the standard behavior of eating non-carnivorous flowers to gain stamina, while also acting as pollinators.
+    -   **Snails (`🐌`)**: A "tank" class insect.
+        -   **Slow Movement**: Snails operate on a move cooldown, making them the slowest insects in the garden.
+        -   **Slime Trails**: When a snail moves, it leaves behind a temporary `SlimeTrail` (`💧`). This trail slows down any other insect that moves onto its cell, creating a unique environmental hazard.
+        -   **Sturdy**: They are sturdy herbivores that eat flowers like default insects but can take more damage.
+    -   **Default Insects (`🐝`)**: These insects follow the standard behavior of eating non-carnivorous flowers to gain stamina, while also acting as pollinators.
 -   **Cockroaches** (`🪳`): A pest and scavenger species. They are dynamically spawned by the `PopulationManager` when the number of corpses on the grid becomes too high. They hunt for corpses to eat, restoring their health and stamina. If no corpses are available, they will attack weak flowers. When they eat, they produce a low-quality nutrient.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.
 -   **Birds** (`🐦`): The predators of the garden.

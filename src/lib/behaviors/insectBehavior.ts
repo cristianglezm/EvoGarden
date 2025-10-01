@@ -8,6 +8,7 @@ import { CaterpillarBehavior } from './specialized/CaterpillarBehavior';
 import { ButterflyBehavior } from './specialized/ButterflyBehavior';
 import { BeetleBehavior } from './specialized/BeetleBehavior';
 import { LadybugBehavior } from './specialized/LadybugBehavior';
+import { SnailBehavior } from './specialized/SnailBehavior';
 
 // The context object passed to each behavior's update method
 export interface InsectBehaviorContext {
@@ -27,7 +28,7 @@ export interface InsectBehaviorContext {
 const behaviorMap: Map<string, InsectBehavior> = new Map<string, InsectBehavior>([
     ['🦋', new ButterflyBehavior()],
     ['🐛', new CaterpillarBehavior()],
-    ['🐌', new DefaultInsectBehavior()],
+    ['🐌', new SnailBehavior()],
     ['🐞', new LadybugBehavior()],
     ['🐝', new DefaultInsectBehavior()],
     ['🪳', new CockroachBehavior()],

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon } from '../types';
+import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail } from '../types';
 import { XIcon, SearchIcon } from './icons';
 
 interface GenericActorDetailsPanelProps {
@@ -80,6 +80,16 @@ const getActorDisplayInfo = (actor: CellContent) => {
                 stats: {
                     'Time to Hatch': `${cocoon.hatchTimer} ticks`,
                     'Will become': '🦋 Butterfly',
+                }
+            };
+        }
+        case 'slimeTrail': {
+            const slimeTrail = actor as SlimeTrail;
+            return {
+                emoji: '💧',
+                title: 'Slime Trail',
+                stats: {
+                    'Time Remaining': `${slimeTrail.lifespan} ticks`,
                 }
             };
         }
