@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import type { ToastMessage } from '../types';
+import type { ToastMessage, AppEvent } from '../types';
 
 interface ToastState {
   toasts: ToastMessage[];
-  addToast: (toast: Omit<ToastMessage, 'id' | 'key' | 'count'>) => void;
+  addToast: (toast: AppEvent) => void;
   removeToast: (id: string) => void;
 }
 

@@ -1,11 +1,12 @@
 import React from 'react';
 import { useAnalyticsStore } from '../stores/analyticsStore';
 import { EnvironmentChart } from './charts/EnvironmentChart';
-import { PopulationChart } from './charts/PopulationChart';
+import { PopulationDynamicsChart } from './charts/PopulationChart';
 import { EventsChart } from './charts/EventsChart';
 import { FlowerTraitsChart } from './charts/FlowerTraitsChart';
 import { BaseEffectsChart } from './charts/BaseEffectsChart';
 import { PerformanceChart } from './charts/PerformanceChart';
+import { EnvironmentHealthChart } from './charts/EnvironmentHealthChart';
 
 export const ChartsPanel: React.FC = () => {
     const history = useAnalyticsStore(state => state.history);
@@ -16,7 +17,10 @@ export const ChartsPanel: React.FC = () => {
                 <EnvironmentChart history={history} />
             </div>
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
-                <PopulationChart history={history} />
+                <EnvironmentHealthChart history={history} />
+            </div>
+            <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
+                <PopulationDynamicsChart history={history} />
             </div>
              <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <EventsChart history={history} />

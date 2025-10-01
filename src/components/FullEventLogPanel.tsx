@@ -53,6 +53,11 @@ export const FullEventLogPanel: React.FC<FullEventLogPanelProps> = ({ isOpen, on
                                         {timeString && <span className="text-secondary/60 mr-2">[{timeString}]</span>}
                                         <span className="text-secondary/60 mr-2">[Tick {(entry.tick ?? 0).toString().padStart(4, '0')}]</span>
                                         {entry.message}
+                                        {entry.count && entry.count > 1 && (
+                                            <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold bg-surface-hover/80 rounded-full">
+                                                x{entry.count}
+                                            </span>
+                                        )}
                                     </p>
                                 );
                             })}
