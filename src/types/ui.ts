@@ -10,6 +10,7 @@ export interface AppEvent {
 
 export interface LogEntry extends AppEvent {
   id: string;
+  count?: number;
 }
 
 export interface ToastMessage {
@@ -18,6 +19,7 @@ export interface ToastMessage {
   type: 'info' | 'success' | 'error';
   count?: number;
   key?: number;
+  tick?: number;
 }
 
 export type ChallengeId = 'survival-1' | 'survival-2' | 'survival-3' | 'predation-1' | 'predation-2' | 'predation-3' |
@@ -55,6 +57,8 @@ export interface AnalyticsDataPoint {
     cocoons: number;
     beetles: number;
     ladybugs: number;
+    snails: number;
+    bees: number;
     reproductions: number;
     insectsEaten: number;
     eggsLaid: number;

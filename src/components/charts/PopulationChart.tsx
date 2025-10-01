@@ -4,63 +4,55 @@ import type { AnalyticsDataPoint } from '../../types';
 import { Chart } from '../Chart';
 import { baseChartOptions, createLegendSelectHandler } from './chartOptions';
 
-interface PopulationChartProps {
+interface PopulationDynamicsChartProps {
     history: AnalyticsDataPoint[];
 }
 
-export const PopulationChart: React.FC<PopulationChartProps> = ({ history }) => {
-    const [populationLegend, setPopulationLegend] = useState<Record<string, boolean>>({ 
-        'Total Flowers': true,
-        'Healing Flowers': true,
-        'Toxic Flowers': true, 
-        'Insects': true, 
+export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = ({ history }) => {
+    const [legend, setLegend] = useState<Record<string, boolean>>({ 
+        'Total Insects': true,
         'Birds': true, 
         'Eagles': true, 
         'Eggs': true, 
-        'Herbicide Planes': true, 
-        'Herbicide Smokes': true, 
-        'Corpses': true, 
-        'Cockroaches': true,
-        'Caterpillars': true,
-        'Butterflies': true,
         'Cocoons': true,
+        'Butterflies': true,
+        'Caterpillars': true,
         'Beetles': true,
         'Ladybugs': true,
+        'Cockroaches': true,
+        'Snails': true,
+        'Bees': true,
     });
-    const handlePopulationLegendChange = createLegendSelectHandler(setPopulationLegend);
+    const handleLegendChange = createLegendSelectHandler(setLegend);
 
-    const populationOption = useMemo<EChartsOption>(() => {
+    const option = useMemo<EChartsOption>(() => {
         const ticks = history.map(h => h.tick);
         return {
             ...baseChartOptions,
-            title: { text: 'Population Dynamics', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
+            title: { text: 'Population Dynamics & Food Web', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
             legend: { 
-                data: ['Total Flowers', 'Healing Flowers', 'Toxic Flowers', 'Insects', 'Birds', 'Eagles', 'Eggs', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses', 'Cockroaches', 'Caterpillars', 'Butterflies', 'Cocoons', 'Beetles', 'Ladybugs'], 
+                data: ['Total Insects', 'Birds', 'Eagles', 'Eggs', 'Cocoons', 'Butterflies', 'Caterpillars', 'Beetles', 'Ladybugs', 'Cockroaches', 'Snails', 'Bees'], 
                 top: 35, 
                 textStyle: { color: '#bbf7d0' }, 
-                selected: populationLegend 
+                selected: legend 
             },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
-                { name: 'Total Flowers', type: 'line', data: history.map(h => h.flowers), color: '#48bb78' },
-                { name: 'Healing Flowers', type: 'line', data: history.map(h => h.healingFlowerCount || 0), color: '#38a169', lineStyle: { type: 'dashed' } },
-                { name: 'Toxic Flowers', type: 'line', data: history.map(h => h.toxicFlowerCount || 0), color: '#c05621', lineStyle: { type: 'dashed' } },
-                { name: 'Insects', type: 'line', data: history.map(h => h.insects), color: '#4299e1' },
+                { name: 'Total Insects', type: 'line', data: history.map(h => h.insects), color: '#4299e1' },
                 { name: 'Birds', type: 'line', data: history.map(h => h.birds), color: '#f56565' },
                 { name: 'Eagles', type: 'line', data: history.map(h => h.eagles), color: '#d69e2e' },
                 { name: 'Eggs', type: 'line', data: history.map(h => h.eggCount), color: '#a0aec0' },
-                { name: 'Herbicide Planes', type: 'line', data: history.map(h => h.herbicidePlanes || 0), color: '#cbd5e0' },
-                { name: 'Herbicide Smokes', type: 'line', data: history.map(h => h.herbicideSmokes || 0), color: '#718096' },
-                { name: 'Corpses', type: 'line', data: history.map(h => h.corpses || 0), color: '#a0aec0' },
-                { name: 'Cockroaches', type: 'line', data: history.map(h => h.cockroaches || 0), color: '#7a4a2a' },
-                { name: 'Caterpillars', type: 'line', data: history.map(h => h.caterpillars || 0), color: '#84cc16' },
-                { name: 'Butterflies', type: 'line', data: history.map(h => h.butterflies || 0), color: '#f97316' },
                 { name: 'Cocoons', type: 'line', data: history.map(h => h.cocoons || 0), color: '#e5e7eb' },
+                { name: 'Butterflies', type: 'line', data: history.map(h => h.butterflies || 0), color: '#f97316' },
+                { name: 'Caterpillars', type: 'line', data: history.map(h => h.caterpillars || 0), color: '#84cc16' },
                 { name: 'Beetles', type: 'line', data: history.map(h => h.beetles || 0), color: '#966919' },
                 { name: 'Ladybugs', type: 'line', data: history.map(h => h.ladybugs || 0), color: '#E53E3E' },
+                { name: 'Cockroaches', type: 'line', data: history.map(h => h.cockroaches || 0), color: '#7a4a2a' },
+                { name: 'Snails', type: 'line', data: history.map(h => h.snails || 0), color: '#D1D5DB' },
+                { name: 'Bees', type: 'line', data: history.map(h => h.bees || 0), color: '#FBBF24' },
             ],
         };
-    }, [history, populationLegend]);
+    }, [history, legend]);
 
-    return <Chart option={populationOption} onEvents={{ 'legendselectchanged': handlePopulationLegendChange }} />;
+    return <Chart option={option} onEvents={{ 'legendselectchanged': handleLegendChange }} />;
 };
