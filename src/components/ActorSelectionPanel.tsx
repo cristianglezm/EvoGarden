@@ -21,6 +21,7 @@ const getActorName = (actor: CellContent): string => {
         case 'flowerSeed': return `🌱 Seed`;
         case 'corpse': return `💀 Corpse`;
         case 'cockroach': return `${(actor as Cockroach).emoji} Cockroach`;
+        case 'slimeTrail': return `💧 Slime Trail`;
         default: return 'Unknown Entity';
     }
 };

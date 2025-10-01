@@ -98,6 +98,10 @@ export const COCKROACH_MOVE_STAMINA_COST = 1;
 export const COCKROACH_MIN_STAMINA_TO_MOVE = 2;
 export const CORPSE_NUTRITION_VALUE = 10; // Health/stamina restored to cockroach
 
+// --- SNAIL & SLIME CONSTANTS ---
+export const SNAIL_MOVE_COOLDOWN = 3; // Snail only moves every 3 ticks
+export const SLIME_TRAIL_LIFESPAN = 50; // ticks
+export const SLIME_TRAIL_SLOW_FACTOR = 0.5; // Halves speed
 
 // --- GENETIC ALGORITHM CONSTANTS ---
 export const FLOWER_STAT_INDICES = {
