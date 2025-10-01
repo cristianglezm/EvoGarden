@@ -75,7 +75,14 @@ The garden is no longer static. It features a fully dynamic climate system that 
         -   **Butterfly**: A pure pollinator that causes no damage to flowers. When it reproduces, it lays an egg that hatches into a Caterpillar.
         -   **Caterpillar**: A voracious flower eater. After consuming a set amount of flower health, it transforms into a stationary `Cocoon` (`⚪️`).
         -   **Cocoon**: After a gestation period, the cocoon hatches into a new Butterfly, completing the cycle.
-    -   **Default Insects (`🐌`, `🐞`, `🐝`)**: These insects follow the standard behavior of eating non-carnivorous flowers to gain stamina, while also acting as pollinators.
+    -   **Ladybugs (`🐞`)**: A specialized predator that helps control the caterpillar population.
+        -   **Hunter AI**: Ladybugs actively hunt for Caterpillars (`🐛`).
+        -   **Pest Control**: When a Ladybug eats a Caterpillar, it removes the pest and gains a significant health and stamina boost.
+        -   **Patrolling**: If no Caterpillars are present, Ladybugs will patrol between flowers, acting as secondary pollinators without damaging them.
+    -   **Beetles (`🪲`)**: A "support" class insect that maintains the health of the garden.
+        -   **Medic AI**: Beetles seek out healthy flowers to collect an abstract nutrient resource.
+        -   **Healing**: After collecting, they search for weak or damaged flowers and deposit the resource, healing them.
+    -   **Default Insects (`🐌`, `🐝`)**: These insects follow the standard behavior of eating non-carnivorous flowers to gain stamina, while also acting as pollinators.
 -   **Cockroaches** (`🪳`): A pest and scavenger species. They are dynamically spawned by the `PopulationManager` when the number of corpses on the grid becomes too high. They hunt for corpses to eat, restoring their health and stamina. If no corpses are available, they will attack weak flowers. When they eat, they produce a low-quality nutrient.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.
 -   **Birds** (`🐦`): The predators of the garden.

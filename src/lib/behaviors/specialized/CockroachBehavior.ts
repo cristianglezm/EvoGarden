@@ -1,4 +1,4 @@
-import type { Cockroach, Corpse, Nutrient, Flower, CellContent } from '../../../types';
+import type { Cockroach, Corpse, Nutrient, Flower, CellContent, Egg, Cocoon } from '../../../types';
 import { 
     COCKROACH_VISION_RANGE, 
     CORPSE_NUTRITION_VALUE, 
@@ -36,15 +36,20 @@ export class CockroachBehavior extends InsectBehavior {
             this.handleEatCorpse(cockroach, corpseOnCell, context);
             return;
         }
+        
+        // 2. Eat egg or cocoon on current cell
+        if (this.handleEatEggOrCocoon(cockroach, context)) {
+            return;
+        }
 
-        // 2. Attack flower on current cell
+        // 3. Attack flower on current cell
         const flowerOnCell = Array.from(nextActorState.values()).find(a => a.x === cockroach.x && a.y === cockroach.y && a.type === 'flower') as Flower | undefined;
         if (flowerOnCell) {
             this.handleAttackFlower(cockroach, flowerOnCell, context);
             return;
         }
         
-        // 3. Search and Move
+        // 4. Search and Move
         if (cockroach.stamina >= COCKROACH_MIN_STAMINA_TO_MOVE) {
             cockroach.stamina -= COCKROACH_MOVE_STAMINA_COST;
             this.handleMovement(cockroach, context);
@@ -61,6 +66,25 @@ export class CockroachBehavior extends InsectBehavior {
         context.nextActorState.set(nutrientId, nutrient);
     }
 
+    private handleEatEggOrCocoon(cockroach: Cockroach, context: InsectBehaviorContext): boolean {
+        const preyOnCell = Array.from(context.nextActorState.values())
+            .find(a => a.x === cockroach.x && a.y === cockroach.y && (a.type === 'egg' || a.type === 'cocoon')) as Egg | Cocoon | undefined;
+
+        if (preyOnCell) {
+            // Don't eat its own eggs
+            if (preyOnCell.type === 'egg' && preyOnCell.insectEmoji === '🪳') {
+                return false;
+            }
+
+            context.nextActorState.delete(preyOnCell.id);
+            cockroach.health = Math.min(cockroach.maxHealth, cockroach.health + CORPSE_NUTRITION_VALUE);
+            cockroach.stamina = Math.min(cockroach.maxStamina, cockroach.stamina + CORPSE_NUTRITION_VALUE);
+            context.events.push({ message: `🪳 A cockroach ate a ${preyOnCell.type}!`, type: 'info', importance: 'low' });
+            return true;
+        }
+        return false;
+    }
+
     private handleAttackFlower(cockroach: Cockroach, flower: Flower, context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get('🪳')!;
         if (cockroach.stamina >= INSECT_ATTACK_COST) {
@@ -73,6 +97,27 @@ export class CockroachBehavior extends InsectBehavior {
                 context.nextActorState.set(nutrientId, nutrient);
             }
         }
+    }
+
+    private findClosestEggOrCocoon(cockroach: Cockroach, context: InsectBehaviorContext): Egg | Cocoon | null {
+        const vision = new Rectangle(cockroach.x, cockroach.y, COCKROACH_VISION_RANGE, COCKROACH_VISION_RANGE);
+        const nearbyPrey = context.qtree.query(vision)
+            .map(p => p.data)
+            .filter(a => (a?.type === 'egg' || a?.type === 'cocoon') && context.nextActorState.has(a.id)) as (Egg | Cocoon)[];
+        
+        const validPrey = nearbyPrey.filter(p => {
+            if (p.type === 'egg') {
+                return p.insectEmoji !== '🪳';
+            }
+            return true; // Cocoons are always fair game for now
+        });
+
+        if (validPrey.length === 0) return null;
+        
+        return validPrey.reduce((closest, current) => {
+            const dist = Math.hypot(cockroach.x - current.x, cockroach.y - current.y);
+            return dist < closest.dist ? { prey: current, dist } : closest;
+        }, { prey: null as (Egg | Cocoon | null), dist: Infinity }).prey;
     }
 
     private handleMovement(cockroach: Cockroach, context: InsectBehaviorContext) {
@@ -90,8 +135,12 @@ export class CockroachBehavior extends InsectBehavior {
                 return (dist < closest.dist) ? { x: corpse.x, y: corpse.y, dist } : closest;
             }, { x: 0, y: 0, dist: Infinity });
         } else {
-            // Priority 2: Find weak flowers
-            target = this.findBestFlowerTarget(cockroach, context);
+            // Priority 2: Find eggs or cocoons
+            target = this.findClosestEggOrCocoon(cockroach, context);
+            if (!target) {
+                // Priority 3: Find weak flowers
+                target = this.findBestFlowerTarget(cockroach, context);
+            }
         }
         
         if (target) {

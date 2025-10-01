@@ -123,36 +123,39 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
 
 -   **Behavior System (`lib/behaviors/`)**: This is a modular pattern for separating actor logic. The engine calls a dedicated function for each actor type, passing the actor's state and a `context` object with necessary global information. Crucially, behaviors no longer create UI notifications directly; they now push structured `AppEvent` objects into the context's `events` array.
 
-    -   **`flowerBehavior`**: Manages the complete flower lifecycle.
+    -   `flowerBehavior`: Manages the complete flower lifecycle.
         -   **Environmental Stress**: The `processFlowerTick` function now uses the `currentTemperature` from the context. If the temperature is outside the flower's genetically determined `minTemperature`/`maxTemperature` range, its stamina cost for that tick is doubled.
         -   **State**: Handles aging, maturation, and energy consumption (stamina, then health).
         -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
-    -   **`insectBehavior`**: A dispatcher that routes to specialized behaviors.
-        -   **`DefaultInsectBehavior`**: Governs standard insect AI (pollinators, attackers, etc.), including genetic-based flower targeting, pollination, and dormancy.
-        -   **`CockroachBehavior`**: Manages scavenger AI. Cockroaches hunt for `Corpse` actors. If none are found, they will attack weak flowers. They produce a low-quality nutrient upon eating.
-
-    -   **`birdBehavior`**: Governs predator AI and connects the food chain.
+    -   `insectBehavior`: A dispatcher that routes to specialized behaviors based on the insect's `emoji` property.
+        -   **`DefaultInsectBehavior`**: Applied to standard insects (`🐌`, `🐝`). Governs flower-eating, pollination, and genetic-based flower targeting.
+        -   **`ButterflyBehavior` / `CaterpillarBehavior`**: Manages the full metamorphosis lifecycle (`🦋` -> `🥚` -> `🐛` -> `⚪️` -> `🦋`). Butterflies are pure pollinators, while caterpillars are voracious flower eaters.
+        -   **`LadybugBehavior`**: Implements a predator AI for Ladybugs (`🐞`) that hunt Caterpillars (`🐛`). They patrol between flowers if no prey is available.
+        -   **`BeetleBehavior`**: Implements a support AI for Beetles (`🪲`). They transfer health from healthy flowers to heal weak ones.
+        -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
+    
+    -   `birdBehavior`: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey. The prey priority is: unprotected insects, then defenseless cocoons, and finally stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it.
         -   **Nutrient Cycle**: After preying on an insect, it creates a nutrient-rich dropping. Eating a cocoon also produces a small nutrient. The eaten insect does not leave a corpse and is instead converted directly into a nutrient.
     
-    -   **`eagleBehavior`**: The apex predator, spawned as a regulatory mechanism.
+    -   `eagleBehavior`: The apex predator, spawned as a regulatory mechanism.
         -   **AI**: Uses the main `qtree` to find the nearest bird.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it and is immediately removed from the simulation.
         -   **Lifecycle**: Eagles are transient actors. If they cannot find a target, they despawn.
 
-    -   **`herbicidePlaneBehavior`**: The plane follows a simple, deterministic path.
+    -   `herbicidePlaneBehavior`: The plane follows a simple, deterministic path.
         -   **Movement**: Spawns at a random edge and moves in a straight line towards the opposite edge.
         -   **Action**: At each cell on its path, it drops a single `HerbicideSmoke` actor.
         -   **Lifecycle**: Removed from the simulation once it moves past its destination.
 
-    -   **`herbicideSmokeBehavior`**: A temporary, damaging area-of-effect entity.
+    -   `herbicideSmokeBehavior`: A temporary, damaging area-of-effect entity.
         -   **Damage**: Each tick, it applies damage to any flowers in its current cell.
         -   **Expansion**: On its first tick, it expands by creating new smoke actors in adjacent cells.
         -   **Lifecycle**: It has a short `lifespan` and is removed when the timer expires.
 
-    -   **`eggBehavior`, `nutrientBehavior`, & `corpseBehavior`**: Simple state-machine behaviors.
+    -   `eggBehavior`, `nutrientBehavior`, & `corpseBehavior`: Simple state-machine behaviors.
         -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed and a new insect is spawned.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires.
         -   `corpseBehavior`: Decrements a `decayTimer`. When the timer expires, it is removed and replaced by a `Nutrient`.

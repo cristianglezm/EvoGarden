@@ -80,6 +80,8 @@ export const INSECT_WANDER_CHANCE = 0.1;
 // --- CATERPILLAR & COCOON CONSTANTS ---
 export const CATERPILLAR_EAT_AMOUNT_FOR_COCOON = 50;
 export const COCOON_HATCH_TIME = 40; // ticks
+export const LADYBUG_HEAL_FROM_CATERPILLAR = 20;
+
 
 // --- BEETLE CONSTANTS ---
 export const HEALTHY_FLOWER_THRESHOLD = 0.8;
@@ -119,8 +121,8 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     ['🐛', { role: 'attacker', attack: 8, maxHealth: 150, maxStamina: 30, speed: 1, eggHatchTime: 20, reproductionCost: 0 }], // Caterpillars don't reproduce
     // Tank is slow and sturdy, low damage
     ['🐌', { role: 'tank', attack: 3, maxHealth: 250, maxStamina: 20, speed: 1, eggHatchTime: 25, reproductionCost: 3 }],
-    // Balanced is a jack-of-all-trades
-    ['🐞', { role: 'balanced', attack: 4, maxHealth: 120, maxStamina: 35, speed: 1, eggHatchTime: 18, reproductionCost: 5 }],
+    // Ladybugs are pest hunters
+    ['🐞', { role: 'hunter', attack: 5, maxHealth: 120, maxStamina: 40, speed: 2, eggHatchTime: 18, reproductionCost: 5 }],
     // Bees are fast pollinators with slightly more damage than butterflies
     ['🐝', { role: 'pollinator', attack: 3, maxHealth: 110, maxStamina: 50, speed: 2, eggHatchTime: 12, reproductionCost: 5 }],
     // Cockroaches are scavengers that can also attack weak flowers
