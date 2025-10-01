@@ -90,6 +90,7 @@ export interface TickSummary {
     butterflyCount: number;
     cocoonCount: number;
     beetleCount: number;
+    ladybugCount: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative
