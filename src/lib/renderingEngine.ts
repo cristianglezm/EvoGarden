@@ -1,4 +1,4 @@
-import type { CellContent, Corpse, Flower, FlowerSeed, Insect, SimulationParams } from '../types';
+import type { CellContent, Corpse, Flower, FlowerSeed, Insect, SimulationParams, SlimeTrail } from '../types';
 
 const CELL_SIZE_PX = 64;
 const GRID_COLOR = 'hsla(120, 100%, 50%, 0.2)';
@@ -105,6 +105,18 @@ export class RenderingEngine {
         // Cache the result and draw it to the main canvas
         this.corpseImageCache.set(actor.originalEmoji, offscreenCanvas);
         ctx.drawImage(offscreenCanvas, actor.x * CELL_SIZE_PX, actor.y * CELL_SIZE_PX);
+    }
+
+    private drawSlimeTrail(ctx: CanvasRenderingContext2D, actor: SlimeTrail) {
+        ctx.save();
+        ctx.globalAlpha = 0.2; // Faint
+        ctx.fillStyle = '#c0c0c0'; // Silvery-white
+        ctx.beginPath();
+        const centerX = actor.x * CELL_SIZE_PX + CELL_SIZE_PX / 2;
+        const centerY = actor.y * CELL_SIZE_PX + CELL_SIZE_PX / 2;
+        ctx.arc(centerX, centerY, CELL_SIZE_PX * 0.4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
     }
 
     private drawEmoji(ctx: CanvasRenderingContext2D, actor: CellContent) {
@@ -228,6 +240,8 @@ export class RenderingEngine {
         for (const actor of dynamicActors) {
             if (actor.type === 'corpse') {
                 this.drawCorpse(this.fgCtx, actor as Corpse);
+            } else if (actor.type === 'slimeTrail') {
+                this.drawSlimeTrail(this.fgCtx, actor as SlimeTrail);
             } else {
                 this.drawEmoji(this.fgCtx, actor);
             }

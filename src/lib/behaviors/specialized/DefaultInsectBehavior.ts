@@ -53,13 +53,13 @@ export class DefaultInsectBehavior extends InsectBehavior {
         }
     }
     
-    private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
+    protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
          return Array.from(context.nextActorState.values()).find(
             (actor) => actor.x === x && actor.y === y && actor.type === 'flower'
         ) as Flower | undefined;
     }
     
-    private handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
+    protected handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get(insect.emoji)!;
         
         // Eating now restores stamina instead of costing it.
@@ -86,7 +86,7 @@ export class DefaultInsectBehavior extends InsectBehavior {
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id };
     }
     
-    private handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
+    protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const { pollen } = insect;
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });
@@ -99,7 +99,7 @@ export class DefaultInsectBehavior extends InsectBehavior {
         }
     }
     
-    private handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext) {
+    protected handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext) {
         const moveCost = INSECT_MOVE_COST * (context.currentTemperature < INSECT_DORMANCY_TEMP ? 2 : 1);
         if (insect.stamina < moveCost) return;
 

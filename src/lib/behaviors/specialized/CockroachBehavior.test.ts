@@ -12,7 +12,8 @@ import {
     COCKROACH_STAMINA_REGEN_PER_TICK,
     COCKROACH_MOVE_STAMINA_COST,
     FLOWER_STAT_INDICES,
-    INSECT_ATTACK_COST
+    INSECT_ATTACK_COST,
+    INSECT_GENOME_LENGTH,
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -31,7 +32,8 @@ describe('CockroachBehavior', () => {
     beforeEach(() => {
         behavior = new CockroachBehavior();
         cockroach = {
-            id: 'roach1', type: 'cockroach', x: 5, y: 5, emoji: '🪳', genome: [],
+            id: 'roach1', type: 'cockroach', x: 5, y: 5, emoji: '🪳',
+            genome: Array(INSECT_GENOME_LENGTH).fill(0.1),
             health: COCKROACH_DATA.maxHealth, maxHealth: COCKROACH_DATA.maxHealth,
             stamina: COCKROACH_DATA.maxStamina, maxStamina: COCKROACH_DATA.maxStamina,
         };
@@ -47,8 +49,7 @@ describe('CockroachBehavior', () => {
         qtree,
         flowerQtree,
         nextActorState,
-        // Mocked properties to satisfy the context type
-        grid: [],
+        grid: Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => [])),
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         events: [] as AppEvent[],
         incrementInsectsDiedOfOldAge: vi.fn(),
