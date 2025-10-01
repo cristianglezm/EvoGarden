@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
@@ -11,6 +11,7 @@ import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { processCorpseTick } from './behaviors/corpseBehavior';
 import { processCocoonTick } from './behaviors/cocoonBehavior';
+import { processSlimeTrailTick } from './behaviors/slimeTrailBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -260,6 +261,9 @@ export class SimulationEngine {
                     break;
                 case 'cocoon':
                     processCocoonTick(actor as Cocoon, { nextActorState, events });
+                    break;
+                case 'slimeTrail':
+                    processSlimeTrailTick(actor as SlimeTrail, { nextActorState });
                     break;
             }
         }

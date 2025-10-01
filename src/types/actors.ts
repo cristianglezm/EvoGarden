@@ -81,6 +81,7 @@ export interface Insect extends Actor {
     genome: number[];
     lifespan?: number; // Kept for backwards compatibility with old saves
     reproductionCooldown?: number;
+    moveCooldown?: number; // For slow insects like snails
     healthEaten?: number; // For caterpillars
     isCarryingNutrient?: boolean; // For beetles
     isHunting?: boolean; // For ladybugs
@@ -122,6 +123,11 @@ export interface Cocoon extends Actor {
     butterflyGenome: number[];
 }
 
+export interface SlimeTrail extends Actor {
+    type: 'slimeTrail';
+    lifespan: number;
+}
+
 export interface Cockroach extends Actor {
     type: 'cockroach';
     health: number;
@@ -158,7 +164,7 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail;
 export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
 
 export type ActorAddDelta = {

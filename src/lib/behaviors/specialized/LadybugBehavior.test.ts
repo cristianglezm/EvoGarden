@@ -10,7 +10,8 @@ import {
     LADYBUG_HEAL_FROM_CATERPILLAR,
     INSECT_ATTACK_COST,
     INSECT_DORMANCY_TEMP,
-    INSECT_HEALTH_DECAY_PER_TICK
+    INSECT_HEALTH_DECAY_PER_TICK,
+    FLOWER_STAT_INDICES
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -46,7 +47,8 @@ describe('LadybugBehavior', () => {
     beforeEach(() => {
         behavior = new LadybugBehavior();
         ladybug = {
-            id: 'ladybug1', type: 'insect', x: 10, y: 10, emoji: '🐞', pollen: null, genome: [],
+            id: 'ladybug1', type: 'insect', x: 10, y: 10, emoji: '🐞', pollen: null, 
+            genome: Array(Object.keys(FLOWER_STAT_INDICES).length).fill(1),
             health: LADYBUG_DATA.maxHealth, maxHealth: LADYBUG_DATA.maxHealth,
             stamina: LADYBUG_DATA.maxStamina, maxStamina: LADYBUG_DATA.maxStamina,
         };
@@ -64,7 +66,7 @@ describe('LadybugBehavior', () => {
         flowerQtree,
         nextActorState,
         events,
-        grid: [],
+        grid: Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => [])),
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,

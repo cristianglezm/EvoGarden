@@ -31,7 +31,7 @@ Define the core data structures for the simulation state.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
-    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files.
+    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, a `moveCooldown` (for snails), and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files.
     -   `InsectStats`: A new interface defining the base stats for each insect type (`attack`, `maxHealth`, `maxStamina`, `speed`, `role`, `eggHatchTime`, `reproductionCost`).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
@@ -40,6 +40,7 @@ Define the core data structures for the simulation state.
     -   `Nutrient`: Includes position and a `lifespan` in ticks.
     -   `Egg`: Includes position, `hatchTimer`, the `insectEmoji` it will spawn, and the `genome` inherited from its parents.
     -   `Corpse`: Includes position, `originalEmoji`, and a `decayTimer` in ticks.
+    -   `SlimeTrail`: A temporary actor with a `lifespan` that slows other insects.
 -   **`Grid`**: A 2D array where each cell contains a list of actor instances (`(CellContent[])[][]`).
 -   **Service Interfaces**:
     -   `FEService`: Defines the contract for the WASM service wrapper, ensuring all methods are typed correctly, especially `getFlowerStats` which returns `Promise<FlowerGenomeStats>`.
@@ -129,10 +130,11 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Reproduction**: Implements all three reproduction methods: Asexual Expansion, Proximity Pollination, and Wind Pollination.
 
     -   `insectBehavior`: A dispatcher that routes to specialized behaviors based on the insect's `emoji` property.
-        -   **`DefaultInsectBehavior`**: Applied to standard insects (`🐌`, `🐝`). Governs flower-eating, pollination, and genetic-based flower targeting.
+        -   **`DefaultInsectBehavior`**: Applied to standard insects (`🐝`). Governs flower-eating, pollination, and genetic-based flower targeting.
         -   **`ButterflyBehavior` / `CaterpillarBehavior`**: Manages the full metamorphosis lifecycle (`🦋` -> `🥚` -> `🐛` -> `⚪️` -> `🦋`). Butterflies are pure pollinators, while caterpillars are voracious flower eaters.
         -   **`LadybugBehavior`**: Implements a predator AI for Ladybugs (`🐞`) that hunt Caterpillars (`🐛`). They patrol between flowers if no prey is available.
         -   **`BeetleBehavior`**: Implements a support AI for Beetles (`🪲`). They transfer health from healthy flowers to heal weak ones.
+        -   **`SnailBehavior`**: Manages the unique logic for Snails (`🐌`). They move on a cooldown, and when they do move, they create a new `SlimeTrail` actor. They extend the `DefaultInsectBehavior` to reuse flower-eating logic.
         -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
     
     -   `birdBehavior`: Governs predator AI and connects the food chain.
@@ -155,10 +157,11 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **Expansion**: On its first tick, it expands by creating new smoke actors in adjacent cells.
         -   **Lifecycle**: It has a short `lifespan` and is removed when the timer expires.
 
-    -   `eggBehavior`, `nutrientBehavior`, & `corpseBehavior`: Simple state-machine behaviors.
+    -   `eggBehavior`, `nutrientBehavior`, `corpseBehavior`, & `slimeTrailBehavior`: Simple state-machine behaviors.
         -   `eggBehavior`: Decrements a `hatchTimer`. When the timer reaches zero, it is removed and a new insect is spawned.
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires.
         -   `corpseBehavior`: Decrements a `decayTimer`. When the timer expires, it is removed and replaced by a `Nutrient`.
+        -   `slimeTrailBehavior`: Decrements a `lifespan` timer and is removed when it expires.
 
 -   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 
@@ -236,7 +239,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
     -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
-    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
+    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, `slimeTrailBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.

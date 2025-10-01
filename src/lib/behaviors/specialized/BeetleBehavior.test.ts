@@ -9,7 +9,8 @@ import {
     INSECT_MOVE_COST,
     BEETLE_HEAL_AMOUNT,
     BEETLE_COLLECT_STAMINA_COST,
-    BEETLE_DEPOSIT_STAMINA_COST
+    BEETLE_DEPOSIT_STAMINA_COST,
+    FLOWER_STAT_INDICES
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -37,7 +38,8 @@ describe('BeetleBehavior', () => {
     beforeEach(() => {
         behavior = new BeetleBehavior();
         beetle = {
-            id: 'beetle1', type: 'insect', x: 10, y: 10, emoji: '🪲', pollen: null, genome: [],
+            id: 'beetle1', type: 'insect', x: 10, y: 10, emoji: '🪲', pollen: null, 
+            genome: Array(Object.keys(FLOWER_STAT_INDICES).length).fill(1),
             health: BEETLE_DATA.maxHealth, maxHealth: BEETLE_DATA.maxHealth,
             stamina: BEETLE_DATA.maxStamina, maxStamina: BEETLE_DATA.maxStamina,
             isCarryingNutrient: false,
@@ -54,7 +56,7 @@ describe('BeetleBehavior', () => {
         flowerQtree,
         nextActorState,
         events,
-        grid: [],
+        grid: Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => [])),
         qtree: new Quadtree(new Rectangle(10, 10, 10, 10), 4),
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
