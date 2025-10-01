@@ -54,6 +54,7 @@ export interface AnalyticsDataPoint {
     butterflies: number;
     cocoons: number;
     beetles: number;
+    ladybugs: number;
     reproductions: number;
     insectsEaten: number;
     eggsLaid: number;

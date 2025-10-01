@@ -272,7 +272,7 @@ export class SimulationEngine {
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
         let healingFlowerCount = 0, toxicFlowerCount = 0;
-        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0;
+        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0;
 
 
         for (const actor of nextActorState.values()) {
@@ -300,6 +300,8 @@ export class SimulationEngine {
                     butterflyCount++;
                 } else if (insect.emoji === '🪲') {
                     beetleCount++;
+                } else if (insect.emoji === '🐞') {
+                    ladybugCount++;
                 }
             } else if (actor.type === 'bird') {
                 birdCount++;
@@ -330,7 +332,7 @@ export class SimulationEngine {
             flowerCount: flowerCountForStats + seedCount,
             insectCount: totalInsectCount,
             birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
-            caterpillarCount, butterflyCount, beetleCount,
+            caterpillarCount, butterflyCount, beetleCount, ladybugCount,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.populationManager.totalBirdsHunted, totalHerbicidePlanesSpawned: this.populationManager.totalHerbicidePlanesSpawned,
