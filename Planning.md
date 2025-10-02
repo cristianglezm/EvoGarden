@@ -135,6 +135,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **`LadybugBehavior`**: Implements a predator AI for Ladybugs (`🐞`) that hunt Caterpillars (`🐛`). They patrol between flowers if no prey is available.
         -   **`BeetleBehavior`**: Implements a support AI for Beetles (`🪲`). They transfer health from healthy flowers to heal weak ones.
         -   **`SnailBehavior`**: Manages the unique logic for Snails (`🐌`). They move on a cooldown, and when they do move, they create a new `SlimeTrail` actor. They extend the `DefaultInsectBehavior` to reuse flower-eating logic.
+        -   **`ScorpionBehavior`**: Implements a predator AI for Scorpions (`🦂`). They are ground-based hunters with a prey preference list (e.g., beetles, snails, cockroaches).
         -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
     
     -   `birdBehavior`: Governs predator AI and connects the food chain.
