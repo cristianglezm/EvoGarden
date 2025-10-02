@@ -87,8 +87,9 @@ The garden is no longer static. It features a fully dynamic climate system that 
         -   **Slow Movement**: Snails operate on a move cooldown, making them the slowest insects in the garden.
         -   **Slime Trails**: When a snail moves, it leaves behind a temporary `SlimeTrail` (`💧`). This trail slows down any other insect that moves onto its cell, creating a unique environmental hazard.
         -   **Sturdy**: They are sturdy herbivores that eat flowers like default insects but can take more damage.
+    -   **Scorpions (`🦂`)**: A deadly ground predator that specializes in hunting other tough insects. Scorpions have a prey preference, prioritizing beetles (`🪲`), then snails (`🐌`), cockroaches (`🪳`), and finally ladybugs (`🐞`). When a scorpion kills its prey, it leaves behind a corpse and receives a significant health and stamina boost.
     -   **Default Insects (`🐝`)**: These insects follow the standard behavior of eating non-carnivorous flowers to gain stamina, while also acting as pollinators.
--   **Cockroaches** (`🪳`): A pest and scavenger species. They are dynamically spawned by the `PopulationManager` when the number of corpses on the grid becomes too high. They hunt for corpses to eat, restoring their health and stamina. If no corpses are available, they will attack weak flowers. When they eat, they produce a low-quality nutrient.
+-   **Cockroaches** (`🪳`): A pest and scavenger species. They are dynamically spawned by the `PopulationManager` when the number of corpses on the grid becomes too high. They hunt for corpses to eat, restoring their health and stamina. If no corpses are available, they will attack weak flowers.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.
 -   **Birds** (`🐦`): The predators of the garden.
     -   **AI & Movement**: Birds use a Quadtree to efficiently scan for prey. They prioritize hunting unprotected insects, then defenseless cocoons, and finally stationary eggs. When not hunting, they exhibit a smarter patrolling AI, flying towards flowers to search for prey.

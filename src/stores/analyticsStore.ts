@@ -28,6 +28,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     ladybugs: summary.ladybugCount,
                     snails: summary.snailCount,
                     bees: summary.beeCount,
+                    scorpionCount: summary.scorpionCount || 0,
                     reproductions: summary.reproductions,
                     insectsEaten: summary.insectsEaten,
                     eggsLaid: summary.eggsLaid,
