@@ -133,6 +133,8 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     ['🪳', { role: 'scavenger', attack: 2, maxHealth: 50, maxStamina: 50, speed: 1, eggHatchTime: 30, reproductionCost: 2 }],
     // Beetles are support tanks
     ['🪲', { role: 'support', attack: 1, maxHealth: 200, maxStamina: 50, speed: 1, eggHatchTime: 30, reproductionCost: 10 }],
+    // Scorpions are ground predators
+    ['🦂', { role: 'hunter', attack: 12, maxHealth: 220, maxStamina: 60, speed: 1, eggHatchTime: 35, reproductionCost: 15 }],
 ]);
 
 
@@ -145,3 +147,6 @@ export const POPULATION_DECLINE_THRESHOLD_CORPSE = 0.04;
 export const BIRD_SPAWN_COOLDOWN = 5;
 export const EAGLE_SPAWN_COOLDOWN = 8;
 export const COCKROACH_SPAWN_COOLDOWN = 15;
+
+// --- SCORPION CONSTANTS ---
+export const SCORPION_HEAL_FROM_PREY = 30;

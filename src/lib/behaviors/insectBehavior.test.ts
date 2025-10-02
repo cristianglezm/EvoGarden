@@ -46,6 +46,12 @@ vi.mock('./specialized/LadybugBehavior', () => {
     return { LadybugBehavior };
 });
 
+vi.mock('./specialized/ScorpionBehavior', () => {
+    const ScorpionBehavior = vi.fn();
+    ScorpionBehavior.prototype.update = vi.fn();
+    return { ScorpionBehavior };
+});
+
 
 describe('insectBehavior dispatcher', () => {
     let mockDefaultBehaviorUpdate: any;
@@ -55,6 +61,7 @@ describe('insectBehavior dispatcher', () => {
     let mockSnailBehaviorUpdate: any;
     let mockBeetleBehaviorUpdate: any;
     let mockLadybugBehaviorUpdate: any;
+    let mockScorpionBehaviorUpdate: any;
 
     const mockContext = {} as InsectBehaviorContext; // Context can be empty for this test
 
@@ -67,6 +74,7 @@ describe('insectBehavior dispatcher', () => {
         const { SnailBehavior } = await import('./specialized/SnailBehavior');
         const { BeetleBehavior } = await import('./specialized/BeetleBehavior');
         const { LadybugBehavior } = await import('./specialized/LadybugBehavior');
+        const { ScorpionBehavior } = await import('./specialized/ScorpionBehavior');
 
         mockDefaultBehaviorUpdate = new (DefaultInsectBehavior as any)().update;
         mockCockroachBehaviorUpdate = new (CockroachBehavior as any)().update;
@@ -75,6 +83,7 @@ describe('insectBehavior dispatcher', () => {
         mockSnailBehaviorUpdate = new (SnailBehavior as any)().update;
         mockBeetleBehaviorUpdate = new (BeetleBehavior as any)().update;
         mockLadybugBehaviorUpdate = new (LadybugBehavior as any)().update;
+        mockScorpionBehaviorUpdate = new (ScorpionBehavior as any)().update;
     });
 
     beforeEach(() => {
@@ -126,6 +135,13 @@ describe('insectBehavior dispatcher', () => {
         const cockroach: Cockroach = { emoji: '🪳', type: 'cockroach' } as Cockroach;
         processInsectTick(cockroach, mockContext);
         expect(mockCockroachBehaviorUpdate).toHaveBeenCalledWith(cockroach, mockContext);
+        expect(mockDefaultBehaviorUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should delegate to ScorpionBehavior for a scorpion (🦂)', () => {
+        const scorpion: Insect = { emoji: '🦂' } as Insect;
+        processInsectTick(scorpion, mockContext);
+        expect(mockScorpionBehaviorUpdate).toHaveBeenCalledWith(scorpion, mockContext);
         expect(mockDefaultBehaviorUpdate).not.toHaveBeenCalled();
     });
 
