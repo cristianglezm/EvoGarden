@@ -45,6 +45,13 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     territoryMarkLifespan: 100,
     signalTTL: 10,
     beePollinationWanderChance: 0.2,
+    // Ant Colony Parameters
+    colonyGridArea: 10,
+    antDormancyTemp: 10,
+    antColonySpawnThreshold: 100,
+    antColonySpawnCost: 20,
+    pheromoneLifespan: 200,
+    pheromoneStrengthDecay: 0.05,
 };
 
 // --- FLOWER CONSTANTS ---
@@ -145,8 +152,15 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     ['🪲', { role: 'support', attack: 1, maxHealth: 200, maxStamina: 50, speed: 1, eggHatchTime: 30, reproductionCost: 10 }],
     // Scorpions are ground predators
     ['🦂', { role: 'hunter', attack: 12, maxHealth: 220, maxStamina: 60, speed: 1, eggHatchTime: 35, reproductionCost: 15 }],
+    // Ants are colony builders and scavengers
+    ['🐜', { role: 'colony-builder', attack: 4, maxHealth: 80, maxStamina: 60, speed: 2, eggHatchTime: 10, reproductionCost: 5 }],
 ]);
 
+// --- FOOD VALUES for Ants ---
+export const FOOD_VALUE_CORPSE = 50;
+export const FOOD_VALUE_EGG = 20;
+export const FOOD_VALUE_COCOON = 30;
+export const FOOD_VALUE_POLLEN = 5;
 
 // --- POPULATION CONTROL ---
 export const POPULATION_TREND_WINDOW = 5;

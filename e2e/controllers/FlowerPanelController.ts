@@ -34,12 +34,20 @@ export class FlowerPanelController {
             await canvas.click({ position: { x, y } });
 
             let targetPanel: Locator;
+            let nameRegex: RegExp;
+            
+            // Determine which panel and name to look for
             if (actorType === 'insect' || actorType === 'cockroach') {
-                // The insect panel is unique in that it has a "Flower Preferences" section.
                 targetPanel = this.page.locator('aside').filter({ hasText: 'Flower Preferences (Genome)' });
+                const insectEmojisRegex = /[🦋🐛🐌🐞🪲🦂🐝🐜🪳]/;
+                nameRegex = insectEmojisRegex;
+            } else if (actorType === 'antColony') {
+                targetPanel = this.page.locator('aside:has-text("Ant Colony Details")');
+                nameRegex = /🐜 Ant Colony/;
             } else {
                 const capitalizedActorType = actorType.charAt(0).toUpperCase() + actorType.slice(1);
                 targetPanel = this.page.locator(`aside:has-text("${capitalizedActorType} Details")`);
+                nameRegex = new RegExp(capitalizedActorType, 'i');
             }
             
             const targetVisible = await targetPanel.isVisible({ timeout: 250 });
@@ -47,14 +55,7 @@ export class FlowerPanelController {
             
             const selectionVisible = await this.actorSelectionPanel.isVisible({ timeout: 250 });
             if (selectionVisible) {
-                let actorButtons: Locator;
-                if (actorType === 'insect' || actorType === 'cockroach') {
-                    // Match any of the insect emojis including cockroach
-                    const insectEmojisRegex = /[🦋🐛🐌🐞🪲🦂🐝🪳]/;
-                    actorButtons = this.actorSelectionPanel.getByRole('button', { name: insectEmojisRegex });
-                } else {
-                    actorButtons = this.actorSelectionPanel.getByRole('button', { name: new RegExp(actorType, 'i') });
-                }
+                const actorButtons = this.actorSelectionPanel.getByRole('button', { name: nameRegex });
 
                 if (await actorButtons.count() > 0) {
                     await actorButtons.first().click();

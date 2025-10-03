@@ -68,6 +68,12 @@ export class ControlPanelController {
   getTerritoryMarkLifespanInput() { return this.getLabel('Territory Mark Lifespan'); }
   getSignalTTLInput() { return this.getLabel('Signal TTL'); }
   getBeePollinationWanderChanceInput() { return this.getLabel('Pollination Wander'); }
+  getColonyGridAreaInput() { return this.getLabel('Colony Grid Area'); }
+  getAntDormancyTempInput() { return this.getLabel('Ant Dormancy Temp'); }
+  getAntColonySpawnThresholdInput() { return this.getLabel('Colony Spawn Threshold'); }
+  getAntColonySpawnCostInput() { return this.getLabel('Colony Spawn Cost'); }
+  getPheromoneLifespanInput() { return this.getLabel('Pheromone Lifespan'); }
+  getPheromoneStrengthDecayInput() { return this.getLabel('Pheromone Decay Rate'); }
 
   // Ecosystem Rules
   getHerbicideDamageInput() { return this.getLabel('Herbicide Damage'); }

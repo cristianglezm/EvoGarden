@@ -14,6 +14,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Dynamic Weather & Seasons**: Experience a living environment with four distinct seasons (Spring, Summer, Autumn, Winter) that cyclically affect temperature and humidity. Be prepared for unpredictable weather events like heatwaves, cold snaps, heavy rain, and droughts that create new evolutionary pressures.
 -   **Intelligent Insects with Genetic AI**: Insects no longer move randomly. Each insect has a unique genetic code (genome) that determines its preferences for different flower traits. They actively seek out flowers that best match their genes, creating complex and emergent behaviors.
 -   **Complex Social Insects (Honeybees)**: Introducing Honeybees (`🐝`), Hives (`🛖`), and a dynamic territory system. Bees work together to gather pollen, produce honey, and defend their territory using a communication system based on scent marks.
+-   **Intelligent Ant Colonies & Pheromone Trails (`🐜`, `⛰️`)**: Ants establish colonies and work together as efficient scavengers. When an ant finds a food source (like a corpse or an egg), it carries it back to the colony and leaves a decaying pheromone trail. Other ants can follow these trails, creating emergent foraging paths to high-value resources.
 -   **Insect Evolution**: When insects reproduce, their offspring inherit a mix of their parents' genomes, with a chance for random mutation. This creates a dynamic evolutionary loop where insects adapt to the garden's flower population over generations.
 -   **Stamina-Based Actions & Health**: Insects now manage health and stamina. Actions like moving and attacking cost stamina, and they must rest to recover. Their health slowly decays, and if it runs out, they die and decompose into a nutrient, completing the ecosystem's cycle of life.
 -   **Corpse & Decay System**: When insects die of old age or from toxic flowers, they leave behind a corpse that slowly decays. Once fully decayed, the corpse transforms into a nutrient, completing another link in the ecosystem's cycle of life.
@@ -95,6 +96,10 @@ The garden is no longer static. It features a fully dynamic climate system that 
         -   **Territory Marks**: As bees travel, they leave invisible territory marks. These marks serve two purposes:
             1.  **Territorial Control**: If a bee from a rival hive enters marked territory, it can trigger a "hunting" state.
             2.  **Communication**: Bees can leave signals on marks (e.g., `UNDER_ATTACK`). This signal propagates through adjacent marks of the same hive, alerting nearby bees to the threat and calling them to action.
+    -   **Ants (`🐜`), Ant Colonies (`⛰️`), & Pheromone Trails**: A complex system for ground-based scavenging and resource gathering.
+        -   **Ants**: Foragers that operate on a state machine. They start by `seeking_food`. If they find a strong pheromone trail left by another ant, they will follow it. Otherwise, they search for food, prioritizing high-value items like corpses, eggs, and cocoons. Once an ant picks up food, it switches to a `returning_to_colony` state.
+        -   **Ant Colonies**: Stationary bases that store food and spawn new ants. When an ant returns with food, the colony's `foodReserves` increase. When reserves are high, new ants are spawned.
+        -   **Pheromone Trails**: Invisible trails left by ants that are returning to the colony *with food*. The `strength` of the trail is proportional to the value of the food being carried. These trails decay over time, and other ants will follow the strongest available trail, creating efficient, emergent paths to food sources.
 -   **Cockroaches** (`🪳`): A pest and scavenger species. They are dynamically spawned by the `PopulationManager` when the number of corpses on the grid becomes too high. They hunt for corpses to eat, restoring their health and stamina. If no corpses are available, they will attack weak flowers.
 -   **Eggs** (`🥚`): The offspring of insects. They remain stationary and hatch after a fixed timer, unless eaten by a bird.
 -   **Birds** (`🐦`): The predators of the garden.
@@ -142,6 +147,9 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
     -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type. The `insectBehavior` module acts as a dispatcher to specialized behaviors (e.g., for caterpillars, cockroaches) located in `src/lib/behaviors/specialized/`.
+    -   `src/lib/behaviors/antColonyBehavior.ts`: The behavior for Ant Colonies.
+    -   `src/lib/behaviors/pheromoneTrailBehavior.ts`: The behavior for Pheromone Trails.
+    -   `src/lib/behaviors/specialized/AntBehavior.ts`: The specialized behavior for Ants.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.

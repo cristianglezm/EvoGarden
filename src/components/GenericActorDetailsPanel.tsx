@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark } from '../types';
+import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { GenomeVisualizer } from './GenomeVisualizer';
 
@@ -114,6 +114,19 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 genome: hive.genome
             };
         }
+        case 'antColony': {
+            const colony = actor as AntColony;
+            return {
+                emoji: '⛰️',
+                title: 'Ant Colony Details',
+                stats: {
+                    'Colony ID': colony.colonyId,
+                    'Food Reserves': colony.foodReserves.toFixed(2),
+                    'Stored Ants': colony.storedAnts || 0,
+                },
+                genome: colony.genome
+            };
+        }
         case 'territoryMark': {
             const mark = actor as TerritoryMark;
             let signalInfo = 'None';
@@ -126,6 +139,23 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 stats: {
                     'Owner': `Hive ${mark.hiveId}`,
                     'Lifespan': `${mark.lifespan} ticks`,
+                    'Active Signal': signalInfo,
+                }
+            };
+        }
+        case 'pheromoneTrail': {
+            const trail = actor as PheromoneTrail;
+            let signalInfo = 'None';
+            if (trail.signal) {
+                signalInfo = `${trail.signal.type} (TTL: ${trail.signal.ttl}) at (${trail.signal.origin.x}, ${trail.signal.origin.y})`;
+            }
+            return {
+                emoji: ' ', // Invisible
+                title: 'Pheromone Trail Details',
+                stats: {
+                    'Owner': `Colony ${trail.colonyId}`,
+                    'Lifespan': `${trail.lifespan} ticks`,
+                    'Strength': trail.strength.toFixed(2),
                     'Active Signal': signalInfo,
                 }
             };

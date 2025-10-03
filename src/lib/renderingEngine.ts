@@ -130,7 +130,8 @@ export class RenderingEngine {
             actor.type === 'herbicideSmoke' ? '💨' :
             actor.type === 'cockroach' ? '🪳' :
             actor.type === 'cocoon' ? '⚪️' : 
-            actor.type === 'hive' ? '🛖' : '';
+            actor.type === 'hive' ? '🛖' :
+            actor.type === 'antColony' ? '⛰️' : '';
         
         if (emoji) {
             ctx.save();

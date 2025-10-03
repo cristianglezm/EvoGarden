@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
@@ -14,6 +14,8 @@ import { processCocoonTick } from './behaviors/cocoonBehavior';
 import { processSlimeTrailTick } from './behaviors/slimeTrailBehavior';
 import { processHiveTick } from './behaviors/hiveBehavior';
 import { processTerritoryMarkTick } from './behaviors/territoryMarkBehavior';
+import { processAntColonyTick } from './behaviors/antColonyBehavior';
+import { processPheromoneTrailTick } from './behaviors/pheromoneTrailBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -273,6 +275,12 @@ export class SimulationEngine {
                 case 'territoryMark':
                     processTerritoryMarkTick(actor as TerritoryMark, { nextActorState });
                     break;
+                case 'antColony':
+                    processAntColonyTick(actor as AntColony, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature });
+                    break;
+                case 'pheromoneTrail':
+                    processPheromoneTrailTick(actor as PheromoneTrail, { nextActorState, params: this.params });
+                    break;
             }
         }
     }
@@ -284,8 +292,8 @@ export class SimulationEngine {
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
         let healingFlowerCount = 0, toxicFlowerCount = 0;
-        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0;
-        let hiveCount = 0, totalHoney = 0;
+        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0, antCount = 0;
+        let hiveCount = 0, totalHoney = 0, colonyCount = 0, totalAntFood = 0;
 
 
         for (const actor of nextActorState.values()) {
@@ -321,6 +329,8 @@ export class SimulationEngine {
                     beeCount++;
                 } else if (insect.emoji === '🦂') {
                     scorpionCount++;
+                } else if (insect.emoji === '🐜') {
+                    antCount++;
                 }
             } else if (actor.type === 'bird') {
                 birdCount++;
@@ -343,6 +353,9 @@ export class SimulationEngine {
             } else if (actor.type === 'hive') {
                 hiveCount++;
                 totalHoney += (actor as Hive).honey;
+            } else if (actor.type === 'antColony') {
+                colonyCount++;
+                totalAntFood += (actor as AntColony).foodReserves;
             }
         }
 
@@ -355,7 +368,11 @@ export class SimulationEngine {
             insectCount: totalInsectCount,
             birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
             caterpillarCount, butterflyCount, beetleCount, ladybugCount, snailCount, beeCount, scorpionCount,
-            hiveCount, totalHoney,
+            antCount,
+            hiveCount,
+            colonyCount,
+            totalHoney,
+            totalAntFood,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.populationManager.totalBirdsHunted, totalHerbicidePlanesSpawned: this.populationManager.totalHerbicidePlanesSpawned,

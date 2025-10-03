@@ -62,12 +62,12 @@ export interface InsectStats {
     maxHealth: number;
     maxStamina: number;
     speed: number;
-    role: 'pollinator' | 'attacker' | 'tank' | 'hunter' | 'balanced' | 'scavenger' | 'support';
+    role: 'pollinator' | 'attacker' | 'tank' | 'hunter' | 'balanced' | 'scavenger' | 'support' | 'colony-builder';
     eggHatchTime: number;
     reproductionCost: number; // stamina cost
 }
 
-export type InsectBehaviorState = 'seeking_food' | 'returning_to_hive' | 'hunting' | 'patrolling' | 'idle' | 'collecting' | 'depositing';
+export type InsectBehaviorState = 'seeking_food' | 'returning_to_hive' | 'hunting' | 'patrolling' | 'idle' | 'collecting' | 'depositing' | 'returning_to_colony';
 
 export interface Insect extends Actor {
     type: 'insect';
@@ -90,6 +90,11 @@ export interface Insect extends Actor {
     isHunting?: boolean; // For ladybugs, scorpions
     targetId?: string; // For hunters
     hiveId?: string; // For honeybees
+    colonyId?: string; // For ants
+    carriedItem?: {
+        type: 'corpse' | 'egg' | 'cocoon' | 'pollen';
+        value: number;
+    };
     isReturningToHive?: boolean; // For honeybees
     behaviorState?: InsectBehaviorState;
 }
@@ -109,6 +114,14 @@ export interface TerritoryMark extends Actor {
     signal?: Signal;
 }
 
+export interface PheromoneTrail extends Actor {
+    type: 'pheromoneTrail';
+    colonyId: string;
+    lifespan: number;
+    strength: number; // For pathfinding
+    signal?: Signal;
+}
+
 export interface Hive extends Actor {
     type: 'hive';
     hiveId: string;
@@ -117,6 +130,15 @@ export interface Hive extends Actor {
     spawnCooldown: number;
     genome: number[];
     storedBees?: number;
+}
+
+export interface AntColony extends Actor {
+    type: 'antColony';
+    colonyId: string;
+    foodReserves: number;
+    spawnCooldown: number;
+    genome: number[]; // Flower preference for pollen foraging
+    storedAnts?: number;
 }
 
 export interface Bird extends Actor {
@@ -195,7 +217,7 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail | Hive | TerritoryMark;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail | Hive | TerritoryMark | AntColony | PheromoneTrail;
 export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
 
 export type ActorAddDelta = {
