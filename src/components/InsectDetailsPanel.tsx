@@ -2,7 +2,7 @@ import React from 'react';
 import type { Insect, Cockroach } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { INSECT_DATA, CATERPILLAR_EAT_AMOUNT_FOR_COCOON } from '../constants';
-import { ACTOR_NAMES } from '../utils';
+import { ACTOR_NAMES, getShortId } from '../utils';
 import { GenomeVisualizer } from './GenomeVisualizer';
 
 interface InsectDetailsPanelProps {
@@ -40,7 +40,7 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
             <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px] min-h-[48px]">
                  <h2 className="font-bold text-lg truncate">
                     {isTrackingThisInsect ? 'Tracking: ' : `${actorName} Details`}
-                    {isTrackingThisInsect && <span className="font-mono text-accent-yellow">{insect.id.substring(7, 12)}</span>}
+                    {isTrackingThisInsect && <span className="font-mono text-accent-yellow">{getShortId(insect.id)}</span>}
                 </h2>
                 <div className="flex items-center gap-2">
                     {isTrackingThisInsect && (
@@ -103,7 +103,7 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
                  <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Status</h3>
                     {insect.type === 'insect' && (insect as Insect).pollen && (
-                        <p><strong>Carrying Pollen:</strong> Yes (from #{(insect as Insect).pollen!.sourceFlowerId.substring(7,12)})</p>
+                        <p><strong>Carrying Pollen:</strong> Yes (from #{getShortId((insect as Insect).pollen!.sourceFlowerId)})</p>
                     )}
                     {insect.type === 'insect' && !(insect as Insect).pollen && (
                         <p><strong>Carrying Pollen:</strong> No</p>

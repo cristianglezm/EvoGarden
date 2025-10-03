@@ -5,6 +5,7 @@ import { flowerService } from '../services/flowerService';
 import { Modal } from './Modal';
 import { Flower3DViewer } from './Flower3DViewer';
 import { TOXIC_FLOWER_THRESHOLD } from '../constants';
+import { getShortId } from '../utils';
 
 interface FlowerDetailsPanelProps {
     flower: Flower | null;
@@ -90,7 +91,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
             <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px] min-h-[48px]">
                 <h2 className="font-bold text-lg truncate">
                     {isTrackingThisFlower ? 'Tracking: ' : 'Flower Details'}
-                    {isTrackingThisFlower && <span className="font-mono text-accent-yellow">{flower.id.substring(7, 12)}</span>}
+                    {isTrackingThisFlower && <span className="font-mono text-accent-yellow">{getShortId(flower.id)}</span>}
                 </h2>
                 <div className="flex items-center gap-2">
                     {isTrackingThisFlower && (
@@ -236,7 +237,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
             {flower && <Modal
                 isOpen={is3DViewerOpen}
                 onClose={handleClose3DViewer}
-                title={`3D Model for Flower #${flower.id.substring(7, 12)}`}
+                title={`3D Model for Flower #${getShortId(flower.id)}`}
             >
                 {isLoading3D || !gltfString ? (
                     <div className="flex items-center justify-center h-full">

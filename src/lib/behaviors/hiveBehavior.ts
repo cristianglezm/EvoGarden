@@ -12,7 +12,7 @@ interface HiveContext {
 
 function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params: SimulationParams): Insect {
     const baseStats = INSECT_DATA.get('🐝')!;
-    const newBeeId = `insect-${position.x}-${position.y}-${Date.now()}`;
+    const newBeeId = `insect-honeybee-${position.x}-${position.y}-${Date.now()}`;
     
     // Inherit from hive, with mutation
     const newGenome = [...hive.genome];
