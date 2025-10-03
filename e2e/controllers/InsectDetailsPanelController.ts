@@ -6,7 +6,7 @@ export class InsectDetailsPanelController {
 
     constructor(page: Page) {
         this.page = page;
-        this.panel = page.locator('aside:has-text("Insect Details")');
+        this.panel = page.locator('aside').filter({ hasText: 'Flower Preferences (Genome)' });
     }
 
     async waitForPanel() {

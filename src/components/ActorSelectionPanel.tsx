@@ -1,30 +1,13 @@
 import React from 'react';
-import type { CellContent, Cockroach } from '../types';
+import type { CellContent } from '../types';
 import { XIcon } from './icons';
+import { getActorName } from '../utils';
 
 interface ActorSelectionPanelProps {
     actors: CellContent[];
     onSelect: (actor: CellContent) => void;
     onClose: () => void;
 }
-
-const getActorName = (actor: CellContent): string => {
-    switch (actor.type) {
-        case 'flower': return `🌸 Flower`;
-        case 'insect': return `${actor.emoji} Insect`;
-        case 'bird': return `🐦 Bird`;
-        case 'eagle': return `🦅 Eagle`;
-        case 'egg': return `🥚 Egg`;
-        case 'nutrient': return `💩 Nutrient`;
-        case 'herbicidePlane': return `✈️ Herbicide Plane`;
-        case 'herbicideSmoke': return `💨 Herbicide Smoke`;
-        case 'flowerSeed': return `🌱 Seed`;
-        case 'corpse': return `💀 Corpse`;
-        case 'cockroach': return `${(actor as Cockroach).emoji} Cockroach`;
-        case 'slimeTrail': return `💧 Slime Trail`;
-        default: return 'Unknown Entity';
-    }
-};
 
 export const ActorSelectionPanel: React.FC<ActorSelectionPanelProps> = ({ actors, onSelect, onClose }) => {
     return (

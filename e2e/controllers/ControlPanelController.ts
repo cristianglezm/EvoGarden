@@ -52,10 +52,22 @@ export class ControlPanelController {
     }
   }
 
+  async openHiveColonyRulesSection() { await this.openCollapsibleSection("Hive & Colony Rules"); }
   async openEcosystemRulesSection() { await this.openCollapsibleSection("Ecosystem Rules"); }
   async openEvolutionReproductionSection() { await this.openCollapsibleSection("Evolution & Reproduction"); }
   async openWeatherEventsSection() { await this.openCollapsibleSection("Weather Events"); }
   async openGraphicsUISection() { await this.openCollapsibleSection("Graphics & UI"); }
+
+  // Hive & Colony Rules
+  getHiveGridAreaInput() { return this.getLabel('Hive Grid Area'); }
+  getBeeDormancyTempInput() { return this.getLabel('Bee Dormancy Temp'); }
+  getWinterHoneyUseInput() { return this.getLabel('Winter Honey Use'); }
+  getPollenToHoneyInput() { return this.getLabel('Pollen to Honey'); }
+  getHiveSpawnThresholdInput() { return this.getLabel('Hive Spawn Threshold'); }
+  getHiveSpawnCostInput() { return this.getLabel('Hive Spawn Cost'); }
+  getTerritoryMarkLifespanInput() { return this.getLabel('Territory Mark Lifespan'); }
+  getSignalTTLInput() { return this.getLabel('Signal TTL'); }
+  getBeePollinationWanderChanceInput() { return this.getLabel('Pollination Wander'); }
 
   // Ecosystem Rules
   getHerbicideDamageInput() { return this.getLabel('Herbicide Damage'); }

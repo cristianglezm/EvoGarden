@@ -1,6 +1,7 @@
 import React from 'react';
-import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail } from '../types';
+import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark } from '../types';
 import { XIcon, SearchIcon } from './icons';
+import { GenomeVisualizer } from './GenomeVisualizer';
 
 interface GenericActorDetailsPanelProps {
     actor: CellContent | null;
@@ -10,7 +11,14 @@ interface GenericActorDetailsPanelProps {
     trackedActorId: string | null;
 }
 
-const getActorDisplayInfo = (actor: CellContent) => {
+interface ActorDisplayInfo {
+    emoji: string;
+    title: string;
+    stats: Record<string, string | number>;
+    genome?: number[];
+}
+
+const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
     switch (actor.type) {
         case 'bird':
             return {
@@ -93,6 +101,35 @@ const getActorDisplayInfo = (actor: CellContent) => {
                 }
             };
         }
+        case 'hive': {
+            const hive = actor as Hive;
+            return {
+                emoji: '🛖',
+                title: 'Honeybee Hive',
+                stats: {
+                    'Hive ID': hive.hiveId,
+                    'Honey Reserves': (Number(hive.honey) || 0).toFixed(2),
+                    'Stored Pollen': (Number(hive.pollen) || 0).toFixed(2),
+                },
+                genome: hive.genome
+            };
+        }
+        case 'territoryMark': {
+            const mark = actor as TerritoryMark;
+            let signalInfo = 'None';
+            if (mark.signal) {
+                signalInfo = `${mark.signal.type} (TTL: ${mark.signal.ttl}) at (${mark.signal.origin.x}, ${mark.signal.origin.y})`;
+            }
+            return {
+                emoji: '📍',
+                title: 'Territory Mark',
+                stats: {
+                    'Owner': `Hive ${mark.hiveId}`,
+                    'Lifespan': `${mark.lifespan} ticks`,
+                    'Active Signal': signalInfo,
+                }
+            };
+        }
         default:
             return {
                 emoji: '❓',
@@ -107,7 +144,7 @@ const getActorDisplayInfo = (actor: CellContent) => {
 export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> = ({ actor, onClose, onTrackActor, onStopTracking, trackedActorId }) => {
     if (!actor) return null;
 
-    const { emoji, title, stats } = getActorDisplayInfo(actor);
+    const { emoji, title, stats, genome } = getActorDisplayInfo(actor);
     const isTrackingThisActor = trackedActorId && trackedActorId === actor.id;
 
     return (
@@ -159,6 +196,7 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
                         <p key={key}><strong>{key}:</strong> {value}</p>
                     ))}
                 </div>
+                {genome && <GenomeVisualizer genome={genome} title="Colony Flower Preferences" />}
             </div>
         </div>
     );

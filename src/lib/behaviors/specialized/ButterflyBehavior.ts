@@ -6,7 +6,7 @@ import {
     INSECT_MOVE_COST,
     INSECT_WANDER_CHANCE,
 } from '../../../constants';
-import { findCellForFlowerSpawn } from '../../simulationUtils';
+import { findCellForFlowerSpawn, scoreFlower } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 
@@ -54,7 +54,8 @@ export class ButterflyBehavior extends InsectBehavior {
     private handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         // Butterflies don't eat or damage flowers, they only interact for pollination.
         this.handlePollination(insect, flower, context);
-        insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id };
+        const pollenScore = scoreFlower(insect, flower);
+        insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
     }
     
     private handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
