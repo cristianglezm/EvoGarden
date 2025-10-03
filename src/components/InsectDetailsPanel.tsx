@@ -32,6 +32,7 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
     const isTrackingThisInsect = trackedActorId && trackedActorId === insect.id;
     const isCaterpillar = insect.emoji === '🐛';
     const isHoneybee = insect.emoji === '🐝';
+    const isAnt = insect.emoji === '🐜';
     const actorName = ACTOR_NAMES[insect.emoji] || (insect.type === 'cockroach' ? 'Cockroach' : 'Insect');
 
     return (
@@ -108,11 +109,15 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
                         <p><strong>Carrying Pollen:</strong> No</p>
                     )}
                     <p><strong>Reproduction Cooldown:</strong> {insect.reproductionCooldown || 0} ticks</p>
-                    {isHoneybee && (
+                    {(isHoneybee || isAnt) && (
                         <>
-                            <p><strong>Hive ID:</strong> {(insect as Insect).hiveId || 'N/A'}</p>
-                             <p><strong>Behavior:</strong> <span className="capitalize">{(insect as Insect).behaviorState?.replace('_', ' ') || 'Idle'}</span></p>
+                            {isHoneybee && <p><strong>Hive ID:</strong> {(insect as Insect).hiveId || 'N/A'}</p>}
+                            {isAnt && <p><strong>Colony ID:</strong> {(insect as Insect).colonyId || 'N/A'}</p>}
+                             <p><strong>Behavior:</strong> <span className="capitalize">{(insect as Insect).behaviorState?.replace(/_/g, ' ') || 'Idle'}</span></p>
                         </>
+                    )}
+                    {isAnt && (insect as Insect).carriedItem && (
+                        <p><strong>Carrying:</strong> <span className="capitalize">{(insect as Insect).carriedItem!.type}</span> (Value: {(insect as Insect).carriedItem!.value})</p>
                     )}
                 </div>
             </div>

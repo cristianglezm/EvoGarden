@@ -61,6 +61,13 @@ export interface SimulationParams {
     territoryMarkLifespan: number;
     signalTTL: number;
     beePollinationWanderChance: number;
+    // Ant Colony Parameters
+    colonyGridArea: number;
+    antDormancyTemp: number;
+    antColonySpawnThreshold: number;
+    antColonySpawnCost: number;
+    pheromoneLifespan: number;
+    pheromoneStrengthDecay: number;
 }
 
 export interface Coord {
@@ -104,8 +111,11 @@ export interface TickSummary {
     snailCount: number;
     beeCount: number;
     scorpionCount: number;
+    antCount: number;
     hiveCount: number;
+    colonyCount: number;
     totalHoney: number;
+    totalAntFood: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative

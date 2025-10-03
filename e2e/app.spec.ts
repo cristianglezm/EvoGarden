@@ -232,6 +232,33 @@ test.describe('Global Search', () => {
     });
 });
 
+test.describe('Ant Colony Simulation', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup a specific scenario for ant testing
+    const controls = new ControlPanelController(page);
+    await controls.open();
+    await controls.getInsectsInput().fill('20'); // More insects to create corpses
+    await controls.getBirdsInput().fill('5'); // Birds to create corpses
+    await controls.getApplyAndReset().click();
+  });
+
+  test('should allow setting ant colony parameters', async ({ page }) => {
+    const controls = new ControlPanelController(page);
+    await controls.open();
+    await controls.openHiveColonyRulesSection();
+
+    await controls.getColonyGridAreaInput().fill('8');
+    await controls.getAntDormancyTempInput().fill('5');
+    await controls.getAntColonySpawnThresholdInput().fill('150');
+    await controls.getAntColonySpawnCostInput().fill('30');
+    await controls.getPheromoneLifespanInput().fill('250');
+    await controls.getPheromoneStrengthDecayInput().fill('0.08');
+    
+    await expect(controls.getColonyGridAreaInput()).toHaveValue('8');
+
+    await controls.getApplyAndReset().click();
+  });
+});
 
 test.describe('Full Environment Parameter Test', () => {
   test('should set Flower Detail multiplier', async ({ page }) => {
@@ -268,6 +295,12 @@ test.describe('Full Environment Parameter Test', () => {
     await controls.getTerritoryMarkLifespanInput().fill('150');
     await controls.getSignalTTLInput().fill('15');
     await controls.getBeePollinationWanderChanceInput().fill('0.3');
+    await controls.getColonyGridAreaInput().fill('8');
+    await controls.getAntDormancyTempInput().fill('5');
+    await controls.getAntColonySpawnThresholdInput().fill('150');
+    await controls.getAntColonySpawnCostInput().fill('30');
+    await controls.getPheromoneLifespanInput().fill('250');
+    await controls.getPheromoneStrengthDecayInput().fill('0.08');
 
     // Open closed sections and set values
     await controls.openEcosystemRulesSection();
