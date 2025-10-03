@@ -1,5 +1,6 @@
 import type { Egg, CellContent, Insect, AppEvent, SimulationParams } from '../../types';
 import { INSECT_DATA } from '../../constants';
+import { ACTOR_NAMES } from '../../utils';
 
 interface EggContext {
     nextActorState: Map<string, CellContent>;
@@ -21,7 +22,8 @@ export const processEggTick = (egg: Egg, context: EggContext) => {
             return;
         }
 
-        const newInsectId = `insect-${egg.x}-${egg.y}-${Date.now()}`;
+        const typeName = (ACTOR_NAMES[egg.insectEmoji] || 'insect').toLowerCase();
+        const newInsectId = `insect-${typeName}-${egg.x}-${egg.y}-${Date.now()}`;
         const newInsect: Insect = {
             id: newInsectId,
             type: 'insect',

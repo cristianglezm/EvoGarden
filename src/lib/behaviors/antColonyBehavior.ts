@@ -12,7 +12,7 @@ interface AntColonyContext {
 
 function createAntFromColony(colony: AntColony, position: {x: number, y: number}, params: SimulationParams): Insect {
     const baseStats = INSECT_DATA.get('🐜')!;
-    const newAntId = `insect-${position.x}-${position.y}-${Date.now()}`;
+    const newAntId = `insect-ant-${position.x}-${position.y}-${Date.now()}`;
     
     // Inherit from colony, with mutation
     const newGenome = [...colony.genome];

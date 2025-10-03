@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Trie } from '../lib/Trie';
 import type { CellContent } from '../types';
 import { SearchIcon, XIcon } from './icons';
+import { getShortId } from '../utils';
 
 interface GlobalSearchProps {
     actors: Map<string, CellContent>;
@@ -100,7 +101,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
              <div className="relative font-mono flex items-center">
                 <input
                     type="text"
-                    value={`Tracking: ${trackedActorId.substring(7, 12)}`}
+                    value={`Tracking: ${getShortId(trackedActorId)}`}
                     disabled
                     className="bg-background text-xs rounded-l-md pl-2 pr-2 py-1 w-48 text-accent-yellow shadow-[inset_0_1px_1px_0_#000]"
                     aria-label="Currently tracking actor"
