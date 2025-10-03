@@ -1,4 +1,4 @@
-import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Insect } from '../types';
+import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Insect, Hive } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { INSECT_DATA } from '../constants';
 
@@ -55,7 +55,8 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
 
     for (let i = 0; i < initialInsects; i++) {
         const id = `insect-init-${i}`;
-        const emoji = getInsectEmoji(id);
+        // Exclude bees from the initial random population pool. They will be spawned by hives.
+        const emoji = getInsectEmoji(id, ['🐝']);
         const baseStats = INSECT_DATA.get(emoji);
         
         if (baseStats) {
@@ -76,4 +77,54 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
     }
 
     return actors;
+};
+
+export const initializeHivesAndBees = (actors: CellContent[], params: SimulationParams) => {
+    const { gridWidth, gridHeight, hiveGridArea, hiveSpawnThreshold, hiveSpawnCost } = params;
+    const hives: Hive[] = [];
+    const bees = actors.filter(a => a.type === 'insect' && (a as Insect).emoji === '🐝') as Insect[];
+
+    let hiveCounter = 1;
+
+    for (let y = 0; y < gridHeight; y += hiveGridArea) {
+        for (let x = 0; x < gridWidth; x += hiveGridArea) {
+            const hiveX = x + Math.floor(Math.random() * hiveGridArea);
+            const hiveY = y + Math.floor(Math.random() * hiveGridArea);
+
+            if (hiveX < gridWidth && hiveY < gridHeight) {
+                const hiveId = `hive-${hiveCounter}`;
+                const newHive: Hive = {
+                    id: hiveId,
+                    type: 'hive',
+                    x: hiveX,
+                    y: hiveY,
+                    hiveId: String(hiveCounter),
+                    honey: hiveSpawnThreshold + (2 * hiveSpawnCost),
+                    pollen: 0,
+                    spawnCooldown: 0,
+                    genome: generateRandomInsectGenome(),
+                    storedBees: 0,
+                };
+                hives.push(newHive);
+                actors.push(newHive); // Modifies the array in place
+                hiveCounter++;
+            }
+        }
+    }
+    
+    // Assign bees to the nearest hive. forEach is safe on an empty array.
+    bees.forEach(bee => {
+        let closestHive: Hive | null = null;
+        let minDistance = Infinity;
+        for (const hive of hives) {
+            const distance = Math.hypot(bee.x - hive.x, bee.y - hive.y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestHive = hive;
+            }
+        }
+        if (closestHive) {
+            bee.hiveId = closestHive.hiveId;
+        }
+    });
 };

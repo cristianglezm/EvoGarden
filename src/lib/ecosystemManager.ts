@@ -1,7 +1,7 @@
-import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower, Egg } from '../types';
+import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower, Egg, TerritoryMark } from '../types';
 import { Quadtree, Rectangle } from './Quadtree';
 import { FLOWER_NUTRIENT_HEAL, MUTATION_CHANCE, MUTATION_AMOUNT, INSECT_DATA, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
-import { findCellForStationaryActor } from './simulationUtils';
+import { findCellForStationaryActor, neighborVectors } from './simulationUtils';
 
 export const processNutrientHealing = (nextActorState: Map<string, CellContent>, qtree: Quadtree<CellContent>): void => {
     const nutrientsToProcess = Array.from(nextActorState.values()).filter(a => a.type === 'nutrient') as Nutrient[];
@@ -22,6 +22,47 @@ export const processNutrientHealing = (nextActorState: Map<string, CellContent>,
         }
     }
 };
+
+export const propagateSignal = (startMark: TerritoryMark, nextActorState: Map<string, CellContent>, params: SimulationParams) => {
+    if (!startMark.signal || startMark.signal.ttl <= 0) return;
+
+    const queue: { mark: TerritoryMark; ttl: number }[] = [{ mark: startMark, ttl: startMark.signal.ttl }];
+    const visited = new Set<string>([startMark.id]);
+
+    while (queue.length > 0) {
+        const { mark, ttl } = queue.shift()!;
+
+        // Update the current mark with the signal, creating a new object
+        // to avoid reference sharing issues.
+        mark.signal = {
+            type: startMark.signal.type,
+            origin: startMark.signal.origin,
+            ttl: ttl,
+        };
+
+        if (ttl > 0) {
+            for (const [dx, dy] of neighborVectors) {
+                const nx = mark.x + dx;
+                const ny = mark.y + dy;
+
+                if (nx >= 0 && nx < params.gridWidth && ny >= 0 && ny < params.gridHeight) {
+                    const neighborActors = Array.from(nextActorState.values()).filter(a => a.x === nx && a.y === ny);
+                    for (const actor of neighborActors) {
+                        if (actor.type === 'territoryMark' && (actor as TerritoryMark).hiveId === startMark.hiveId && !visited.has(actor.id)) {
+                            const neighborMark = actor as TerritoryMark;
+                            // Check if the neighbor already has this signal or a stronger one
+                            if (!neighborMark.signal || (neighborMark.signal.type === startMark.signal.type && neighborMark.signal.ttl < ttl - 1)) {
+                                visited.add(neighborMark.id);
+                                queue.push({ mark: neighborMark, ttl: ttl - 1 });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+
 
 const createOffspringGenome = (genome1: number[], genome2: number[]): number[] => {
     const newGenome = genome1.map((gene, i) => {
@@ -59,6 +100,8 @@ export const handleInsectReproduction = (
     for (const actor of nextActorState.values()) {
         if (actor.type === 'insect') {
             const insect = actor as Insect;
+            // Honeybees do not reproduce directly; the hive does.
+            if (insect.emoji === '🐝') continue;
             insectQtree.insert({ x: insect.x, y: insect.y, data: insect });
             allInsects.push(insect);
         }

@@ -60,6 +60,8 @@ export interface AnalyticsDataPoint {
     snails: number;
     bees: number;
     scorpionCount: number;
+    hiveCount: number;
+    totalHoney: number;
     reproductions: number;
     insectsEaten: number;
     eggsLaid: number;

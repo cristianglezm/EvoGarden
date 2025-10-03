@@ -258,6 +258,17 @@ test.describe('Full Environment Parameter Test', () => {
     await controls.getInsectsInput().fill('5');
     await controls.getBirdsInput().fill('3');
 
+    await controls.openHiveColonyRulesSection();
+    await controls.getHiveGridAreaInput().fill('12');
+    await controls.getBeeDormancyTempInput().fill('8');
+    await controls.getWinterHoneyUseInput().fill('0.02');
+    await controls.getPollenToHoneyInput().fill('0.6');
+    await controls.getHiveSpawnThresholdInput().fill('120');
+    await controls.getHiveSpawnCostInput().fill('25');
+    await controls.getTerritoryMarkLifespanInput().fill('150');
+    await controls.getSignalTTLInput().fill('15');
+    await controls.getBeePollinationWanderChanceInput().fill('0.3');
+
     // Open closed sections and set values
     await controls.openEcosystemRulesSection();
     await controls.getHerbicideDamageInput().fill('30');

@@ -77,7 +77,7 @@ describe('ButterflyBehavior', () => {
         
         const flowerState = nextActorState.get(flower.id) as Flower;
         expect(flowerState.health).toBe(initialFlowerHealth); // No damage
-        expect(butterfly.pollen).toEqual({ genome: flower.genome, sourceFlowerId: flower.id });
+        expect(butterfly.pollen).toEqual({ genome: flower.genome, sourceFlowerId: flower.id, score: expect.any(Number) });
     });
 
     it('should pollinate a different mature flower', () => {
@@ -87,7 +87,7 @@ describe('ButterflyBehavior', () => {
         grid[5][5].push(targetFlower);
         nextActorState.set(targetFlower.id, targetFlower);
         
-        butterfly.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
+        butterfly.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
         
         const context = setupContext();
         behavior.update(butterfly, context);

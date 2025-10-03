@@ -2,7 +2,6 @@ import type { Insect, SimulationParams, Grid, CellContent, AppEvent, Cockroach }
 import { Quadtree } from '../Quadtree';
 import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
 import { InsectBehavior } from './base/InsectBehavior';
-import { DefaultInsectBehavior } from './specialized/DefaultInsectBehavior';
 import { CockroachBehavior } from './specialized/CockroachBehavior';
 import { CaterpillarBehavior } from './specialized/CaterpillarBehavior';
 import { ButterflyBehavior } from './specialized/ButterflyBehavior';
@@ -10,6 +9,7 @@ import { BeetleBehavior } from './specialized/BeetleBehavior';
 import { LadybugBehavior } from './specialized/LadybugBehavior';
 import { SnailBehavior } from './specialized/SnailBehavior';
 import { ScorpionBehavior } from './specialized/ScorpionBehavior';
+import { HoneybeeBehavior } from './specialized/HoneybeeBehavior';
 
 // The context object passed to each behavior's update method
 export interface InsectBehaviorContext {
@@ -31,7 +31,7 @@ const behaviorMap: Map<string, InsectBehavior> = new Map<string, InsectBehavior>
     ['🐛', new CaterpillarBehavior()],
     ['🐌', new SnailBehavior()],
     ['🐞', new LadybugBehavior()],
-    ['🐝', new DefaultInsectBehavior()],
+    ['🐝', new HoneybeeBehavior()],
     ['🪳', new CockroachBehavior()],
     ['🪲', new BeetleBehavior()],
     ['🦂', new ScorpionBehavior()],
