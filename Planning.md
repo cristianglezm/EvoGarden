@@ -31,10 +31,12 @@ Define the core data structures for the simulation state.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
-    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, a `moveCooldown` (for snails), and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files. It also includes properties for social insects: `hiveId`, `isReturningToHive`, and a `behaviorState`.
+    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, a `moveCooldown` (for snails), and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files. It also includes properties for social insects: `hiveId`, `colonyId`, `isReturningToHive`, `carriedItem`, and a `behaviorState`.
     -   `InsectStats`: A new interface defining the base stats for each insect type (`attack`, `maxHealth`, `maxStamina`, `speed`, `role`, `eggHatchTime`, `reproductionCost`).
     -   `Hive`: A stationary actor representing a bee colony, with properties for `honey` and `pollen` reserves and a `spawnCooldown`.
+    -   `AntColony`: A stationary actor representing an ant colony, with properties for `foodReserves`, `spawnCooldown`, a genetic `genome` for pollen preference, and a count of `storedAnts`.
     -   `TerritoryMark`: An invisible, temporary actor left by bees, which includes a `lifespan` and an optional `Signal`.
+    -   `PheromoneTrail`: An invisible, temporary actor left by ants, with properties for `lifespan`, `strength`, and an optional `Signal`.
     -   `Signal`: A message that can be attached to a `TerritoryMark`, with a `type` (e.g., `UNDER_ATTACK`) and a `ttl` (time-to-live).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
@@ -63,7 +65,7 @@ Define the core data structures for the simulation state.
 
 To promote flexibility and ensure saved states are perfectly reproducible, core simulation logic parameters should not be hardcoded as constants.
 
--   **Centralized in `SimulationParams`**: Constants like `FLOWER_TICK_COST_MULTIPLIER`, `EGG_HATCH_TIME`, `INSECT_REPRODUCTION_CHANCE`, etc., should be properties of the `SimulationParams` object.
+-   **Centralized in `SimulationParams`**: Constants like `FLOWER_TICK_COST_MULTIPLIER`, `EGG_HATCH_TIME`, `INSECT_REPRODUCTION_CHANCE`, etc., should be properties of the `SimulationParams` object. This includes all hive and ant colony parameters like `hiveGridArea`, `antColonySpawnThreshold`, `pheromoneLifespan`, and `pheromoneStrengthDecay`.
 -   **Default Configuration**: A `DEFAULT_SIM_PARAMS` object will be defined in `src/constants.ts` to provide the initial state.
 -   **Benefits**: This approach allows for easy tweaking from the UI (e.g., creating "easy" or "hard" modes) and ensures that when a state is saved and loaded, it runs with the exact same rules, preventing inconsistencies.
 
@@ -142,6 +144,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **`ScorpionBehavior`**: Implements a predator AI for Scorpions (`🦂`). They are ground-based hunters with a prey preference list (e.g., beetles, snails, cockroaches).
         -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
         -   **`HoneybeeBehavior`**: A state-driven AI for social bees. Manages states like `seeking_food`, `returning_to_hive`, and `hunting`. Bees interact with their assigned `Hive` to deposit pollen. They leave `TerritoryMark` actors as they move, which can be used to detect rival bees or propagate signals.
+        -   **`AntBehavior`**: A state-driven AI for social ants. Manages states like `seeking_food` and `returning_to_colony`. Ants search for food (prioritizing corpses), carry it back, and leave pheromone trails.
 
     -   `birdBehavior`: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey. The prey priority is: unprotected insects, then defenseless cocoons, and finally stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
@@ -170,7 +173,9 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   `slimeTrailBehavior`: Decrements a `lifespan` timer and is removed when it expires.
     
     -   `hiveBehavior`: A stationary actor that converts stored pollen into honey and spawns new bees when resources are sufficient.
+    -   `antColonyBehavior`: A stationary actor that converts stored food into new ants and manages stored ants during dormancy.
     -   `territoryMarkBehavior`: A temporary, invisible actor that decays over time. It can hold a `Signal` which also has a time-to-live (`ttl`).
+    -   `pheromoneTrailBehavior`: A temporary, invisible actor that decays over time. Its `strength` also decays, guiding other ants.
 
 -   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 
@@ -249,6 +254,9 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
     -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, `slimeTrailBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
+    -   `src/lib/behaviors/antColonyBehavior.ts`: The behavior for Ant Colonies.
+    -   `src/lib/behaviors/pheromoneTrailBehavior.ts`: The behavior for Pheromone Trails.
+    -   `src/lib/behaviors/specialized/AntBehavior.ts`: The specialized behavior for Ants.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.

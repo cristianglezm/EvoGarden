@@ -1,4 +1,4 @@
-import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Insect, Hive } from '../types';
+import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Insect, Hive, AntColony } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { INSECT_DATA } from '../constants';
 
@@ -55,8 +55,8 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
 
     for (let i = 0; i < initialInsects; i++) {
         const id = `insect-init-${i}`;
-        // Exclude bees from the initial random population pool. They will be spawned by hives.
-        const emoji = getInsectEmoji(id, ['🐝']);
+        // Exclude bees and ants from the initial random population pool. They will be spawned by hives/colonies.
+        const emoji = getInsectEmoji(id, ['🐝', '🐜']);
         const baseStats = INSECT_DATA.get(emoji);
         
         if (baseStats) {
@@ -125,6 +125,56 @@ export const initializeHivesAndBees = (actors: CellContent[], params: Simulation
         }
         if (closestHive) {
             bee.hiveId = closestHive.hiveId;
+        }
+    });
+};
+
+export const initializeAntColonies = (actors: CellContent[], params: SimulationParams) => {
+    const { gridWidth, gridHeight, colonyGridArea, antColonySpawnThreshold, antColonySpawnCost } = params;
+    const colonies: AntColony[] = [];
+    const ants = actors.filter(a => a.type === 'insect' && (a as Insect).emoji === '🐜') as Insect[];
+
+    let colonyCounter = 1;
+
+    // Create colonies on a grid, similar to hives
+    for (let y = 0; y < gridHeight; y += colonyGridArea) {
+        for (let x = 0; x < gridWidth; x += colonyGridArea) {
+            const colonyX = x + Math.floor(Math.random() * colonyGridArea);
+            const colonyY = y + Math.floor(Math.random() * colonyGridArea);
+
+            if (colonyX < gridWidth && colonyY < gridHeight) {
+                const colonyId = `colony-${colonyCounter}`;
+                const newColony: AntColony = {
+                    id: colonyId,
+                    type: 'antColony',
+                    x: colonyX,
+                    y: colonyY,
+                    colonyId: String(colonyCounter),
+                    foodReserves: antColonySpawnThreshold + (2 * antColonySpawnCost),
+                    spawnCooldown: 0,
+                    genome: generateRandomInsectGenome(), // For pollen preference
+                    storedAnts: 0,
+                };
+                colonies.push(newColony);
+                actors.push(newColony); // Modifies the array in place
+                colonyCounter++;
+            }
+        }
+    }
+    
+    // Assign any pre-existing ants to the nearest colony.
+    ants.forEach(ant => {
+        let closestColony: AntColony | null = null;
+        let minDistance = Infinity;
+        for (const colony of colonies) {
+            const distance = Math.hypot(ant.x - colony.x, ant.y - colony.y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestColony = colony;
+            }
+        }
+        if (closestColony) {
+            ant.colonyId = closestColony.colonyId;
         }
     });
 };
