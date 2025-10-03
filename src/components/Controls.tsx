@@ -27,7 +27,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount', 'beeWinterHoneyConsumption', 'hivePollenToHoneyRatio', 'beePollinationWanderChance'].includes(name);
+        const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount', 'beeWinterHoneyConsumption', 'hivePollenToHoneyRatio', 'beePollinationWanderChance', 'pheromoneStrengthDecay'].includes(name);
         const isString = ['windDirection', 'notificationMode'].includes(name);
         
         setLocalParams(prev => {
@@ -204,6 +204,33 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         <span className="text-secondary text-sm">Pollination Wander: {Math.round(localParams.beePollinationWanderChance * 100)}%</span>
                         <input type="range" name="beePollinationWanderChance" id="beePollinationWanderChance" min="0" max="1" step="0.01" value={localParams.beePollinationWanderChance} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
+                    <div className="pt-3 mt-3 border-t border-border/50">
+                        <h4 className="text-md font-semibold text-primary-light/70 mb-2">Ants</h4>
+                        <label className="block" htmlFor="colonyGridArea">
+                            <span className="text-secondary text-sm">Colony Grid Area: {localParams.colonyGridArea}x{localParams.colonyGridArea}</span>
+                            <input type="range" name="colonyGridArea" id="colonyGridArea" min="5" max="20" value={localParams.colonyGridArea} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        </label>
+                        <label className="block" htmlFor="antDormancyTemp">
+                            <span className="text-secondary text-sm">Ant Dormancy Temp: {localParams.antDormancyTemp}°C</span>
+                            <input type="range" name="antDormancyTemp" id="antDormancyTemp" min="0" max="20" value={localParams.antDormancyTemp} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        </label>
+                        <label className="block" htmlFor="antColonySpawnThreshold">
+                            <span className="text-secondary text-sm">Colony Spawn Threshold: {localParams.antColonySpawnThreshold} food</span>
+                            <input type="range" name="antColonySpawnThreshold" id="antColonySpawnThreshold" min="20" max="200" step="10" value={localParams.antColonySpawnThreshold} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        </label>
+                        <label className="block" htmlFor="antColonySpawnCost">
+                            <span className="text-secondary text-sm">Colony Spawn Cost: {localParams.antColonySpawnCost} food</span>
+                            <input type="range" name="antColonySpawnCost" id="antColonySpawnCost" min="10" max="100" step="5" value={localParams.antColonySpawnCost} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        </label>
+                        <label className="block" htmlFor="pheromoneLifespan">
+                            <span className="text-secondary text-sm">Pheromone Lifespan: {localParams.pheromoneLifespan} ticks</span>
+                            <input type="range" name="pheromoneLifespan" id="pheromoneLifespan" min="50" max="500" step="10" value={localParams.pheromoneLifespan} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        </label>
+                        <label className="block" htmlFor="pheromoneStrengthDecay">
+                            <span className="text-secondary text-sm">Pheromone Decay Rate: {(localParams.pheromoneStrengthDecay * 100).toFixed(1)}%</span>
+                            <input type="range" name="pheromoneStrengthDecay" id="pheromoneStrengthDecay" min="0.01" max="0.2" step="0.01" value={localParams.pheromoneStrengthDecay} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                        </label>
+                    </div>
                 </CollapsibleSection>
 
                 <CollapsibleSection title="Ecosystem Rules" defaultOpen={false}>

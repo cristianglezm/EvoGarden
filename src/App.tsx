@@ -440,6 +440,8 @@ export default function App(): React.ReactNode {
             case 'cocoon':
             case 'hive':
             case 'territoryMark':
+            case 'antColony':
+            case 'pheromoneTrail':
                 return <GenericActorDetailsPanel 
                             actor={selectedActor} 
                             onClose={() => handleActorSelection(null)}
