@@ -3,6 +3,8 @@ import { ControlPanelController } from './controllers/ControlPanelController';
 import { FlowerPanelController } from './controllers/FlowerPanelController';
 import { DataPanelController } from './controllers/DataPanelController';
 import { EventLogPanelController } from './controllers/EventLogPanelController';
+import { GlobalSearchController } from './controllers/GlobalSearchController';
+import { InsectDetailsPanelController } from './controllers/InsectDetailsPanelController';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -189,6 +191,88 @@ test.describe('Canvas and Flower Details Panel', () => {
   });
 });
 
+test.describe('Global Search', () => {
+    test('should find, highlight, and then track an actor by its ID', async ({ page }) => {
+        const controls = new ControlPanelController(page);
+        const actors = new FlowerPanelController(page); // Generic actor selector
+        const search = new GlobalSearchController(page);
+        const insects = new InsectDetailsPanelController(page);
+
+        // 1. Run simulation to ensure there are insects
+        await controls.runSimulation(3);
+
+        // 2. Select an insect to get its ID
+        const selected = await actors.selectActor('insect');
+        expect(selected).toBe(true);
+        
+        await insects.waitForPanel();
+        const insectId = await insects.getActorId();
+        const partialId = insectId.substring(0, 10);
+        
+        // 3. Close the details panel to start fresh
+        await insects.closePanel();
+        await expect(insects.panel).not.toBeVisible();
+
+        // 4. Search for the insect using its partial ID
+        await search.searchFor(partialId);
+
+        // 5. Select the suggestion, which should highlight it and open the panel
+        await search.selectSuggestion(insectId);
+
+        // 6. Verify that the details panel is now visible (highlighted)
+        await insects.waitForPanel();
+        const highlightedId = await insects.getActorId();
+        expect(highlightedId).toBe(insectId);
+
+        // 7. Click the track button to start tracking
+        await search.clickTrackButton();
+
+        // 8. Verify it's in tracking mode
+        const getShortId = (id: string): string => {
+            const parts = id.split('-');
+            if (parts.length > 2) {
+                const dataParts = parts.slice(1, parts.length - 1);
+                const timestamp = parts[parts.length - 1];
+                if (!isNaN(parseInt(timestamp, 10))) {
+                    return `${dataParts.join('-')}-${timestamp.slice(-2)}`;
+                }
+            }
+            return id.slice(-5);
+        };
+        const trackingInput = page.getByLabel('Currently tracking actor');
+        await expect(trackingInput).toBeVisible();
+        await expect(trackingInput).toHaveValue(`Tracking: ${getShortId(insectId)}`);
+    });
+});
+
+test.describe('Ant Colony Simulation', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup a specific scenario for ant testing
+    const controls = new ControlPanelController(page);
+    await controls.open();
+    await controls.getInsectsInput().fill('20'); // More insects to create corpses
+    await controls.getBirdsInput().fill('5'); // Birds to create corpses
+    await controls.getApplyAndReset().click();
+  });
+
+  test('should allow setting ant colony parameters', async ({ page }) => {
+    const controls = new ControlPanelController(page);
+    await controls.open();
+    await controls.openHiveColonyRulesSection();
+
+    await controls.getColonyGridAreaInput().fill('8');
+    await controls.getAntDormancyTempInput().fill('5');
+    await controls.getAntColonySpawnThresholdInput().fill('150');
+    await controls.getAntColonySpawnCostInput().fill('30');
+    await controls.getPheromoneLifespanInput().fill('250');
+    await controls.getPheromoneStrengthDecayInput().fill('0.08');
+    
+    await expect(controls.getColonyGridAreaInput()).toHaveValue('8');
+
+    await controls.getApplyAndReset().click();
+  });
+});
+
 test.describe('Full Environment Parameter Test', () => {
   test('should set Flower Detail multiplier', async ({ page }) => {
     const controls = new ControlPanelController(page);
@@ -200,15 +284,56 @@ test.describe('Full Environment Parameter Test', () => {
   test('should set all parameters and apply', async ({ page }) => {
     const controls = new ControlPanelController(page);
     await controls.open();
+
+    // World Parameters
     await controls.getGridWidthInput().fill('15');
     await controls.getGridHeightInput().fill('15');
     await controls.getTemperatureInput().fill('20');
     await controls.getHumidityInput().fill('0.5');
     await controls.setWindDirection('NE');
     await controls.getWindStrengthInput().fill('5');
+    
+    // Initial Population
     await controls.getFlowersInput().fill('10');
     await controls.getInsectsInput().fill('5');
     await controls.getBirdsInput().fill('3');
+
+    await controls.openHiveColonyRulesSection();
+    await controls.getHiveGridAreaInput().fill('12');
+    await controls.getBeeDormancyTempInput().fill('8');
+    await controls.getWinterHoneyUseInput().fill('0.02');
+    await controls.getPollenToHoneyInput().fill('0.6');
+    await controls.getHiveSpawnThresholdInput().fill('120');
+    await controls.getHiveSpawnCostInput().fill('25');
+    await controls.getTerritoryMarkLifespanInput().fill('150');
+    await controls.getSignalTTLInput().fill('15');
+    await controls.getBeePollinationWanderChanceInput().fill('0.3');
+    await controls.getColonyGridAreaInput().fill('8');
+    await controls.getAntDormancyTempInput().fill('5');
+    await controls.getAntColonySpawnThresholdInput().fill('150');
+    await controls.getAntColonySpawnCostInput().fill('30');
+    await controls.getPheromoneLifespanInput().fill('250');
+    await controls.getPheromoneStrengthDecayInput().fill('0.08');
+
+    // Open closed sections and set values
+    await controls.openEcosystemRulesSection();
+    await controls.getHerbicideDamageInput().fill('30');
+    await controls.getHerbicideCooldownInput().fill('100');
+    await controls.getHerbicideThresholdInput().fill('0.8');
+
+    await controls.openEvolutionReproductionSection();
+    await controls.getReproductionCooldownInput().fill('5');
+    await controls.getMutationChanceInput().fill('0.1');
+    await controls.getMutationAmountInput().fill('0.25');
+
+    await controls.openWeatherEventsSection();
+    await controls.getWeatherEventChanceInput().fill('0.01');
+    await controls.getWeatherMinDurationInput().fill('25');
+    await controls.getWeatherMaxDurationInput().fill('55');
+
+    await controls.openGraphicsUISection();
+    await controls.setNotificationMode('log');
+
     await controls.getApplyAndReset().click();
   });
 });

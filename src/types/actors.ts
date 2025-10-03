@@ -1,8 +1,8 @@
-
 import type { Coord } from './base';
 
 export interface Actor extends Coord {
     id: string;
+    emoji?: string;
 }
 
 // Raw genetic effects from WASM
@@ -57,15 +57,88 @@ export interface FlowerSeed extends Actor {
     age: number;
 }
 
+export interface InsectStats {
+    attack: number;
+    maxHealth: number;
+    maxStamina: number;
+    speed: number;
+    role: 'pollinator' | 'attacker' | 'tank' | 'hunter' | 'balanced' | 'scavenger' | 'support' | 'colony-builder';
+    eggHatchTime: number;
+    reproductionCost: number; // stamina cost
+}
+
+export type InsectBehaviorState = 'seeking_food' | 'returning_to_hive' | 'hunting' | 'patrolling' | 'idle' | 'collecting' | 'depositing' | 'returning_to_colony';
+
 export interface Insect extends Actor {
     type: 'insect';
     pollen: {
         genome: string;
         sourceFlowerId: string;
-    } | null; // Genome and source ID of last visited flower
+        score: number;
+    } | null;
     emoji: string;
-    lifespan: number;
+    health: number;
+    maxHealth: number;
+    stamina: number;
+    maxStamina: number;
+    genome: number[];
+    lifespan?: number; // Kept for backwards compatibility with old saves
     reproductionCooldown?: number;
+    moveCooldown?: number; // For slow insects like snails
+    healthEaten?: number; // For caterpillars
+    isCarryingNutrient?: boolean; // For beetles
+    isHunting?: boolean; // For ladybugs, scorpions
+    targetId?: string; // For hunters
+    hiveId?: string; // For honeybees
+    colonyId?: string; // For ants
+    carriedItem?: {
+        type: 'corpse' | 'egg' | 'cocoon' | 'pollen';
+        value: number;
+    };
+    isReturningToHive?: boolean; // For honeybees
+    behaviorState?: InsectBehaviorState;
+}
+
+export type SignalType = 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND';
+
+export interface Signal {
+    type: SignalType;
+    origin: Coord;
+    ttl: number;
+}
+
+export interface TerritoryMark extends Actor {
+    type: 'territoryMark';
+    hiveId: string;
+    lifespan: number;
+    signal?: Signal;
+}
+
+export interface PheromoneTrail extends Actor {
+    type: 'pheromoneTrail';
+    colonyId: string;
+    lifespan: number;
+    strength: number; // For pathfinding
+    signal?: Signal;
+}
+
+export interface Hive extends Actor {
+    type: 'hive';
+    hiveId: string;
+    honey: number;
+    pollen: number;
+    spawnCooldown: number;
+    genome: number[];
+    storedBees?: number;
+}
+
+export interface AntColony extends Actor {
+    type: 'antColony';
+    colonyId: string;
+    foodReserves: number;
+    spawnCooldown: number;
+    genome: number[]; // Flower preference for pollen foraging
+    storedAnts?: number;
 }
 
 export interface Bird extends Actor {
@@ -88,6 +161,35 @@ export interface Egg extends Actor {
     type: 'egg';
     hatchTimer: number;
     insectEmoji: string;
+    genome: number[];
+}
+
+export interface Corpse extends Actor {
+    type: 'corpse';
+    originalEmoji: string;
+    decayTimer: number;
+}
+
+export interface Cocoon extends Actor {
+    type: 'cocoon';
+    hatchTimer: number;
+    butterflyGenome: number[];
+}
+
+export interface SlimeTrail extends Actor {
+    type: 'slimeTrail';
+    lifespan: number;
+}
+
+export interface Cockroach extends Actor {
+    type: 'cockroach';
+    health: number;
+    maxHealth: number;
+    stamina: number;
+    maxStamina: number;
+    genome: number[];
+    emoji: string;
+    reproductionCooldown?: number;
 }
 
 export interface HerbicidePlane extends Actor {
@@ -115,8 +217,8 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
-export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail | Hive | TerritoryMark | AntColony | PheromoneTrail;
+export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
 
 export type ActorAddDelta = {
     type: 'add';

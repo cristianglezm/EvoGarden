@@ -47,6 +47,27 @@ export interface SimulationParams {
     droughtHumidityDecrease: number;
     weatherEventMinDuration: number;
     weatherEventMaxDuration: number;
+    // Insect Evolution
+    reproductionCooldown: number;
+    mutationChance: number;
+    mutationAmount: number;
+    // Hive Parameters
+    hiveGridArea: number;
+    beeDormancyTemp: number;
+    beeWinterHoneyConsumption: number;
+    hivePollenToHoneyRatio: number;
+    hiveSpawnThreshold: number;
+    hiveSpawnCost: number;
+    territoryMarkLifespan: number;
+    signalTTL: number;
+    beePollinationWanderChance: number;
+    // Ant Colony Parameters
+    colonyGridArea: number;
+    antDormancyTemp: number;
+    antColonySpawnThreshold: number;
+    antColonySpawnCost: number;
+    pheromoneLifespan: number;
+    pheromoneStrengthDecay: number;
 }
 
 export interface Coord {
@@ -80,6 +101,21 @@ export interface TickSummary {
     eggCount: number;
     herbicidePlaneCount: number;
     herbicideSmokeCount: number;
+    corpseCount: number;
+    cockroachCount: number;
+    caterpillarCount: number;
+    butterflyCount: number;
+    cocoonCount: number;
+    beetleCount: number;
+    ladybugCount: number;
+    snailCount: number;
+    beeCount: number;
+    scorpionCount: number;
+    antCount: number;
+    hiveCount: number;
+    colonyCount: number;
+    totalHoney: number;
+    totalAntFood: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative
@@ -91,6 +127,7 @@ export interface TickSummary {
     eggsLaid: number;
     insectsBorn: number;
     eggsEaten: number;
+    cocoonsEaten: number;
     insectsDiedOfOldAge: number;
     avgHealth: number;
     avgStamina: number;
@@ -110,6 +147,8 @@ export interface TickSummary {
     season: Season;
     weatherEvent: WeatherEventType;
     pendingFlowerRequests: number;
+    healingFlowerCount: number;
+    toxicFlowerCount: number;
 }
 
 export interface FlowerCreationRequest {

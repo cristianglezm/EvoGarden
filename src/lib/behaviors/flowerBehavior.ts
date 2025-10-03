@@ -47,7 +47,7 @@ export const processFlowerTick = (
     }
 
     if (flower.health <= 0) {
-        // The engine will handle deletion by checking nextActorState map
+        nextActorState.delete(flower.id);
         return; 
     }
     

@@ -1,5 +1,5 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season } from '../types';
-import { getInsectEmoji } from '../utils';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail } from '../types';
+import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
@@ -9,11 +9,18 @@ import { processNutrientTick } from './behaviors/nutrientBehavior';
 import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
+import { processCorpseTick } from './behaviors/corpseBehavior';
+import { processCocoonTick } from './behaviors/cocoonBehavior';
+import { processSlimeTrailTick } from './behaviors/slimeTrailBehavior';
+import { processHiveTick } from './behaviors/hiveBehavior';
+import { processTerritoryMarkTick } from './behaviors/territoryMarkBehavior';
+import { processAntColonyTick } from './behaviors/antColonyBehavior';
+import { processPheromoneTrailTick } from './behaviors/pheromoneTrailBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
 import * as ecosystemManager from './ecosystemManager';
-import { DEFAULT_SIM_PARAMS, INSECT_LIFESPAN } from '../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA, TOXIC_FLOWER_THRESHOLD } from '../constants';
 import { Quadtree } from './Quadtree';
 import { updateEnvironment } from './environmentManager';
 
@@ -56,6 +63,7 @@ export class SimulationEngine {
     // Tick-specific counters
     private insectsEatenThisTick = 0;
     private eggsEatenThisTick = 0;
+    private cocoonsEatenThisTick = 0;
     private insectsDiedOfOldAgeThisTick = 0;
     private eggsLaidThisTick = 0;
     private insectsBornThisTick = 0;
@@ -120,7 +128,7 @@ export class SimulationEngine {
                 imageData: imageData,
                 sex: flower.sex,
             });
-            events.push({ message: `☠️ New champion saved! Most Toxic: ${(flower.toxicityRate * 100).toFixed(0)}%.`, type: 'success', importance: 'high' });
+            events.push({ message: `🏆 New champion saved! Most Toxic: ${(flower.toxicityRate * 100).toFixed(0)}%.`, type: 'success', importance: 'high' });
             newChampion = true;
         }
         
@@ -134,7 +142,7 @@ export class SimulationEngine {
                 imageData: imageData,
                 sex: flower.sex,
             });
-            events.push({ message: `🌿 New champion saved! Most Healing: ${(flower.toxicityRate * -100).toFixed(0)}%.`, type: 'success', importance: 'high' });
+            events.push({ message: `🏆 New champion saved! Most Healing: ${(flower.toxicityRate * -100).toFixed(0)}%.`, type: 'success', importance: 'high' });
             newChampion = true;
         }
 
@@ -180,6 +188,7 @@ export class SimulationEngine {
     private _resetTickCounters() {
         this.insectsEatenThisTick = 0;
         this.eggsEatenThisTick = 0;
+        this.cocoonsEatenThisTick = 0;
         this.insectsDiedOfOldAgeThisTick = 0;
         this.eggsLaidThisTick = 0;
         this.insectsBornThisTick = 0;
@@ -205,9 +214,11 @@ export class SimulationEngine {
         };
         const insectContext = {
             ...flowerContext,
+            qtree,
             flowerQtree,
             events,
             incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; },
+            newActorQueue,
         };
         
         for (const currentActor of actorsToProcess) {
@@ -218,7 +229,8 @@ export class SimulationEngine {
                 case 'bird':
                     processBirdTick(actor as Bird, { grid: this.grid, params: this.params, qtree, flowerQtree, nextActorState, events,
                         incrementInsectsEaten: () => { this.insectsEatenThisTick++; this.totalInsectsEaten++; },
-                        incrementEggsEaten: () => { this.eggsEatenThisTick++; }
+                        incrementEggsEaten: () => { this.eggsEatenThisTick++; },
+                        incrementCocoonsEaten: () => { this.cocoonsEatenThisTick++; },
                     });
                     break;
                 case 'eagle':
@@ -233,23 +245,41 @@ export class SimulationEngine {
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
                     break;
                 case 'insect':
-                    processInsectTick(actor as Insect, insectContext, newActorQueue);
+                case 'cockroach':
+                    processInsectTick(actor as Insect | Cockroach, insectContext);
                     break;
-                case 'flower': {
-                    const flower = actor as Flower;
-                    processFlowerTick(flower, flowerContext, newActorQueue);
-                    if (flower.health <= 0) nextActorState.delete(flower.id);
+                case 'flower':
+                    processFlowerTick(actor as Flower, flowerContext, newActorQueue);
                     break;
-                }
-                case 'flowerSeed': {
+                case 'flowerSeed':
                     processFlowerSeedTick(actor as FlowerSeed, flowerContext);
                     break;
-                }
                 case 'egg':
                     processEggTick(actor as Egg, { nextActorState, events, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params });
                     break;
                 case 'nutrient':
                     processNutrientTick(actor as Nutrient, { nextActorState });
+                    break;
+                case 'corpse':
+                    processCorpseTick(actor as Corpse, { nextActorState });
+                    break;
+                case 'cocoon':
+                    processCocoonTick(actor as Cocoon, { nextActorState, events });
+                    break;
+                case 'slimeTrail':
+                    processSlimeTrailTick(actor as SlimeTrail, { nextActorState });
+                    break;
+                case 'hive':
+                    processHiveTick(actor as Hive, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature });
+                    break;
+                case 'territoryMark':
+                    processTerritoryMarkTick(actor as TerritoryMark, { nextActorState });
+                    break;
+                case 'antColony':
+                    processAntColonyTick(actor as AntColony, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature });
+                    break;
+                case 'pheromoneTrail':
+                    processPheromoneTrailTick(actor as PheromoneTrail, { nextActorState, params: this.params });
                     break;
             }
         }
@@ -257,10 +287,14 @@ export class SimulationEngine {
     
     private _calculateTickSummary(nextActorState: Map<string, CellContent>, newFlowerCount: number, tickTimeMs: number): TickSummary {
         let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, eggCount = 0;
-        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0;
+        let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0, corpseCount = 0, cockroachCount = 0, cocoonCount = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
+        let healingFlowerCount = 0, toxicFlowerCount = 0;
+        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0, antCount = 0;
+        let hiveCount = 0, totalHoney = 0, colonyCount = 0, totalAntFood = 0;
+
 
         for (const actor of nextActorState.values()) {
             if (actor.type === 'flower') {
@@ -271,10 +305,33 @@ export class SimulationEngine {
                 maxToxicitySoFar = Math.max(maxToxicitySoFar, f.toxicityRate);
                 totalVitality += f.effects.vitality; totalAgility += f.effects.agility; totalStrength += f.effects.strength;
                 totalIntelligence += f.effects.intelligence; totalLuck += f.effects.luck;
+                if (f.toxicityRate < 0) {
+                    healingFlowerCount++;
+                } else if (f.toxicityRate > TOXIC_FLOWER_THRESHOLD) {
+                    toxicFlowerCount++;
+                }
             } else if (actor.type === 'flowerSeed') {
                 seedCount++;
             } else if (actor.type === 'insect') {
                 insectCount++;
+                const insect = actor as Insect;
+                if (insect.emoji === '🐛') {
+                    caterpillarCount++;
+                } else if (insect.emoji === '🦋') {
+                    butterflyCount++;
+                } else if (insect.emoji === '🪲') {
+                    beetleCount++;
+                } else if (insect.emoji === '🐞') {
+                    ladybugCount++;
+                } else if (insect.emoji === '🐌') {
+                    snailCount++;
+                } else if (insect.emoji === '🐝') {
+                    beeCount++;
+                } else if (insect.emoji === '🦂') {
+                    scorpionCount++;
+                } else if (insect.emoji === '🐜') {
+                    antCount++;
+                }
             } else if (actor.type === 'bird') {
                 birdCount++;
             } else if (actor.type === 'eagle') {
@@ -287,24 +344,46 @@ export class SimulationEngine {
                 herbicideSmokeCount++;
             } else if (actor.type === 'nutrient') {
                 nutrientCount++;
+            } else if (actor.type === 'corpse') {
+                corpseCount++;
+            } else if (actor.type === 'cockroach') {
+                cockroachCount++;
+            } else if (actor.type === 'cocoon') {
+                cocoonCount++;
+            } else if (actor.type === 'hive') {
+                hiveCount++;
+                totalHoney += (actor as Hive).honey;
+            } else if (actor.type === 'antColony') {
+                colonyCount++;
+                totalAntFood += (actor as AntColony).foodReserves;
             }
         }
 
         const flowerDensity = (flowerCountForStats + seedCount) / (this.params.gridWidth * this.params.gridHeight);
+        const totalInsectCount = insectCount + cockroachCount;
 
         return {
             tick: this.tick,
             flowerCount: flowerCountForStats + seedCount,
-            insectCount, birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount,
+            insectCount: totalInsectCount,
+            birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
+            caterpillarCount, butterflyCount, beetleCount, ladybugCount, snailCount, beeCount, scorpionCount,
+            antCount,
+            hiveCount,
+            colonyCount,
+            totalHoney,
+            totalAntFood,
             reproductions: newFlowerCount,
             insectsEaten: this.insectsEatenThisTick, totalInsectsEaten: this.totalInsectsEaten, maxFlowerAge,
             totalBirdsHunted: this.populationManager.totalBirdsHunted, totalHerbicidePlanesSpawned: this.populationManager.totalHerbicidePlanesSpawned,
             nutrientCount, flowerDensity,
             eggsLaid: this.eggsLaidThisTick, insectsBorn: this.insectsBornThisTick, eggsEaten: this.eggsEatenThisTick,
+            cocoonsEaten: this.cocoonsEatenThisTick,
             insectsDiedOfOldAge: this.insectsDiedOfOldAgeThisTick,
             avgHealth: flowerCountForStats > 0 ? totalHealth / flowerCountForStats : 0,
             avgStamina: flowerCountForStats > 0 ? totalStamina / flowerCountForStats : 0,
-            maxHealth: maxHealthSoFar, maxStamina: maxStaminaSoFar, maxToxicity: maxToxicitySoFar,
+            maxHealth: maxHealthSoFar, maxToxicity: maxToxicitySoFar,
+            maxStamina: maxStaminaSoFar,
             avgNutrientEfficiency: flowerCountForStats > 0 ? totalNutrientEfficiency / flowerCountForStats : 0,
             avgMaturationPeriod: flowerCountForStats > 0 ? totalMaturationPeriod / flowerCountForStats : 0,
             avgVitality: flowerCountForStats > 0 ? totalVitality / flowerCountForStats : 0,
@@ -318,6 +397,8 @@ export class SimulationEngine {
             season: this.environmentState.season,
             weatherEvent: this.environmentState.currentWeatherEvent.type,
             pendingFlowerRequests: this.asyncFlowerFactory.getPendingRequestCount(),
+            healingFlowerCount,
+            toxicFlowerCount,
         };
     }
     
@@ -377,10 +458,6 @@ export class SimulationEngine {
         return deltas;
     }
     
-    /**
-     * Enforces the rule that only one flower or seed can exist per cell.
-     * Iterates through the actor state and removes duplicates, keeping the first one encountered.
-     */
     private _resolveFlowerAndSeedConflicts(nextActorState: Map<string, CellContent>): void {
         const occupiedCells = new Set<string>(); // Stores "x,y" coordinates
         const actorIds = [...nextActorState.keys()]; // Use a copy of keys for safe iteration
@@ -425,9 +502,23 @@ export class SimulationEngine {
         // Spring Repopulation Logic
         if (previousSeason === 'Winter' && this.environmentState.season === 'Spring') {
             const flowerCount = Array.from(nextActorState.values()).filter(a => a.type === 'flower' || a.type === 'flowerSeed').length;
-            const insectCount = Array.from(nextActorState.values()).filter(a => a.type === 'insect').length;
+            const insectCount = Array.from(nextActorState.values()).filter(a => a.type === 'insect' || a.type === 'cockroach').length;
 
             if (flowerCount <= this.params.initialFlowers || insectCount <= this.params.initialInsects) {
+                // Boost hives at the start of spring
+                const hives = Array.from(nextActorState.values()).filter(a => a.type === 'hive') as Hive[];
+                if (hives.length > 0) {
+                    let boosted = false;
+                    for (const hive of hives) {
+                        // Top up all hives to give them a strong start for the new season.
+                        hive.honey = this.params.hiveSpawnThreshold + (2 * this.params.hiveSpawnCost);
+                        boosted = true;
+                    }
+                    if (boosted) {
+                         events.push({ message: '🛖 Spring has revitalized the dormant hives!', type: 'success', importance: 'high' });
+                    }
+                }
+
                 events.push({ message: '🌱 Spring has arrived, and new life stirs in the garden!', type: 'success', importance: 'high' });                          
                 const tempGridForPlacement = this.grid.map(row => row.map(cell => [...cell]));
                 
@@ -457,10 +548,22 @@ export class SimulationEngine {
                          const pos = findEmptyCell(tempGridForPlacement, this.params);
                          if (pos) {
                             const id = `insect-repop-${i}-${Date.now()}`;
-                            const emoji = getInsectEmoji(id);
-                            const newInsect: Insect = { id, type: 'insect', x: pos.x, y: pos.y, pollen: null, emoji, lifespan: INSECT_LIFESPAN };
-                            nextActorState.set(id, newInsect);
-                            tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                            // Exclude bees from random repopulation; they should only come from hives.
+                            const emoji = getInsectEmoji(id, ['🐝']);
+                            const baseStats = INSECT_DATA.get(emoji);
+                            if (baseStats) {
+                                const newInsect: Insect = { 
+                                    id, type: 'insect', x: pos.x, y: pos.y, 
+                                    pollen: null, emoji, 
+                                    genome: generateRandomInsectGenome(),
+                                    health: baseStats.maxHealth,
+                                    maxHealth: baseStats.maxHealth,
+                                    stamina: baseStats.maxStamina,
+                                    maxStamina: baseStats.maxStamina
+                                };
+                                nextActorState.set(id, newInsect);
+                                tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                            }
                          }
                     }
                 }
@@ -562,7 +665,6 @@ export class SimulationEngine {
         this.grid = loadedGrid;
         this.asyncFlowerFactory.updateParams(this.params);
         
-        // Restore environment state, with fallback for older saves
         this.environmentState = loadedEnvState || {
             currentTemperature: this.params.temperature,
             currentHumidity: this.params.humidity,
@@ -573,14 +675,35 @@ export class SimulationEngine {
         this.loadChampionsFromDb();
 
         const regenerationPromises = this.grid.flat(2).map(entity => {
+            // Data migration for backward compatibility with older save files
+            if (entity.type === 'hive') {
+                const hive = entity as Hive;
+                if (hive.pollen === undefined) hive.pollen = 0;
+                if (hive.spawnCooldown === undefined) hive.spawnCooldown = 0;
+            }
             if (entity.type === 'flower' && entity.genome) {
                 return this.flowerService.drawFlower(entity.genome)
                     .then(result => { if (result?.image) entity.imageData = result.image; })
                     .catch(err => console.error(`Failed to regenerate image for flower ${entity.id}`, err));
             }
-            if (entity.type === 'insect') {
-                if (!entity.emoji) entity.emoji = getInsectEmoji(entity.id);
-                if (entity.lifespan === undefined) entity.lifespan = INSECT_LIFESPAN; // Backwards compatibility
+            if (entity.type === 'insect' || entity.type === 'cockroach') {
+                const insect = entity as Insect | Cockroach;
+                if (!insect.emoji) {
+                     insect.emoji = entity.type === 'cockroach' ? '🪳' : getInsectEmoji(insect.id);
+                }
+                
+                // Backward compatibility for saves from before the health/stamina update
+                if ((insect as any).lifespan !== undefined && insect.health === undefined) {
+                    const baseStats = INSECT_DATA.get(insect.emoji);
+                    if (baseStats) {
+                        insect.maxHealth = baseStats.maxHealth;
+                        insect.health = ((insect as any).lifespan / 100) * baseStats.maxHealth;
+                        insect.maxStamina = baseStats.maxStamina;
+                        insect.stamina = baseStats.maxStamina;
+                        insect.genome = generateRandomInsectGenome();
+                        delete (insect as any).lifespan;
+                    }
+                }
             }
             return Promise.resolve();
         });

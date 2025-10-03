@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createInitialMobileActors, createNewFlower } from './simulationInitializer';
-import type { FEService, FlowerGenomeStats } from '../types';
-import { DEFAULT_SIM_PARAMS } from '../constants';
+import type { FEService, FlowerGenomeStats, Insect } from '../types';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../constants';
 
 const mockFlowerService: FEService = {
     initialize: vi.fn().mockResolvedValue(undefined),
@@ -77,16 +77,23 @@ describe('simulationInitializer', () => {
     });
 
     describe('createInitialMobileActors', () => {
-        it('should create the correct number of insects and birds', () => {
+        it('should create insects with full stats and a random genome', () => {
             const params = { ...DEFAULT_SIM_PARAMS, initialInsects: 3, initialBirds: 2 };
             const actors = createInitialMobileActors(params);
 
-            const insects = actors.filter(c => c.type === 'insect');
+            const insects = actors.filter(c => c.type === 'insect') as Insect[];
             const birds = actors.filter(c => c.type === 'bird');
             
             expect(actors.length).toBe(5);
             expect(insects.length).toBe(3);
             expect(birds.length).toBe(2);
+
+            const firstInsect = insects[0];
+            const baseStats = INSECT_DATA.get(firstInsect.emoji)!;
+            expect(firstInsect.health).toBe(baseStats.maxHealth);
+            expect(firstInsect.stamina).toBe(baseStats.maxStamina);
+            expect(firstInsect.genome).toBeInstanceOf(Array);
+            expect(firstInsect.genome.length).toBeGreaterThan(0);
         });
 
         it('should return actors with placeholder coordinates', () => {
