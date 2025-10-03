@@ -4,7 +4,7 @@ import { SimulationEngine } from './lib/simulationEngine';
 import { flowerService } from './services/flowerService';
 import { TICK_RATE_MS } from './constants';
 import type { SimulationParams, Flower } from './types';
-import { createNewFlower, createInitialMobileActors, initializeHivesAndBees } from './lib/simulationInitializer';
+import { createNewFlower, createInitialMobileActors, initializeHivesAndBees, initializeAntColonies } from './lib/simulationInitializer';
 
 let isRunning = false;
 let gameLoopTimeoutId: number | undefined;
@@ -113,6 +113,7 @@ self.onmessage = async (e: MessageEvent) => {
             const allActors = [...initialFlowers, ...initialMobileActors];
             
             initializeHivesAndBees(allActors, params);
+            initializeAntColonies(allActors, params);
 
             engine.initializeGridWithActors(allActors);
             self.postMessage({ type: 'init-complete', payload: engine.getGridState() });
