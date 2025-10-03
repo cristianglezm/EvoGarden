@@ -35,6 +35,16 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     reproductionCooldown: 1,
     mutationChance: 0.05,
     mutationAmount: 0.2,
+    // Hive Parameters
+    hiveGridArea: 10,
+    beeDormancyTemp: 10,
+    beeWinterHoneyConsumption: 0.01,
+    hivePollenToHoneyRatio: 0.5,
+    hiveSpawnThreshold: 100,
+    hiveSpawnCost: 20,
+    territoryMarkLifespan: 100,
+    signalTTL: 10,
+    beePollinationWanderChance: 0.2,
 };
 
 // --- FLOWER CONSTANTS ---

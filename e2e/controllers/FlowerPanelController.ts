@@ -33,17 +33,32 @@ export class FlowerPanelController {
             const y = box.height * (j / (DENSITY + 1));
             await canvas.click({ position: { x, y } });
 
-            const targetPanel = this.page.locator(`aside:has-text("${actorType} Details")`);
+            let targetPanel: Locator;
+            if (actorType === 'insect' || actorType === 'cockroach') {
+                // The insect panel is unique in that it has a "Flower Preferences" section.
+                targetPanel = this.page.locator('aside').filter({ hasText: 'Flower Preferences (Genome)' });
+            } else {
+                const capitalizedActorType = actorType.charAt(0).toUpperCase() + actorType.slice(1);
+                targetPanel = this.page.locator(`aside:has-text("${capitalizedActorType} Details")`);
+            }
+            
             const targetVisible = await targetPanel.isVisible({ timeout: 250 });
             if (targetVisible) return true;
             
             const selectionVisible = await this.actorSelectionPanel.isVisible({ timeout: 250 });
             if (selectionVisible) {
-                const actorButtons = this.actorSelectionPanel.getByRole('button', { name: new RegExp(actorType, 'i') });
-                // If there's at least one button matching the actor type, click the first one.
-                // This resolves strict mode violations when multiple actors of the same type are in one cell.
+                let actorButtons: Locator;
+                if (actorType === 'insect' || actorType === 'cockroach') {
+                    // Match any of the insect emojis including cockroach
+                    const insectEmojisRegex = /[🦋🐛🐌🐞🪲🦂🐝🪳]/;
+                    actorButtons = this.actorSelectionPanel.getByRole('button', { name: insectEmojisRegex });
+                } else {
+                    actorButtons = this.actorSelectionPanel.getByRole('button', { name: new RegExp(actorType, 'i') });
+                }
+
                 if (await actorButtons.count() > 0) {
                     await actorButtons.first().click();
+                    await expect(targetPanel).toBeVisible();
                     return true;
                 }
             }

@@ -51,6 +51,16 @@ export interface SimulationParams {
     reproductionCooldown: number;
     mutationChance: number;
     mutationAmount: number;
+    // Hive Parameters
+    hiveGridArea: number;
+    beeDormancyTemp: number;
+    beeWinterHoneyConsumption: number;
+    hivePollenToHoneyRatio: number;
+    hiveSpawnThreshold: number;
+    hiveSpawnCost: number;
+    territoryMarkLifespan: number;
+    signalTTL: number;
+    beePollinationWanderChance: number;
 }
 
 export interface Coord {
@@ -94,6 +104,8 @@ export interface TickSummary {
     snailCount: number;
     beeCount: number;
     scorpionCount: number;
+    hiveCount: number;
+    totalHoney: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative
