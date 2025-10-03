@@ -160,7 +160,7 @@ describe('DefaultInsectBehavior', () => {
         expect(insect.health).toBeCloseTo(expectedHealth);
         
         // Pollen check remains the same.
-        expect(insect.pollen).toEqual({ genome: flower.genome, sourceFlowerId: flower.id });
+        expect(insect.pollen).toEqual({ genome: flower.genome, sourceFlowerId: flower.id, score: expect.any(Number) });
     });
 
     it('should be healed by a healing flower', () => {
@@ -195,7 +195,7 @@ describe('DefaultInsectBehavior', () => {
         grid[5][5].push(targetFlower);
         nextActorState.set(targetFlower.id, targetFlower);
         
-        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
         
         const context = setupContext();
         behavior.update(insect, context);
@@ -237,7 +237,7 @@ describe('DefaultInsectBehavior', () => {
         flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
 
         // Insect is carrying pollen from the flower it's currently on
-        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
 
         behavior.update(insect, setupContext());
 
@@ -256,7 +256,7 @@ describe('DefaultInsectBehavior', () => {
         flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
 
         // Insect has pollen from another flower
-        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1' };
+        insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
 
         behavior.update(insect, setupContext());
 

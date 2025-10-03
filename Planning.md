@@ -31,8 +31,11 @@ Define the core data structures for the simulation state.
 -   **Actor Types**: Define interfaces for each entity:
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
-    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, a `moveCooldown` (for snails), and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files.
+    -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, a `moveCooldown` (for snails), and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files. It also includes properties for social insects: `hiveId`, `isReturningToHive`, and a `behaviorState`.
     -   `InsectStats`: A new interface defining the base stats for each insect type (`attack`, `maxHealth`, `maxStamina`, `speed`, `role`, `eggHatchTime`, `reproductionCost`).
+    -   `Hive`: A stationary actor representing a bee colony, with properties for `honey` and `pollen` reserves and a `spawnCooldown`.
+    -   `TerritoryMark`: An invisible, temporary actor left by bees, which includes a `lifespan` and an optional `Signal`.
+    -   `Signal`: A message that can be attached to a `TerritoryMark`, with a `type` (e.g., `UNDER_ATTACK`) and a `ttl` (time-to-live).
     -   `Bird`: Includes position and a `target` coordinate.
     -   `Eagle`: Includes position and a `target` coordinate (for a bird).
     -   `HerbicidePlane`: Includes position, a `path` vector, and an `end` coordinate.
@@ -121,6 +124,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   **Responsibilities**:
         -   `processNutrientHealing`: Scans for all nutrients and applies their healing effect to nearby flowers.
         -   `handleInsectReproduction`: Scans for pairs of insects of the same species on the same cell, initiating reproduction. It handles the creation of a new `Egg` with a `genome` created by crossing over the parents' genomes with a chance of mutation, then puts the parents on a `reproductionCooldown`.
+        -   `propagateSignal`: Handles the propagation of a signal through adjacent, friendly `TerritoryMark` actors.
 
 -   **Behavior System (`lib/behaviors/`)**: This is a modular pattern for separating actor logic. The engine calls a dedicated function for each actor type, passing the actor's state and a `context` object with necessary global information. Crucially, behaviors no longer create UI notifications directly; they now push structured `AppEvent` objects into the context's `events` array.
 
@@ -137,7 +141,8 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **`SnailBehavior`**: Manages the unique logic for Snails (`🐌`). They move on a cooldown, and when they do move, they create a new `SlimeTrail` actor. They extend the `DefaultInsectBehavior` to reuse flower-eating logic.
         -   **`ScorpionBehavior`**: Implements a predator AI for Scorpions (`🦂`). They are ground-based hunters with a prey preference list (e.g., beetles, snails, cockroaches).
         -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
-    
+        -   **`HoneybeeBehavior`**: A state-driven AI for social bees. Manages states like `seeking_food`, `returning_to_hive`, and `hunting`. Bees interact with their assigned `Hive` to deposit pollen. They leave `TerritoryMark` actors as they move, which can be used to detect rival bees or propagate signals.
+
     -   `birdBehavior`: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey. The prey priority is: unprotected insects, then defenseless cocoons, and finally stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.
         -   **Hunting**: Moves directly towards its target. Upon reaching the target, it "eats" it.
@@ -163,6 +168,9 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   `nutrientBehavior`: Decrements a `lifespan` timer. It is removed when the timer expires.
         -   `corpseBehavior`: Decrements a `decayTimer`. When the timer expires, it is removed and replaced by a `Nutrient`.
         -   `slimeTrailBehavior`: Decrements a `lifespan` timer and is removed when it expires.
+    
+    -   `hiveBehavior`: A stationary actor that converts stored pollen into honey and spawns new bees when resources are sufficient.
+    -   `territoryMarkBehavior`: A temporary, invisible actor that decays over time. It can hold a `Signal` which also has a time-to-live (`ttl`).
 
 -   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 

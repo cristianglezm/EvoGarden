@@ -95,7 +95,7 @@ export const cloneActor = <T extends CellContent>(actor: T): T => {
     const newActor = { ...actor };
 
     // If the actor is an insect and has pollen, deep-copy the pollen object.
-    if ('pollen' in newActor && newActor.pollen) {
+    if (actor.type === 'insect' && 'pollen' in newActor && newActor.pollen) {
         newActor.pollen = { ...(newActor.pollen as NonNullable<Insect['pollen']>) };
     }
     

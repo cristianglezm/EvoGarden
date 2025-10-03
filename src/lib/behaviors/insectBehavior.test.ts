@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { processInsectTick } from './insectBehavior';
-import type { Insect, Cockroach } from '../../types';
+import type { Insect, Cockroach, CellContent } from '../../types';
 import type { InsectBehaviorContext } from './insectBehavior';
 
 // Mock the specialized behavior modules
@@ -52,6 +52,12 @@ vi.mock('./specialized/ScorpionBehavior', () => {
     return { ScorpionBehavior };
 });
 
+vi.mock('./specialized/HoneybeeBehavior', () => {
+    const HoneybeeBehavior = vi.fn();
+    HoneybeeBehavior.prototype.update = vi.fn();
+    return { HoneybeeBehavior };
+});
+
 
 describe('insectBehavior dispatcher', () => {
     let mockDefaultBehaviorUpdate: any;
@@ -62,8 +68,11 @@ describe('insectBehavior dispatcher', () => {
     let mockBeetleBehaviorUpdate: any;
     let mockLadybugBehaviorUpdate: any;
     let mockScorpionBehaviorUpdate: any;
+    let mockHoneybeeBehaviorUpdate: any;
 
-    const mockContext = {} as InsectBehaviorContext; // Context can be empty for this test
+    const mockContext = {
+        nextActorState: new Map<string, CellContent>(),
+    } as InsectBehaviorContext;
 
     beforeAll(async () => {
         // We must import the mocks to get access to the mocked constructors/methods
@@ -75,6 +84,7 @@ describe('insectBehavior dispatcher', () => {
         const { BeetleBehavior } = await import('./specialized/BeetleBehavior');
         const { LadybugBehavior } = await import('./specialized/LadybugBehavior');
         const { ScorpionBehavior } = await import('./specialized/ScorpionBehavior');
+        const { HoneybeeBehavior } = await import('./specialized/HoneybeeBehavior');
 
         mockDefaultBehaviorUpdate = new (DefaultInsectBehavior as any)().update;
         mockCockroachBehaviorUpdate = new (CockroachBehavior as any)().update;
@@ -84,6 +94,7 @@ describe('insectBehavior dispatcher', () => {
         mockBeetleBehaviorUpdate = new (BeetleBehavior as any)().update;
         mockLadybugBehaviorUpdate = new (LadybugBehavior as any)().update;
         mockScorpionBehaviorUpdate = new (ScorpionBehavior as any)().update;
+        mockHoneybeeBehaviorUpdate = new (HoneybeeBehavior as any)().update;
     });
 
     beforeEach(() => {
@@ -125,10 +136,11 @@ describe('insectBehavior dispatcher', () => {
         expect(mockDefaultBehaviorUpdate).not.toHaveBeenCalled();
     });
 
-    it('should delegate to DefaultInsectBehavior for a bee (🐝)', () => {
+    it('should delegate to HoneybeeBehavior for a bee (🐝)', () => {
         const bee: Insect = { emoji: '🐝' } as Insect;
         processInsectTick(bee, mockContext);
-        expect(mockDefaultBehaviorUpdate).toHaveBeenCalledWith(bee, mockContext);
+        expect(mockHoneybeeBehaviorUpdate).toHaveBeenCalledWith(bee, mockContext);
+        expect(mockDefaultBehaviorUpdate).not.toHaveBeenCalled();
     });
 
     it('should delegate to CockroachBehavior for a cockroach (🪳)', () => {

@@ -129,7 +129,8 @@ export class RenderingEngine {
             actor.type === 'herbicidePlane' ? '✈️' :
             actor.type === 'herbicideSmoke' ? '💨' :
             actor.type === 'cockroach' ? '🪳' :
-            actor.type === 'cocoon' ? '⚪️' : '';
+            actor.type === 'cocoon' ? '⚪️' : 
+            actor.type === 'hive' ? '🛖' : '';
         
         if (emoji) {
             ctx.save();
@@ -178,7 +179,7 @@ export class RenderingEngine {
         for (const actor of actors.values()) {
             if (actor.type === 'flower' || actor.type === 'flowerSeed') {
                 staticActors.set(actor.id, actor);
-            } else {
+            } else if (actor.type !== 'territoryMark') { // Do not draw territory marks
                 dynamicActors.push(actor);
             }
         }
