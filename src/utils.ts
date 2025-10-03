@@ -73,3 +73,25 @@ export const getActorName = (actor: CellContent): string => {
         default: return 'Unknown Entity';
     }
 };
+
+/**
+ * Creates a shortened, human-readable ID from a full actor ID.
+ * @param id The full actor ID string.
+ * @returns A shortened ID string.
+ */
+export const getShortId = (id: string): string => {
+    const parts = id.split('-');
+    // Handles formats like:
+    // insect-{type}-{x}-{y}-{timestamp} -> {type}-{x}-{y}-{ts}
+    // flower-{x}-{y}-{timestamp} -> {x}-{y}-{ts}
+    if (parts.length > 2) {
+        const dataParts = parts.slice(1, parts.length - 1);
+        const timestamp = parts[parts.length - 1];
+        // Ensure timestamp is a number before slicing
+        if (!isNaN(parseInt(timestamp, 10))) {
+            return `${dataParts.join('-')}-${timestamp.slice(-2)}`;
+        }
+    }
+    // Fallback for other ID formats
+    return id.slice(-5);
+};

@@ -2,6 +2,7 @@ import React from 'react';
 import type { Egg } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { INSECT_DATA } from '../constants';
+import { getShortId } from '../utils';
 
 interface EggDetailsPanelProps {
     egg: Egg | null;
@@ -22,7 +23,7 @@ export const EggDetailsPanel: React.FC<EggDetailsPanelProps> = ({ egg, onClose, 
             <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px] min-h-[48px]">
                  <h2 className="font-bold text-lg truncate">
                     {isTrackingThisEgg ? 'Tracking: ' : 'Egg Details'}
-                    {isTrackingThisEgg && <span className="font-mono text-accent-yellow">{egg.id.substring(7, 12)}</span>}
+                    {isTrackingThisEgg && <span className="font-mono text-accent-yellow">{getShortId(egg.id)}</span>}
                 </h2>
                 <div className="flex items-center gap-2">
                     {isTrackingThisEgg && (

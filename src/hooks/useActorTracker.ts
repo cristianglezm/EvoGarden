@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { eventService } from '../services/eventService';
 import type { CellContent } from '../types';
+import { getShortId } from '../utils';
 
 interface UseActorTrackerProps {
     actors: Map<string, CellContent>;
@@ -26,7 +27,7 @@ export const useActorTracker = ({ actors, isRunning, setIsRunning, setSelectedAc
             wasRunningBeforeTrackingRef.current = isRunning;
             setTrackedActorId(actorToTrack.id);
             setIsRunning(true);
-            eventService.dispatch({ message: `Tracking ${actorType} #${actorToTrack.id.substring(7, 12)}`, type: 'info', importance: 'high' });
+            eventService.dispatch({ message: `Tracking ${actorType} #${getShortId(actorToTrack.id)}`, type: 'info', importance: 'high' });
         } else {
             eventService.dispatch({ message: `${actorType} ID containing "${id}" not found.`, type: 'error', importance: 'high' });
         }
@@ -36,7 +37,7 @@ export const useActorTracker = ({ actors, isRunning, setIsRunning, setSelectedAc
         if (trackedActorId) {
             const trackedActor = actors.get(trackedActorId);
             const actorType = trackedActor ? trackedActor.type : 'actor';
-            eventService.dispatch({ message: `Stopped tracking ${actorType} #${trackedActorId.substring(7, 12)}.`, type: 'info', importance: 'high' });
+            eventService.dispatch({ message: `Stopped tracking ${actorType} #${getShortId(trackedActorId)}.`, type: 'info', importance: 'high' });
         }
         setTrackedActorId(null);
         setSelectedActor(null);

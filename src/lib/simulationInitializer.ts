@@ -1,5 +1,5 @@
 import type { SimulationParams, CellContent, Flower, FEService, FlowerGenomeStats, Insect, Hive, AntColony } from '../types';
-import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
+import { getInsectEmoji, generateRandomInsectGenome, ACTOR_NAMES } from '../utils';
 import { INSECT_DATA } from '../constants';
 
 // Fallback values
@@ -60,6 +60,8 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
         const baseStats = INSECT_DATA.get(emoji);
         
         if (baseStats) {
+            const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
+            const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
             const newInsect: Insect = { 
                 id, type: 'insect', x: -1, y: -1, 
                 pollen: null, emoji, 

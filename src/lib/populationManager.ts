@@ -108,7 +108,7 @@ export class PopulationManager {
         if (corpseTrend === 'growing' && this.cockroachSpawnCooldown === 0) {
             const spot = findCellForStationaryActor(grid, this.params, 'cockroach');
             if (spot) {
-                const cockroachId = `cockroach-dyn-${Date.now()}`;
+                const cockroachId = `insect-cockroach-${spot.x}-${spot.y}-${Date.now()}`;
                 const baseStats = INSECT_DATA.get('🪳')!;
                 const cockroachGenome = Array(INSECT_GENOME_LENGTH).fill(0.1); // Mildly dislike everything else
                 cockroachGenome[FLOWER_STAT_INDICES.HEALTH] = -2.0; // Strongly dislike healthy flowers
