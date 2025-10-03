@@ -9,6 +9,7 @@ describe('Controls component', () => {
     const mockSetIsRunning = vi.fn();
     const mockOnSave = vi.fn();
     const mockOnLoad = vi.fn();
+    const mockOnStart = vi.fn();
 
     const defaultProps = {
         params: DEFAULT_SIM_PARAMS,
@@ -19,6 +20,7 @@ describe('Controls component', () => {
         onLoad: mockOnLoad,
         hasSavedState: false,
         isSaving: false,
+        onStart: mockOnStart,
     };
 
     beforeEach(() => {
@@ -107,6 +109,66 @@ describe('Controls component', () => {
         
         expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
             windDirection: 'NW'
+        }));
+    });
+
+    it('updates hive grid area and applies it', async () => {
+        render(<Controls {...defaultProps} />);
+
+        // Open the collapsible section
+        fireEvent.click(screen.getByRole('button', { name: /Hive & Colony Rules/i }));
+        
+        // Check that the input is now visible
+        const hiveGridInput = await screen.findByLabelText(/Hive Grid Area/i);
+        expect(hiveGridInput).toBeVisible();
+
+        // Change value and apply
+        fireEvent.change(hiveGridInput, { target: { value: '15' } });
+        fireEvent.click(screen.getByRole('button', { name: /Apply & Reset/i }));
+        
+        expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
+            hiveGridArea: 15
+        }));
+    });
+
+    it('updates honeybee parameters and applies them', async () => {
+        render(<Controls {...defaultProps} />);
+
+        // Open the collapsible section
+        fireEvent.click(screen.getByRole('button', { name: /Hive & Colony Rules/i }));
+        
+        // Wait for inputs to be visible and change them
+        const dormancyInput = await screen.findByLabelText(/Bee Dormancy Temp/i);
+        fireEvent.change(dormancyInput, { target: { value: '8' } });
+
+        const honeyUseInput = await screen.findByLabelText(/Winter Honey Use/i);
+        fireEvent.change(honeyUseInput, { target: { value: '0.02' } });
+
+        const ratioInput = await screen.findByLabelText(/Pollen to Honey/i);
+        fireEvent.change(ratioInput, { target: { value: '0.6' } });
+        
+        const thresholdInput = await screen.findByLabelText(/Hive Spawn Threshold/i);
+        fireEvent.change(thresholdInput, { target: { value: '120' } });
+
+        const costInput = await screen.findByLabelText(/Hive Spawn Cost/i);
+        fireEvent.change(costInput, { target: { value: '25' } });
+        
+        const lifespanInput = await screen.findByLabelText(/Territory Mark Lifespan/i);
+        fireEvent.change(lifespanInput, { target: { value: '150' } });
+
+        const ttlInput = await screen.findByLabelText(/Signal TTL/i);
+        fireEvent.change(ttlInput, { target: { value: '15' } });
+
+        fireEvent.click(screen.getByRole('button', { name: /Apply & Reset/i }));
+        
+        expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
+            beeDormancyTemp: 8,
+            beeWinterHoneyConsumption: 0.02,
+            hivePollenToHoneyRatio: 0.6,
+            hiveSpawnThreshold: 120,
+            hiveSpawnCost: 25,
+            territoryMarkLifespan: 150,
+            signalTTL: 15,
         }));
     });
     

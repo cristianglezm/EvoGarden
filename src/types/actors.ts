@@ -67,11 +67,14 @@ export interface InsectStats {
     reproductionCost: number; // stamina cost
 }
 
+export type InsectBehaviorState = 'seeking_food' | 'returning_to_hive' | 'hunting' | 'patrolling' | 'idle' | 'collecting' | 'depositing';
+
 export interface Insect extends Actor {
     type: 'insect';
     pollen: {
         genome: string;
         sourceFlowerId: string;
+        score: number;
     } | null;
     emoji: string;
     health: number;
@@ -84,8 +87,36 @@ export interface Insect extends Actor {
     moveCooldown?: number; // For slow insects like snails
     healthEaten?: number; // For caterpillars
     isCarryingNutrient?: boolean; // For beetles
-    isHunting?: boolean; // For ladybugs
-    targetId?: string; // For ladybugs
+    isHunting?: boolean; // For ladybugs, scorpions
+    targetId?: string; // For hunters
+    hiveId?: string; // For honeybees
+    isReturningToHive?: boolean; // For honeybees
+    behaviorState?: InsectBehaviorState;
+}
+
+export type SignalType = 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND';
+
+export interface Signal {
+    type: SignalType;
+    origin: Coord;
+    ttl: number;
+}
+
+export interface TerritoryMark extends Actor {
+    type: 'territoryMark';
+    hiveId: string;
+    lifespan: number;
+    signal?: Signal;
+}
+
+export interface Hive extends Actor {
+    type: 'hive';
+    hiveId: string;
+    honey: number;
+    pollen: number;
+    spawnCooldown: number;
+    genome: number[];
+    storedBees?: number;
 }
 
 export interface Bird extends Actor {
@@ -164,7 +195,7 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail;
+export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail | Hive | TerritoryMark;
 export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
 
 export type ActorAddDelta = {

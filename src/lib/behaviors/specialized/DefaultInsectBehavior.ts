@@ -10,7 +10,7 @@ import {
     INSECT_STAMINA_GAIN_FROM_EATING,
     INSECT_DAMAGE_FROM_TOXIC_FLOWER
 } from '../../../constants';
-import { findCellForFlowerSpawn } from '../../simulationUtils';
+import { findCellForFlowerSpawn, scoreFlower } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 
@@ -83,7 +83,8 @@ export class DefaultInsectBehavior extends InsectBehavior {
         this.handlePollination(insect, flower, context);
 
         // Always pick up pollen from the interacted flower
-        insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id };
+        const pollenScore = scoreFlower(insect, flower);
+        insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
     }
     
     protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
