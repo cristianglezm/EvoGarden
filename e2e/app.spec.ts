@@ -228,7 +228,20 @@ test.describe('Global Search', () => {
         await search.clickTrackButton();
 
         // 8. Verify it's in tracking mode
-        await expect(page.getByText(`Tracking: ${insectId.substring(7, 12)}`)).toBeVisible();
+        const getShortId = (id: string): string => {
+            const parts = id.split('-');
+            if (parts.length > 2) {
+                const dataParts = parts.slice(1, parts.length - 1);
+                const timestamp = parts[parts.length - 1];
+                if (!isNaN(parseInt(timestamp, 10))) {
+                    return `${dataParts.join('-')}-${timestamp.slice(-2)}`;
+                }
+            }
+            return id.slice(-5);
+        };
+        const trackingInput = page.getByLabel('Currently tracking actor');
+        await expect(trackingInput).toBeVisible();
+        await expect(trackingInput).toHaveValue(`Tracking: ${getShortId(insectId)}`);
     });
 });
 

@@ -2,6 +2,7 @@ import React from 'react';
 import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { GenomeVisualizer } from './GenomeVisualizer';
+import { getShortId } from '../utils';
 
 interface GenericActorDetailsPanelProps {
     actor: CellContent | null;
@@ -182,7 +183,7 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
             <header className="flex items-center justify-between p-1 pl-4 bg-background text-primary-light rounded-t-[5px] min-h-[48px]">
                 <h2 className="font-bold text-lg truncate">
                     {isTrackingThisActor ? 'Tracking: ' : title}
-                    {isTrackingThisActor && <span className="font-mono text-accent-yellow">{actor.id.substring(7, 12)}</span>}
+                    {isTrackingThisActor && <span className="font-mono text-accent-yellow">{getShortId(actor.id)}</span>}
                 </h2>
                 <div className="flex items-center gap-2">
                     {isTrackingThisActor && (
