@@ -69,13 +69,11 @@ export class SnailBehavior extends DefaultInsectBehavior {
         const oldY = insect.y;
 
         // Use the parent's movement logic
-        super.handleMovement(insect, hasInteracted, context);
+        const movedByParent = super.handleMovement(insect, hasInteracted, context);
         
-        const moved = insect.x !== oldX || insect.y !== oldY;
-
-        if (moved) {
+        if (movedByParent) {
             // Leave a slime trail at the old position
-            const trailId = `slime-${oldX}-${oldY}-${Date.now()}`;
+            const trailId = context.getNextId('slime', oldX, oldY);
             const slimeTrail: SlimeTrail = {
                 id: trailId,
                 type: 'slimeTrail',
@@ -86,6 +84,6 @@ export class SnailBehavior extends DefaultInsectBehavior {
             context.newActorQueue.push(slimeTrail);
         }
 
-        return moved;
+        return movedByParent;
     }
 }

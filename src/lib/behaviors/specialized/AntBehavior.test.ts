@@ -20,6 +20,7 @@ describe('AntBehavior', () => {
     let nextActorState: Map<string, CellContent>;
     let qtree: Quadtree<CellContent>;
     let newActorQueue: CellContent[];
+    const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
     
     const createMockCorpse = (id: string, x: number, y: number): Corpse => ({
@@ -46,6 +47,7 @@ describe('AntBehavior', () => {
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
         qtree = new Quadtree(boundary, 4);
         newActorQueue = [];
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = (): any => ({
@@ -59,6 +61,7 @@ describe('AntBehavior', () => {
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
+        getNextId,
     });
 
     it('should seek and move towards the nearest corpse', () => {
@@ -80,8 +83,10 @@ describe('AntBehavior', () => {
     it('should pick up a corpse and switch to returning_to_colony state', () => {
         const corpse = createMockCorpse('c1', 10, 10);
         nextActorState.set(corpse.id, corpse);
+        const context = setupContext();
+        context.qtree.insert({ x: corpse.x, y: corpse.y, data: corpse });
 
-        behavior.update(ant, setupContext());
+        behavior.update(ant, context);
         
         expect(nextActorState.has(corpse.id)).toBe(false); // Corpse is picked up
         expect(ant.carriedItem).toEqual({ type: 'corpse', value: FOOD_VALUE_CORPSE });
@@ -144,7 +149,11 @@ describe('AntBehavior', () => {
         nextActorState.set(weakTrail.id, weakTrail);
         ant.behaviorState = 'seeking_food'; // When seeking, it should follow trails
 
-        behavior.update(ant, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: strongTrail.x, y: strongTrail.y, data: strongTrail });
+        context.qtree.insert({ x: weakTrail.x, y: weakTrail.y, data: weakTrail });
+
+        behavior.update(ant, context);
         
         expect(ant.x).toBe(11);
         expect(ant.y).toBe(11);

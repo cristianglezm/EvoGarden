@@ -10,6 +10,7 @@ describe('antColonyBehavior', () => {
     let events: AppEvent[];
     let newActorQueue: CellContent[];
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS };
+    const getNextId = vi.fn((type, x, y) => `${type}-${x}-${y}`);
 
     beforeEach(() => {
         colony = {
@@ -23,6 +24,7 @@ describe('antColonyBehavior', () => {
         events = [];
         newActorQueue = [];
         vi.restoreAllMocks();
+        getNextId.mockClear();
     });
 
     const setupContext = () => ({
@@ -31,6 +33,7 @@ describe('antColonyBehavior', () => {
         newActorQueue,
         params,
         currentTemperature: params.temperature,
+        getNextId,
     });
 
     it('should not spawn an ant if food is below threshold', () => {

@@ -6,7 +6,7 @@ import {
     INSECT_MOVE_COST,
     INSECT_WANDER_CHANCE,
 } from '../../../constants';
-import { findCellForFlowerSpawn, scoreFlower } from '../../simulationUtils';
+import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 
@@ -46,8 +46,8 @@ export class ButterflyBehavior extends InsectBehavior {
     }
     
     private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return Array.from(context.nextActorState.values()).find(
-            (actor) => actor.x === x && actor.y === y && actor.type === 'flower'
+         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
+            (actor) => actor.type === 'flower'
         ) as Flower | undefined;
     }
     
@@ -63,7 +63,7 @@ export class ButterflyBehavior extends InsectBehavior {
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });
             if (spawnSpot) {
-                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome);
+                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
                 if (seed) {
                     context.newActorQueue.push(seed);
                 }

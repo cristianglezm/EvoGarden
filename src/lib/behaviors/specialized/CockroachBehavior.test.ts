@@ -27,6 +27,7 @@ describe('CockroachBehavior', () => {
     let nextActorState: Map<string, CellContent>;
     let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
+    const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 10, gridHeight: 10 };
 
     beforeEach(() => {
@@ -42,6 +43,7 @@ describe('CockroachBehavior', () => {
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
         qtree = new Quadtree(boundary, 4);
         flowerQtree = new Quadtree(boundary, 4);
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
 
     const setupContext = () => ({
@@ -55,6 +57,7 @@ describe('CockroachBehavior', () => {
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
         newActorQueue: [] as CellContent[],
+        getNextId,
     });
 
     it('should search for and move towards the nearest corpse', () => {
@@ -79,7 +82,10 @@ describe('CockroachBehavior', () => {
         cockroach.health = 10;
         cockroach.stamina = 10;
         
-        behavior.update(cockroach, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: corpse.x, y: corpse.y, data: corpse });
+        
+        behavior.update(cockroach, context);
 
         expect(nextActorState.has(corpse.id)).toBe(false);
         // Health check: 10 (initial) - 0.5 (decay) + 10 (nutrition) = 19.5
@@ -170,7 +176,10 @@ describe('CockroachBehavior', () => {
         const initialFlowerHealth = flower.health;
         const initialStamina = cockroach.stamina;
 
-        behavior.update(cockroach, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+
+        behavior.update(cockroach, context);
         
         const updatedFlower = nextActorState.get(flower.id) as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth - COCKROACH_DATA.attack);

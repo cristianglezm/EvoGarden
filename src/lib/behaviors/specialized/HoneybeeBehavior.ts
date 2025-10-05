@@ -6,7 +6,7 @@ import {
     INSECT_ATTACK_COST,
     INSECT_POLLINATION_CHANCE,
 } from '../../../constants';
-import { scoreFlower, findCellForFlowerSpawn } from '../../simulationUtils';
+import { scoreFlower, findCellForFlowerSpawn, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 import { propagateSignal } from '../../ecosystemManager';
@@ -169,12 +169,13 @@ export class HoneybeeBehavior extends InsectBehavior {
     }
 
     private findHive(insect: Insect, context: InsectBehaviorContext): Hive | undefined {
+        // This is still O(N), but hives are few. A better optimization would be a dedicated map.
         return Array.from(context.nextActorState.values()).find(a => a.type === 'hive' && (a as Hive).hiveId === insect.hiveId) as Hive | undefined;
     }
     
     private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return Array.from(context.nextActorState.values()).find(
-           (actor) => actor.x === x && actor.y === y && actor.type === 'flower'
+        return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
+           (actor) => actor.type === 'flower'
        ) as Flower | undefined;
    }
 
@@ -183,7 +184,7 @@ export class HoneybeeBehavior extends InsectBehavior {
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });
             if (spawnSpot) {
-                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome);
+                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
                 if (seed) {
                     context.newActorQueue.push(seed);
                 }
@@ -232,7 +233,7 @@ export class HoneybeeBehavior extends InsectBehavior {
                 markOnCell.lifespan = context.params.territoryMarkLifespan;
             }
         } else {
-            const markId = `mark-${insect.x}-${insect.y}`;
+            const markId = context.getNextId('mark', insect.x, insect.y);
             const newMark: TerritoryMark = {
                 id: markId, type: 'territoryMark', x: insect.x, y: insect.y,
                 hiveId: insect.hiveId!, lifespan: context.params.territoryMarkLifespan,
@@ -242,8 +243,8 @@ export class HoneybeeBehavior extends InsectBehavior {
     }
 
     private getMarkOnCell(x: number, y: number, context: InsectBehaviorContext): TerritoryMark | undefined {
-        return Array.from(context.nextActorState.values())
-            .find(a => a.x === x && a.y === y && a.type === 'territoryMark') as TerritoryMark | undefined;
+        return getActorsOnCell(context.qtree, context.nextActorState, x, y)
+            .find(a => a.type === 'territoryMark') as TerritoryMark | undefined;
     }
 
     private createSignal(insect: Insect, type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND', context: InsectBehaviorContext, origin?: { x: number, y: number }) {

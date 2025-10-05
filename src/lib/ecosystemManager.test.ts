@@ -11,6 +11,8 @@ describe('ecosystemManager', () => {
         let events: AppEvent[];
         const params = { ...DEFAULT_SIM_PARAMS, gridWidth: 5, gridHeight: 5 };
         const baseStats = INSECT_DATA.get('🦋')!;
+        const getNextId = vi.fn((type, x, y) => `${type}-${x}-${y}`);
+
 
         const createTestInsect = (id: string, x: number, y: number, genome: number[]): Insect => ({
             id, type: 'insect', x, y, emoji: '🦋', pollen: null,
@@ -39,7 +41,7 @@ describe('ecosystemManager', () => {
             // Pick parent1 for crossover (0.4 < 0.5) and prevent mutation (0.4 is not < 0.05)
             vi.spyOn(Math, 'random').mockReturnValue(0.4);
 
-            const eggsLaid = handleInsectReproduction(nextActorState, params, events);
+            const eggsLaid = handleInsectReproduction(nextActorState, params, events, getNextId);
             expect(eggsLaid).toBe(1);
             
             const egg = Array.from(nextActorState.values()).find(a => a.type === 'egg') as Egg;
@@ -81,7 +83,7 @@ describe('ecosystemManager', () => {
                 return 1;
             });
 
-            handleInsectReproduction(nextActorState, params, events);
+            handleInsectReproduction(nextActorState, params, events, getNextId);
             
             const egg = Array.from(nextActorState.values()).find(a => a.type === 'egg') as Egg;
             expect(egg).toBeDefined();
@@ -99,7 +101,7 @@ describe('ecosystemManager', () => {
             nextActorState.set(parent1.id, parent1);
             nextActorState.set(parent2.id, parent2);
             
-            const eggsLaid = handleInsectReproduction(nextActorState, params, events);
+            const eggsLaid = handleInsectReproduction(nextActorState, params, events, getNextId);
             
             expect(eggsLaid).toBe(0);
         });
@@ -114,7 +116,7 @@ describe('ecosystemManager', () => {
              nextActorState.set(parent1.id, parent1);
              nextActorState.set(parent2.id, parent2);
             
-             const eggsLaid = handleInsectReproduction(nextActorState, params, events);
+             const eggsLaid = handleInsectReproduction(nextActorState, params, events, getNextId);
             
              expect(eggsLaid).toBe(0);
         });

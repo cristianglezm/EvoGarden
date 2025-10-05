@@ -81,7 +81,8 @@ const createOffspringGenome = (genome1: number[], genome2: number[]): number[] =
 export const handleInsectReproduction = (
     nextActorState: Map<string, CellContent>,
     params: SimulationParams,
-    events: AppEvent[]
+    events: AppEvent[],
+    getNextId: (type: string, x: number, y: number) => string,
 ): number => {
     let eggsLaidThisTick = 0;
     const { gridWidth, gridHeight } = params;
@@ -100,8 +101,8 @@ export const handleInsectReproduction = (
     for (const actor of nextActorState.values()) {
         if (actor.type === 'insect') {
             const insect = actor as Insect;
-            // Honeybees do not reproduce directly; the hive does.
-            if (insect.emoji === '🐝') continue;
+            // Social insects (bees, ants) reproduce via their colony/hive, not directly.
+            if (insect.emoji === '🐝' || insect.emoji === '🐜') continue;
             insectQtree.insert({ x: insect.x, y: insect.y, data: insect });
             allInsects.push(insect);
         }
@@ -126,7 +127,7 @@ export const handleInsectReproduction = (
                 // Determine what the egg will hatch into
                 const offspringEmoji = insect.emoji === '🦋' ? '🐛' : insect.emoji;
 
-                const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
+                const eggId = getNextId('egg', spot.x, spot.y);
                 const offspringGenome = createOffspringGenome(insect.genome, partner.genome);
                 const newEgg: Egg = { 
                     id: eggId, type: 'egg', x: spot.x, y: spot.y, 
