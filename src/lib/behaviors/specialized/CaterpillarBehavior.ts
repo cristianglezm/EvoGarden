@@ -9,6 +9,7 @@ import {
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
+import { getActorsOnCell } from '../../simulationUtils';
 
 /**
  * Implements the behavior for Caterpillars. Their primary goal is to eat
@@ -52,8 +53,8 @@ export class CaterpillarBehavior extends InsectBehavior {
     }
     
     private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return Array.from(context.nextActorState.values()).find(
-            (actor) => actor.x === x && actor.y === y && actor.type === 'flower'
+         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
+            (actor) => actor.type === 'flower'
         ) as Flower | undefined;
     }
     
@@ -66,10 +67,10 @@ export class CaterpillarBehavior extends InsectBehavior {
     }
     
     private metamorphose(insect: Insect, context: InsectBehaviorContext) {
-        const { nextActorState, events } = context;
+        const { nextActorState, events, getNextId } = context;
         nextActorState.delete(insect.id);
         
-        const cocoonId = `cocoon-${insect.x}-${insect.y}-${Date.now()}`;
+        const cocoonId = getNextId('cocoon', insect.x, insect.y);
         const newCocoon: Cocoon = {
             id: cocoonId,
             type: 'cocoon',

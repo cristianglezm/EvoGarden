@@ -1,13 +1,15 @@
 import type { Cocoon, CellContent, Insect, AppEvent } from '../../types';
 import { INSECT_DATA } from '../../constants';
+import { ACTOR_NAMES } from '../../utils';
 
 interface CocoonContext {
     nextActorState: Map<string, CellContent>;
     events: AppEvent[];
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
 export const processCocoonTick = (cocoon: Cocoon, context: CocoonContext) => {
-    const { nextActorState, events } = context;
+    const { nextActorState, events, getNextId } = context;
     
     cocoon.hatchTimer--;
     if (cocoon.hatchTimer <= 0) {
@@ -19,7 +21,7 @@ export const processCocoonTick = (cocoon: Cocoon, context: CocoonContext) => {
             return;
         }
 
-        const newButterflyId = `insect-${cocoon.x}-${cocoon.y}-${Date.now()}`;
+        const newButterflyId = getNextId(ACTOR_NAMES['🦋'].toLowerCase(), cocoon.x, cocoon.y);
         const newButterfly: Insect = {
             id: newButterflyId,
             type: 'insect',

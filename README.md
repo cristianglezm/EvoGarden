@@ -45,6 +45,20 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Inspect Individuals**: Click on any cell to inspect its occupants. A selection panel appears if multiple actors are present. View detailed, real-time stats for any actor and start tracking them directly from their dedicated details panel.
 -   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer.
 
+## 🔬 Key Concepts
+
+EvoGarden is more than just a visual simulation; it's a complex, self-regulating digital ecosystem. Understanding these core concepts will enhance your experience:
+
+1.  **The Circle of Life**: The entire ecosystem is a closed loop. Birds eat insects, creating nutrient-rich droppings. Insects also die of old age, leaving corpses that decompose into nutrients. These nutrients are then absorbed by flowers, which heal and grow stronger. Healthy flowers can then support a larger insect population, which in turn supports the birds, completing the cycle.
+
+2.  **Dual Genetic AI**: Evolution is at the heart of EvoGarden.
+    *   **Flowers**: Their visual appearance, health, stamina, toxicity, and resilience to weather are all determined by a unique genetic code.
+    *   **Insects**: They also possess a genome that dictates their preferences for certain flower traits. They actively seek out flowers that best match their genes, creating an evolutionary arms race between predator and prey.
+
+3.  **Environmental Pressure**: The garden is a dynamic environment. The four seasons bring cyclical changes in temperature and humidity, while random weather events like heatwaves and cold snaps introduce sudden challenges. Flowers and insects that evolve to be resilient to these changes will have a significant survival advantage.
+
+4.  **Ecosystem Balance**: The simulation actively works to prevent ecological collapse. If the insect population booms, the engine will spawn predatory birds. If the insect population crashes (leaving birds with no food), an apex predator (the eagle) may be introduced to cull the bird population. If flowers grow too dense, an herbicide plane is deployed. This creates a constantly shifting balance of power.
+
 ## 🔬 Simulation Deep Dive
 
 ### Performance & Architecture
@@ -136,7 +150,7 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
 -   `async draw3DFlower(genome: string): string`: Takes a flower's genome and returns a string containing a GLTF file for 3D rendering.
 
 ## 📁 Project Structure
--   `index.html`: The single-page entry point. It contains the `<div id="root">` where the React app is mounted.
+-   `index.html`: The single-page entry point.
 -   `package.json`: Defines project metadata, scripts (`dev`, `build`), and dependencies.
 -   `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`: Configuration files for the Vite build tool and the Tailwind CSS styling pipeline.
 -   `src/`: Contains all the application source code.
@@ -144,16 +158,18 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/App.tsx`: The root React component. Manages global state and layout.
     -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
     -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
-    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and hosts the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
-    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module.
-    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating tasks to specialized managers. It is instantiated and run exclusively within the web worker.
+    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
+    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
+    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating tasks to specialized managers.
     -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
     -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
     -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
-    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type. The `insectBehavior` module acts as a dispatcher to specialized behaviors (e.g., for caterpillars, cockroaches) located in `src/lib/behaviors/specialized/`.
+    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, `slimeTrailBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/behaviors/antColonyBehavior.ts`: The behavior for Ant Colonies.
     -   `src/lib/behaviors/pheromoneTrailBehavior.ts`: The behavior for Pheromone Trails.
+    -   `src/lib/behaviors/spiderWebBehavior.ts`: The behavior for Spider Webs.
     -   `src/lib/behaviors/specialized/AntBehavior.ts`: The specialized behavior for Ants.
+    -   `src/lib/behaviors/specialized/SpiderBehavior.ts`: The specialized behavior for Spiders.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.

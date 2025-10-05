@@ -11,6 +11,7 @@ describe('birdBehavior', () => {
     let incrementInsectsEaten: () => void;
     let incrementEggsEaten: () => void;
     let incrementCocoonsEaten: () => void;
+    let getNextId: (type: string, x: number, y: number) => string;
     let grid: Grid;
     let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
@@ -33,6 +34,7 @@ describe('birdBehavior', () => {
         incrementInsectsEaten = vi.fn();
         incrementEggsEaten = vi.fn();
         incrementCocoonsEaten = vi.fn();
+        getNextId = vi.fn((type, x, y) => `${type}-${x}-${y}`);
         grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
         qtree = new Quadtree(new Rectangle(DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2, DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2), 4);
         flowerQtree = new Quadtree(new Rectangle(DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2, DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2), 4);
@@ -48,6 +50,7 @@ describe('birdBehavior', () => {
         incrementInsectsEaten,
         incrementEggsEaten,
         incrementCocoonsEaten,
+        getNextId,
     });
     
     it('should find the closest unprotected insect as a target', () => {

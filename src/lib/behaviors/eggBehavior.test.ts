@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processEggTick } from './eggBehavior';
 import type { Egg, CellContent, AppEvent, Bird, Insect } from '../../types';
 import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../../constants';
+import { ACTOR_NAMES } from '../../utils';
 
 describe('eggBehavior', () => {
     let egg: Egg;
@@ -9,6 +10,7 @@ describe('eggBehavior', () => {
     let events: AppEvent[];
     let incrementInsectsBorn: () => void;
     const mockGenome = [1, 2, 3];
+    const mockGetNextId = vi.fn();
 
 
     beforeEach(() => {
@@ -17,13 +19,15 @@ describe('eggBehavior', () => {
         nextActorState.set(egg.id, egg);
         events = [];
         incrementInsectsBorn = vi.fn();
+        mockGetNextId.mockClear().mockReturnValue('new-insect-id');
     });
 
-    const setupContext = () => ({
+    const setupContext = (): any => ({
         nextActorState,
         events,
         incrementInsectsBorn,
         params: DEFAULT_SIM_PARAMS,
+        getNextId: mockGetNextId,
     });
 
     it('should decrement the hatch timer', () => {
@@ -38,7 +42,7 @@ describe('eggBehavior', () => {
         processEggTick(egg, setupContext());
 
         expect(nextActorState.has(egg.id)).toBe(false);
-        const newInsect = Array.from(nextActorState.values()).find(a => a.type === 'insect') as Insect | undefined;
+        const newInsect = nextActorState.get('new-insect-id') as Insect | undefined;
         
         expect(newInsect).toBeDefined();
         expect(newInsect?.x).toBe(egg.x);
@@ -52,6 +56,7 @@ describe('eggBehavior', () => {
         expect(events.length).toBe(1);
         expect(events[0].message).toBe('🐣 An insect has hatched!');
         expect(incrementInsectsBorn).toHaveBeenCalledTimes(1);
+        expect(mockGetNextId).toHaveBeenCalledWith(ACTOR_NAMES[egg.insectEmoji].toLowerCase(), egg.x, egg.y);
     });
     
     it('should not hatch if a bird is on the same cell', () => {

@@ -8,6 +8,20 @@ export const windVectors: Record<WindDirection, {dx: number, dy: number}> = {
 };
 export const neighborVectors = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 
+export const getActorsOnCell = (qtree: Quadtree<CellContent>, nextActorState: Map<string, CellContent>, x: number, y: number): CellContent[] => {
+    const range = new Rectangle(x + 0.5, y + 0.5, 0.5, 0.5); // Center on cell
+    // The qtree is from the start of the tick. We must filter by nextActorState to get the current view.
+    return qtree.query(range)
+        .map(p => p.data)
+        .filter(actor => {
+            if (!actor || !nextActorState.has(actor.id)) return false;
+            // The query can be imprecise, so double-check coordinates.
+            const currentActor = nextActorState.get(actor.id)!;
+            return currentActor.x === x && currentActor.y === y;
+        });
+};
+
+
 export const findEmptyCell = (grid: Grid, params: SimulationParams, origin?: Coord): Coord | null => {
     if(origin) {
         const emptyNeighbors = neighborVectors

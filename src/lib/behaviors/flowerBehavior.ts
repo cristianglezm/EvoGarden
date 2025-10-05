@@ -17,6 +17,7 @@ export interface FlowerContext {
     currentTemperature: number;
     nextActorState: Map<string, CellContent>;
     claimedCellsThisTick: Set<string>; // New: Tracks cells claimed for spawning in the current tick
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
 export const processFlowerTick = (
@@ -60,7 +61,7 @@ export const processFlowerTick = (
             const spawnSpot = findCellForFlowerSpawn(grid, params, { x: flower.x, y: flower.y }, claimedCellsThisTick);
 
             if (spawnSpot) {
-                const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome);
+                const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, undefined, context.getNextId);
                 if (seed) {
                     newActorQueue.push(seed);
                     claimedCellsThisTick.add(`${spawnSpot.x},${spawnSpot.y}`);
@@ -80,7 +81,7 @@ export const processFlowerTick = (
                 const partner = matureNeighbors[0];
                 const spawnSpot = findCellForFlowerSpawn(grid, params, { x: partner.x, y: partner.y }, claimedCellsThisTick);
                 if (spawnSpot) {
-                    const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, partner.genome);
+                    const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, partner.genome, context.getNextId);
                     if (seed) {
                         newActorQueue.push(seed);
                         claimedCellsThisTick.add(`${spawnSpot.x},${spawnSpot.y}`);
@@ -102,7 +103,7 @@ export const processFlowerTick = (
                 if (targetFlower?.isMature) {
                     const spawnSpot = findCellForFlowerSpawn(grid, params, {x: targetX, y: targetY}, claimedCellsThisTick);
                     if (spawnSpot) {
-                         const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome);
+                         const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome, context.getNextId);
                          if(seed) {
                             newActorQueue.push(seed);
                             claimedCellsThisTick.add(`${spawnSpot.x},${spawnSpot.y}`);
