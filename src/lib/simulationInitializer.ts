@@ -16,7 +16,8 @@ export const createNewFlower = async (
     flowerService: FEService, 
     params: SimulationParams, 
     x: number, y: number, 
-    genome?: string, parentGenome2?: string
+    genome?: string, parentGenome2?: string,
+    flowerId?: string,
 ): Promise<Flower | null> => {
     try {
         let newFlowerData: { genome: string; image: string };
@@ -31,9 +32,10 @@ export const createNewFlower = async (
         const maxStamina = stats.stamina || FALLBACK_MAX_STAMINA;
         const nutrientEfficiency = 1.0 + ((stats.effects?.vitality || 0) / 100) || FALLBACK_NUTRIENT_EFFICIENCY;
         const maturationPeriod = stats.maturationPeriod || FALLBACK_MATURATION_AGE;
+        const id = flowerId || `flower-${x}-${y}-${Date.now()}`;
 
         return {
-            id: `flower-${x}-${y}-${Date.now()}`, type: 'flower', x, y,
+            id, type: 'flower', x, y,
             genome: newFlowerData.genome, imageData: newFlowerData.image, maxHealth, maxStamina,
             nutrientEfficiency, minTemperature: stats.minTemperature, maxTemperature: stats.maxTemperature,
             maturationPeriod, sex: stats.sex, toxicityRate: stats.toxicityRate, effects: stats.effects,

@@ -54,7 +54,7 @@ export class ScorpionBehavior extends InsectBehavior {
                 // Prey is killed
                 context.nextActorState.delete(targetOnCell.id);
                 // Create a corpse
-                const corpseId = `corpse-${targetOnCell.x}-${targetOnCell.y}-${Date.now()}`;
+                const corpseId = context.getNextId('corpse', targetOnCell.x, targetOnCell.y);
                 context.newActorQueue.push({ 
                     id: corpseId, type: 'corpse', x: targetOnCell.x, y: targetOnCell.y, 
                     originalEmoji: targetOnCell.emoji, decayTimer: CORPSE_DECAY_TIME 

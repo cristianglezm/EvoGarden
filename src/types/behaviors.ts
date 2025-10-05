@@ -18,4 +18,5 @@ export interface InsectBehaviorContext {
     incrementInsectsDiedOfOldAge: () => void;
     currentTemperature: number;
     newActorQueue: CellContent[];
+    getNextId: (type: string, x: number, y: number) => string;
 }

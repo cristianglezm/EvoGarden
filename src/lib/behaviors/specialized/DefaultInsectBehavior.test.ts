@@ -19,6 +19,7 @@ describe('DefaultInsectBehavior', () => {
     let events: AppEvent[];
     let newActorQueue: CellContent[];
     let incrementInsectsDiedOfOldAge: Mock;
+    const getNextId = vi.fn();
     
     const mockFlower: Flower = {
         id: 'flower1', type: 'flower', x: 8, y: 8,
@@ -56,6 +57,7 @@ describe('DefaultInsectBehavior', () => {
         newActorQueue = [];
         events = [];
         incrementInsectsDiedOfOldAge = vi.fn();
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = () => ({
@@ -69,6 +71,7 @@ describe('DefaultInsectBehavior', () => {
         incrementInsectsDiedOfOldAge,
         currentTemperature: DEFAULT_SIM_PARAMS.temperature,
         newActorQueue,
+        getNextId,
     });
 
     it('should lose health and not move or attack if stamina is too low', () => {
@@ -126,7 +129,7 @@ describe('DefaultInsectBehavior', () => {
         behavior.update(insect, setupContext());
 
         // Should move towards the healthy flower at (8,8)
-        // Starts at (5,5), speed is 1 (for ladybug). Moves 1 unit along the vector: (5,5) -> (5.7, 5.7), which rounds to (6,6)
+        // Starts at (5,5), speed is 2 (for ladybug). Moves towards (8,8)
         expect(insect.x).toBe(6);
         expect(insect.y).toBe(6);
 
@@ -141,20 +144,23 @@ describe('DefaultInsectBehavior', () => {
         const initialHealth = insect.health;
         const initialStamina = insect.stamina;
 
-        behavior.update(insect, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
+
+        behavior.update(insect, context);
         
         const flowerState = nextActorState.get(flower.id) as Flower;
         const baseStats = INSECT_DATA.get(insect.emoji)!;
 
-        // Stamina logic has changed: insects GAIN stamina from eating, then spend some to wander away.
+        // Stamina logic: insects GAIN stamina from eating, then spend some to wander away.
         const expectedStamina = Math.min(insect.maxStamina, initialStamina + INSECT_STAMINA_GAIN_FROM_EATING) - INSECT_MOVE_COST;
         expect(insect.stamina).toBe(expectedStamina);
         
         // Flower health is reduced by the insect's attack power.
         expect(flowerState.health).toBe(flower.maxHealth - baseStats.attack);
         
-        // Insect health logic has changed: it decays per tick, and takes damage based on flower toxicity.
-        // It no longer gains health from a neutral flower.
+        // Insect health logic: it decays per tick, and takes damage based on flower toxicity.
         const damageFromFlower = INSECT_DAMAGE_FROM_TOXIC_FLOWER * flower.toxicityRate;
         const expectedHealth = initialHealth - INSECT_HEALTH_DECAY_PER_TICK - damageFromFlower;
         expect(insect.health).toBeCloseTo(expectedHealth);
@@ -169,7 +175,12 @@ describe('DefaultInsectBehavior', () => {
         nextActorState.set(healingFlower.id, healingFlower);
         
         const initialHealth = insect.health;
-        behavior.update(insect, setupContext());
+
+        const context = setupContext();
+        context.qtree.insert({ x: healingFlower.x, y: healingFlower.y, data: healingFlower });
+        context.flowerQtree.insert({ x: healingFlower.x, y: healingFlower.y, data: healingFlower });
+        
+        behavior.update(insect, context);
         
         expect(insect.health).toBe(Math.min(insect.maxHealth, initialHealth - INSECT_HEALTH_DECAY_PER_TICK + (INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(healingFlower.toxicityRate))));
     });
@@ -180,7 +191,12 @@ describe('DefaultInsectBehavior', () => {
         nextActorState.set(toxicFlower.id, toxicFlower);
 
         const initialHealth = insect.health;
-        behavior.update(insect, setupContext());
+        
+        const context = setupContext();
+        context.qtree.insert({ x: toxicFlower.x, y: toxicFlower.y, data: toxicFlower });
+        context.flowerQtree.insert({ x: toxicFlower.x, y: toxicFlower.y, data: toxicFlower });
+
+        behavior.update(insect, context);
 
         const damageFromFlower = INSECT_DAMAGE_FROM_TOXIC_FLOWER * toxicFlower.toxicityRate;
         const expectedHealth = initialHealth - INSECT_HEALTH_DECAY_PER_TICK - damageFromFlower;
@@ -189,7 +205,7 @@ describe('DefaultInsectBehavior', () => {
     });
 
     it('should pollinate a different mature flower', () => {
-        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.3); // Ensures successful pollination check
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(INSECT_POLLINATION_CHANCE / 2);
 
         const targetFlower: Flower = { ...mockFlower, id: 'flower2', x: 5, y: 5, genome: 'g2', isMature: true };
         grid[5][5].push(targetFlower);
@@ -198,10 +214,13 @@ describe('DefaultInsectBehavior', () => {
         insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
         
         const context = setupContext();
+        context.qtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+        context.flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+
         behavior.update(insect, context);
         
         expect(requestNewFlower).toHaveBeenCalledTimes(1);
-        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1');
+        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1', expect.any(Function));
         expect(newActorQueue.length).toBe(1);
 
         randomSpy.mockRestore();
@@ -234,12 +253,15 @@ describe('DefaultInsectBehavior', () => {
         const targetFlower: Flower = { ...mockFlower, id: 'flower1', x: 5, y: 5, genome: 'g1', isMature: true };
         grid[5][5].push(targetFlower);
         nextActorState.set(targetFlower.id, targetFlower);
-        flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+
+        const context = setupContext();
+        context.qtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+        context.flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
 
         // Insect is carrying pollen from the flower it's currently on
         insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
 
-        behavior.update(insect, setupContext());
+        behavior.update(insect, context);
 
         expect(requestNewFlower).not.toHaveBeenCalled();
 
@@ -253,12 +275,15 @@ describe('DefaultInsectBehavior', () => {
         const targetFlower: Flower = { ...mockFlower, id: 'flower2', x: 5, y: 5, genome: 'g2', isMature: false };
         grid[5][5].push(targetFlower);
         nextActorState.set(targetFlower.id, targetFlower);
-        flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+
+        const context = setupContext();
+        context.qtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+        context.flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
 
         // Insect has pollen from another flower
         insect.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
 
-        behavior.update(insect, setupContext());
+        behavior.update(insect, context);
 
         expect(requestNewFlower).not.toHaveBeenCalled();
 

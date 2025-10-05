@@ -8,11 +8,12 @@ interface AntColonyContext {
     newActorQueue: CellContent[];
     params: SimulationParams;
     currentTemperature: number;
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
-function createAntFromColony(colony: AntColony, position: {x: number, y: number}, params: SimulationParams): Insect {
+function createAntFromColony(colony: AntColony, position: {x: number, y: number}, params: SimulationParams, getNextId: (type: string, x: number, y: number) => string): Insect {
     const baseStats = INSECT_DATA.get('🐜')!;
-    const newAntId = `insect-ant-${position.x}-${position.y}-${Date.now()}`;
+    const newAntId = getNextId('insect-ant', position.x, position.y);
     
     // Inherit from colony, with mutation
     const newGenome = [...colony.genome];
@@ -40,7 +41,7 @@ function createAntFromColony(colony: AntColony, position: {x: number, y: number}
 }
 
 export const processAntColonyTick = (colony: AntColony, context: AntColonyContext) => {
-    const { nextActorState, events, newActorQueue, params, currentTemperature } = context;
+    const { nextActorState, events, newActorQueue, params, currentTemperature, getNextId } = context;
     
     // 1. Handle ants emerging from dormancy
     if (currentTemperature > params.antDormancyTemp && colony.storedAnts && colony.storedAnts > 0) {
@@ -56,7 +57,7 @@ export const processAntColonyTick = (colony: AntColony, context: AntColonyContex
 
         if (spawnSpot) {
             colony.storedAnts--;
-            const newAnt = createAntFromColony(colony, spawnSpot, params);
+            const newAnt = createAntFromColony(colony, spawnSpot, params, getNextId);
             newActorQueue.push(newAnt);
             events.push({ message: `🐜 An ant emerged from its colony as the weather warmed.`, type: 'info', importance: 'low' });
         }
@@ -77,7 +78,7 @@ export const processAntColonyTick = (colony: AntColony, context: AntColonyContex
         if (spawnSpot) {
             colony.foodReserves = Math.max(0, colony.foodReserves - params.antColonySpawnCost);
             colony.spawnCooldown = 5; // Simple cooldown
-            const newAnt = createAntFromColony(colony, spawnSpot, params);
+            const newAnt = createAntFromColony(colony, spawnSpot, params, getNextId);
             newActorQueue.push(newAnt);
             events.push({ message: `🐜 A new ant was born at Colony ${colony.colonyId}!`, type: 'info', importance: 'low' });
         }

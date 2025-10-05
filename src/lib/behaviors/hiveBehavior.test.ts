@@ -10,6 +10,7 @@ describe('hiveBehavior', () => {
     let events: AppEvent[];
     let newActorQueue: CellContent[];
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS };
+    const getNextId = vi.fn((type, x, y) => `${type}-${x}-${y}`);
 
     beforeEach(() => {
         hive = {
@@ -23,6 +24,7 @@ describe('hiveBehavior', () => {
         events = [];
         newActorQueue = [];
         vi.restoreAllMocks();
+        getNextId.mockClear();
     });
 
     const setupContext = () => ({
@@ -31,6 +33,7 @@ describe('hiveBehavior', () => {
         newActorQueue,
         params,
         currentTemperature: params.temperature,
+        getNextId,
     });
 
     it('should convert pollen to honey', () => {

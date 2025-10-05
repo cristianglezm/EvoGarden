@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { processHerbicidePlaneTick } from './herbicidePlaneBehavior';
 import type { HerbicidePlane, CellContent, Grid, SimulationParams } from '../../types';
 import { DEFAULT_SIM_PARAMS } from '../../constants';
@@ -8,6 +8,7 @@ describe('herbicidePlaneBehavior', () => {
     let nextActorState: Map<string, CellContent>;
     let grid: Grid;
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 5, gridHeight: 5 };
+    const mockGetNextId = vi.fn();
 
     beforeEach(() => {
         // Horizontal sweep from top-left
@@ -18,22 +19,27 @@ describe('herbicidePlaneBehavior', () => {
         grid = Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => []));
         nextActorState = new Map();
         nextActorState.set(plane.id, plane);
+        mockGetNextId.mockClear();
     });
 
     const setupContext = () => ({
         grid,
         params,
         nextActorState,
+        getNextId: mockGetNextId,
     });
 
     it('should drop smoke and move one step along its primary path', () => {
+        mockGetNextId.mockReturnValue('smoke-id');
         processHerbicidePlaneTick(plane, setupContext());
         const smoke = Array.from(nextActorState.values()).find(a => a.type === 'herbicideSmoke');
         expect(smoke).toBeDefined();
+        expect(smoke?.id).toBe('smoke-id');
         expect(smoke?.x).toBe(0); // Smoke dropped at original position
         expect(smoke?.y).toBe(0);
         expect(plane.x).toBe(1); // Plane moved
         expect(plane.y).toBe(0);
+        expect(mockGetNextId).toHaveBeenCalledWith('smoke', 0, 0);
     });
 
     it('should turn and reverse direction when hitting a boundary', () => {

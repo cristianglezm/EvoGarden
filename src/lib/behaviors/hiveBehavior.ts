@@ -8,11 +8,12 @@ interface HiveContext {
     newActorQueue: CellContent[];
     params: SimulationParams;
     currentTemperature: number;
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
-function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params: SimulationParams): Insect {
+function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params: SimulationParams, getNextId: (type: string, x: number, y: number) => string): Insect {
     const baseStats = INSECT_DATA.get('🐝')!;
-    const newBeeId = `insect-honeybee-${position.x}-${position.y}-${Date.now()}`;
+    const newBeeId = getNextId('insect-honeybee', position.x, position.y);
     
     // Inherit from hive, with mutation
     const newGenome = [...hive.genome];
@@ -40,7 +41,7 @@ function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params:
 }
 
 export const processHiveTick = (hive: Hive, context: HiveContext) => {
-    const { nextActorState, events, newActorQueue, params, currentTemperature } = context;
+    const { nextActorState, events, newActorQueue, params, currentTemperature, getNextId } = context;
     
     // 1. Handle bees emerging from dormancy
     if (currentTemperature > params.beeDormancyTemp && hive.storedBees && hive.storedBees > 0) {
@@ -56,7 +57,7 @@ export const processHiveTick = (hive: Hive, context: HiveContext) => {
 
         if (spawnSpot) {
             hive.storedBees--;
-            const newBee = createBeeFromHive(hive, spawnSpot, params);
+            const newBee = createBeeFromHive(hive, spawnSpot, params, getNextId);
             newActorQueue.push(newBee);
             events.push({ message: `🐝 A bee emerged from its hive as the weather warmed.`, type: 'info', importance: 'low' });
         }
@@ -83,7 +84,7 @@ export const processHiveTick = (hive: Hive, context: HiveContext) => {
         if (spawnSpot) {
             hive.honey = Math.max(0, hive.honey - params.hiveSpawnCost);
             hive.spawnCooldown = 5; // Simple cooldown
-            const newBee = createBeeFromHive(hive, spawnSpot, params);
+            const newBee = createBeeFromHive(hive, spawnSpot, params, getNextId);
             newActorQueue.push(newBee);
             events.push({ message: `🐝 A new bee was born at Hive ${hive.hiveId}!`, type: 'info', importance: 'low' });
         }

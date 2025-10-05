@@ -13,7 +13,9 @@ describe('CaterpillarBehavior', () => {
     let grid: Grid;
     let nextActorState: Map<string, CellContent>;
     let flowerQtree: Quadtree<CellContent>;
+    let qtree: Quadtree<CellContent>;
     let events: AppEvent[];
+    const getNextId = vi.fn();
     const CATERPILLAR_DATA = INSECT_DATA.get('🐛')!;
 
     const mockFlower: Flower = {
@@ -42,8 +44,10 @@ describe('CaterpillarBehavior', () => {
         nextActorState.set(caterpillar.id, caterpillar);
         
         const boundary = new Rectangle(7.5, 7.5, 7.5, 7.5);
+        qtree = new Quadtree(boundary, 4);
         flowerQtree = new Quadtree(boundary, 4);
         events = [];
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = (): any => ({
@@ -51,12 +55,13 @@ describe('CaterpillarBehavior', () => {
         params: DEFAULT_SIM_PARAMS,
         nextActorState,
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
-        qtree: new Quadtree(new Rectangle(7.5, 7.5, 7.5, 7.5), 4),
+        qtree,
         flowerQtree,
         events,
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: DEFAULT_SIM_PARAMS.temperature,
         newActorQueue: [],
+        getNextId,
     });
 
     it('should eat a flower on the same cell, decreasing its health and increasing healthEaten', () => {
@@ -65,7 +70,11 @@ describe('CaterpillarBehavior', () => {
         nextActorState.set(flower.id, flower);
         const initialFlowerHealth = flower.health;
 
-        behavior.update(caterpillar, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
+
+        behavior.update(caterpillar, context);
         
         const flowerState = nextActorState.get(flower.id) as Flower;
         expect(flowerState.health).toBe(initialFlowerHealth - CATERPILLAR_DATA.attack);
@@ -92,8 +101,11 @@ describe('CaterpillarBehavior', () => {
         const flower = { ...mockFlower, x: 5, y: 5 };
         grid[5][5].push(flower);
         nextActorState.set(flower.id, flower);
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
 
-        behavior.update(caterpillar, setupContext());
+        behavior.update(caterpillar, context);
 
         expect(nextActorState.has(caterpillar.id)).toBe(false); // Caterpillar is gone
         
@@ -112,8 +124,11 @@ describe('CaterpillarBehavior', () => {
         const flower = { ...mockFlower, x: 5, y: 5 };
         grid[5][5].push(flower);
         nextActorState.set(flower.id, flower);
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
 
-        behavior.update(caterpillar, setupContext());
+        behavior.update(caterpillar, context);
 
         expect(nextActorState.has(caterpillar.id)).toBe(true);
         const cocoon = Array.from(nextActorState.values()).find(a => a.type === 'cocoon');

@@ -21,6 +21,7 @@ describe('HoneybeeBehavior', () => {
     let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
     let newActorQueue: CellContent[];
+    const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
     
     const createMockFlower = (id: string, x: number, y: number): Flower => ({
@@ -53,6 +54,7 @@ describe('HoneybeeBehavior', () => {
         qtree = new Quadtree(boundary, 4);
         flowerQtree = new Quadtree(boundary, 4);
         newActorQueue = [];
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = (): any => ({
@@ -66,6 +68,7 @@ describe('HoneybeeBehavior', () => {
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
+        getNextId,
     });
 
     it('should seek and move towards the best flower when seeking food', () => {
@@ -83,8 +86,10 @@ describe('HoneybeeBehavior', () => {
     it('should collect pollen and switch to returning_to_hive state', () => {
         const flower = createMockFlower('f1', 10, 10);
         nextActorState.set(flower.id, flower);
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
 
-        behavior.update(bee, setupContext());
+        behavior.update(bee, context);
         
         expect(bee.pollen).not.toBeNull();
         expect(bee.pollen?.sourceFlowerId).toBe(flower.id);
@@ -144,6 +149,8 @@ describe('HoneybeeBehavior', () => {
     it('should switch to hunting when an UNDER_ATTACK signal is on its territory mark', () => {
         const mark: TerritoryMark = { id: 'mark1', type: 'territoryMark', x: 10, y: 10, hiveId: '1', lifespan: 10, signal: { type: 'UNDER_ATTACK', origin: {x: 1, y: 1}, ttl: 5 } };
         nextActorState.set(mark.id, mark);
+        const context = setupContext();
+        context.qtree.insert({ x: mark.x, y: mark.y, data: mark });
         
         // Fix: Add an enemy bee for the hunt logic to find
         const enemyBee: Insect = { 
@@ -154,7 +161,7 @@ describe('HoneybeeBehavior', () => {
         nextActorState.set(enemyBee.id, enemyBee);
         qtree.insert({ x: enemyBee.x, y: enemyBee.y, data: enemyBee });
         
-        behavior.update(bee, setupContext());
+        behavior.update(bee, context);
 
         expect(bee.behaviorState).toBe('hunting');
     });

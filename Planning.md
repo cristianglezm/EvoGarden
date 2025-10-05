@@ -244,49 +244,57 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 -   **Automatic React DevTools**: A custom Vite plugin automatically launches the standalone React DevTools application.
 
 ## 10. Project Structure
--   `index.html`: The single-page entry point. It contains the `<div id="root">` where the React app is mounted.
--   `package.json`: Defines project metadata, scripts (`dev`, `build`), and dependencies.
+-   `index.html`: The single-page entry point.
+-   `package.json`: Project metadata, scripts, and dependencies.
 -   `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`: Configuration files for the Vite build tool and the Tailwind CSS styling pipeline.
 -   `src/`: Contains all the application source code.
-    -   `src/index.tsx`: The main entry point for the React application.
-    -   `src/App.tsx`: The root React component. Manages global state and layout.
-    -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
-    -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
-    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
-    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
-    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating tasks to specialized managers.
-    -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
-    -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
-    -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
-    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, `slimeTrailBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
-    -   `src/lib/behaviors/antColonyBehavior.ts`: The behavior for Ant Colonies.
-    -   `src/lib/behaviors/pheromoneTrailBehavior.ts`: The behavior for Pheromone Trails.
-    -   `src/lib/behaviors/spiderWebBehavior.ts`: The behavior for Spider Webs.
-    -   `src/lib/behaviors/specialized/AntBehavior.ts`: The specialized behavior for Ants.
-    -   `src/lib/behaviors/specialized/SpiderBehavior.ts`: The specialized behavior for Spiders.
-    -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
-    -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
-    -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.
-    -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
-    -   `src/components/Controls.tsx`: UI for changing simulation parameters.
-    -   `src/components/ActorSelectionPanel.tsx`: A panel that appears when a user clicks a cell containing multiple actors.
-    -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked and includes a button to initiate tracking.
-    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect.
-    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg.
-    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors.
-    -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
-    -   `src/components/Modal.tsx`: A generic modal component.
-    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
-    -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress.
-    -   `src/components/ChartsPanel.tsx`: Renders all the data visualization charts using data from the `analyticsStore`.
-    -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
-    -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
-    -   `src/components/StatusPanel.tsx`: The main container in the header for status information, including the global search widget.
-    -   `src/components/GlobalSearch.tsx`: The UI component for the global actor search and tracking widget located in the header.
-    -   `src/components/Toast.tsx`: Renders a single toast notification.
-    -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
-    -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
-    -   `src/stores/`: Contains all Zustand global state management stores.
-    -   `src/utils.ts`: A module for shared utility functions.
-    -   `src/constants.ts`: Global constants for the simulation.
-    -   `src/types.ts`: Shared TypeScript types for the simulation.
+    -   **Entry Point & Styles**:
+        -   `index.tsx`: React application entry point.
+        -   `App.tsx`: Root React component, manages global state and layout.
+        -   `style.css`: Main stylesheet with Tailwind directives and theme variables.
+    -   **Core Simulation Library (`lib/`)**:
+        -   `simulationEngine.ts`: The high-level orchestrator for the simulation.
+        -   `simulationInitializer.ts`: Functions for creating initial actors.
+        -   `PopulationManager.ts`: Manages ecosystem balancing.
+        -   `AsyncFlowerFactory.ts`: Handles asynchronous flower creation.
+        -   `EcosystemManager.ts`: Contains global behavior functions.
+        -   `environmentManager.ts`: Manages seasons and weather (inferred from imports).
+        -   `renderingEngine.ts`: Manages the two-canvas rendering system.
+        -   `behaviors/`: Modules for individual actor logic.
+            -   Contains behaviors for all actors (`birdBehavior.ts`, `insectBehavior.ts`, `slimeTrailBehavior.ts`, etc.).
+            -   `base/`: Base class for insect behaviors.
+            -   `specialized/`: Contains complex AI for specific insects (Ants, Spiders, Bees, etc.).
+        -   `Quadtree.ts` & `Trie.ts`: Data structures for performance optimization.
+    -   **Components (`components/`)**:
+        -   **Main View**:
+            -   `SimulationView.tsx`: Hosts the two stacked canvas elements.
+        -   **UI Panels**:
+            -   `Controls.tsx`: UI for changing simulation parameters.
+            -   `DataPanel.tsx`: Main UI for the slide-out panel containing challenges, analytics, and the Seed Bank.
+            -   `...DetailsPanel.tsx`: A suite of panels for inspecting individual actors.
+            -   `ActorSelectionPanel.tsx`: A panel for disambiguating clicks on crowded cells.
+        -   **Header UI**:
+            -   `StatusPanel.tsx`: The main container in the header for status information.
+            -   `GlobalSearch.tsx`: The global actor search and tracking widget.
+        -   **Data Visualization**:
+            -   `ChartsPanel.tsx`: The main container for the analytics tab.
+            -   `charts/`: Directory containing individual, specialized chart components.
+            -   `Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
+            -   `SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
+        -   **Modals & Notifications**:
+            -   `Modal.tsx` & `ConfirmationModal.tsx`: Generic modal components.
+            -   `Flower3DViewer.tsx`: React-Three-Fiber component for rendering the 3D flower model.
+            -   `Toast.tsx` & `ToastContainer.tsx`: Components for pop-up notifications.
+    -   **Hooks (`hooks/`)**:
+        -   `useSimulation.ts`: Manages the simulation web worker.
+        -   `useActorTracker.ts`: Encapsulates actor tracking logic.
+    -   **Services (`services/`)**:
+        -   `flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
+        -   `eventService.ts`: Central hub for all UI notifications.
+        -   `db.ts`: Dexie (IndexedDB) setup for persistence.
+    -   **State Management (`stores/`)**:
+        -   Contains all Zustand global state management stores (`analyticsStore`, `challengeStore`, etc.).
+    -   **Core Definitions**:
+        -   `types/`: Directory containing all TypeScript type definitions.
+        -   `constants.ts`: Global simulation constants.
+        -   `utils.ts`: Shared utility functions.

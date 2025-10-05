@@ -10,7 +10,7 @@ import {
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 import { Rectangle } from '../../Quadtree';
-import { scoreFlower } from '../../simulationUtils';
+import { scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { neighborVectors } from '../../simulationUtils';
 
 const ANT_VISION_RANGE = 7;
@@ -173,7 +173,7 @@ export class AntBehavior extends InsectBehavior {
     }
 
     private findFoodOnCell(insect: Insect, context: InsectBehaviorContext): Corpse | Egg | Cocoon | Flower | null {
-        const actorsOnCell = Array.from(context.nextActorState.values()).filter(a => a.x === insect.x && a.y === insect.y);
+        const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
         for (const type of PREY_PRIORITY) {
             const food = actorsOnCell.find(a => a.type === type);
             if (food) return food as Corpse | Egg | Cocoon;
@@ -232,12 +232,13 @@ export class AntBehavior extends InsectBehavior {
     }
 
     private findColony(insect: Insect, context: InsectBehaviorContext): AntColony | undefined {
+        // This is still O(N), but colonies are few. A better optimization would be a dedicated map.
         return Array.from(context.nextActorState.values()).find(a => a.type === 'antColony' && (a as AntColony).colonyId === insect.colonyId) as AntColony | undefined;
     }
     
     private getPheromoneOnCell(x: number, y: number, context: InsectBehaviorContext): PheromoneTrail | undefined {
-        return Array.from(context.nextActorState.values())
-            .find(a => a.x === x && a.y === y && a.type === 'pheromoneTrail') as PheromoneTrail | undefined;
+        return getActorsOnCell(context.qtree, context.nextActorState, x, y)
+            .find(a => a.type === 'pheromoneTrail') as PheromoneTrail | undefined;
     }
     
     private leavePheromoneTrail(insect: Insect, context: InsectBehaviorContext) {
@@ -245,8 +246,6 @@ export class AntBehavior extends InsectBehavior {
         // Only leave strong trails from valuable food, or weak "exploration" trails when returning home.
         // Don't leave trails when just wandering around seeking food.
         if (strength <= 1 && insect.behaviorState !== 'returning_to_colony') return; 
-        
-        const trailId = `pheromone-${insect.x}-${insect.y}-${Date.now()}`;
         
         const trailOnCell = this.getPheromoneOnCell(insect.x, insect.y, context);
 
@@ -265,6 +264,7 @@ export class AntBehavior extends InsectBehavior {
             }
         } else {
             // Create a new trail
+            const trailId = context.getNextId('pheromone', insect.x, insect.y);
             const newTrail: PheromoneTrail = {
                 id: trailId, type: 'pheromoneTrail', x: insect.x, y: insect.y,
                 colonyId: insect.colonyId!, lifespan: context.params.pheromoneLifespan,
