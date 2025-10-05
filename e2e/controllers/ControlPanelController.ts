@@ -18,7 +18,13 @@ export class ControlPanelController {
     await this.page.getByRole('button', { name: 'Close controls panel' }).click();
     await expect(this.panel).not.toBeInViewport();
   }
-
+  private async setSlider(label: string | RegExp, value: string) {
+    const slider = this.page.getByLabel(label);
+    await slider.evaluate((el, { value }) => {
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { value });
+  }
   getStart() { return this.page.getByRole('button', { name: /Start simulation/i }); }
   getPause() { return this.page.getByRole('button', { name: /Pause simulation/i }); }
   getSave() { return this.page.getByRole('button', { name: /Save/i }); }
@@ -53,6 +59,7 @@ export class ControlPanelController {
   }
 
   async openHiveColonyRulesSection() { await this.openCollapsibleSection("Hive & Colony Rules"); }
+  async openSpiderRulesSection() { await this.openCollapsibleSection("Spider Rules"); }
   async openEcosystemRulesSection() { await this.openCollapsibleSection("Ecosystem Rules"); }
   async openEvolutionReproductionSection() { await this.openCollapsibleSection("Evolution & Reproduction"); }
   async openWeatherEventsSection() { await this.openCollapsibleSection("Weather Events"); }
@@ -74,6 +81,18 @@ export class ControlPanelController {
   getAntColonySpawnCostInput() { return this.getLabel('Colony Spawn Cost'); }
   getPheromoneLifespanInput() { return this.getLabel('Pheromone Lifespan'); }
   getPheromoneStrengthDecayInput() { return this.getLabel('Pheromone Decay Rate'); }
+
+  // Spider Rules
+  async setSpiderGridAreaInput(value: string) { await this.setSlider('Spider Grid Area', value); }
+  async setSpiderWebStaminaInput(value: string) { await this.setSlider(/^Web Stamina:/, value); }
+  async setSpiderWebStaminaRegenInput(value: string) { await this.setSlider('Web Stamina Regen', value); }
+  async setSpiderWebBuildCostInput(value: string) { await this.setSlider('Web Build Cost', value); }
+  async setSpiderMaxWebsInput(value: string) { await this.setSlider('Max Webs', value); }
+  async setSpiderWebLifespanInput(value: string) { await this.setSlider('Web Lifespan', value); }
+  async setSpiderWebStrengthInput(value: string) { await this.setSlider('Web Strength', value); }
+  async setSpiderWebTrapChanceInput(value: string) { await this.setSlider('Trap Chance', value); }
+  async setSpiderEscapeChanceModifierInput(value: string) { await this.setSlider('Escape Modifier', value); }
+
 
   // Ecosystem Rules
   getHerbicideDamageInput() { return this.getLabel('Herbicide Damage'); }

@@ -30,6 +30,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     bees: summary.beeCount,
                     scorpionCount: summary.scorpionCount || 0,
                     antCount: summary.antCount || 0,
+                    spiderCount: summary.spiderCount || 0,
                     hiveCount: summary.hiveCount,
                     colonyCount: summary.colonyCount || 0,
                     totalHoney: summary.totalHoney,

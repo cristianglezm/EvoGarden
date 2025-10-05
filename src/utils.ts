@@ -1,7 +1,7 @@
 import { INSECT_GENOME_LENGTH } from "./constants";
 import type { CellContent, Corpse, Insect } from "./types";
 
-const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🪲', '🦂', '🐝', '🐜'];
+const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🪲', '🦂', '🐝', '🐜', '🕷️'];
 
 export const getInsectEmoji = (insectId: string, exclude: string[] = []): string => {
     const availableEmojis = insectEmojis.filter(e => !exclude.includes(e));
@@ -29,6 +29,8 @@ export const ACTOR_NAMES: Record<string, string> = {
   '🐝': 'Honeybee',
   '🪳': 'Cockroach',
   '🐜': 'Ant',
+  '🕷️': 'Spider',
+  '🕸️': 'Spider Web',
   '🐦': 'Bird',
   '🦅': 'Eagle',
   '🥚': 'Egg',
@@ -70,6 +72,7 @@ export const getActorName = (actor: CellContent): string => {
         case 'territoryMark': return `📍 Territory Mark`;
         case 'antColony': return `⛰️ Ant Colony`;
         case 'pheromoneTrail': return `Pheromone Trail`;
+        case 'spiderweb': return `🕸️ Spider Web`;
         default: return 'Unknown Entity';
     }
 };

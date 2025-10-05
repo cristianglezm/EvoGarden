@@ -316,6 +316,17 @@ test.describe('Full Environment Parameter Test', () => {
     await controls.getPheromoneStrengthDecayInput().fill('0.08');
 
     // Open closed sections and set values
+    await controls.openSpiderRulesSection();
+    await controls.setSpiderGridAreaInput('10');
+    await controls.setSpiderWebStaminaInput('120');
+    await controls.setSpiderWebStaminaRegenInput('0.70');
+    await controls.setSpiderWebBuildCostInput('30');
+    await controls.setSpiderMaxWebsInput('7');
+    await controls.setSpiderWebLifespanInput('600');
+    await controls.setSpiderWebStrengthInput('25');
+    await controls.setSpiderWebTrapChanceInput('0.5');
+    await controls.setSpiderEscapeChanceModifierInput('0.75');
+
     await controls.openEcosystemRulesSection();
     await controls.getHerbicideDamageInput().fill('30');
     await controls.getHerbicideCooldownInput().fill('100');

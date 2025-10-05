@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail } from '../types';
+import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail, SpiderWeb } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { GenomeVisualizer } from './GenomeVisualizer';
 import { getShortId } from '../utils';
@@ -158,6 +158,19 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                     'Lifespan': `${trail.lifespan} ticks`,
                     'Strength': trail.strength.toFixed(2),
                     'Active Signal': signalInfo,
+                }
+            };
+        }
+        case 'spiderweb': {
+            const web = actor as SpiderWeb;
+            return {
+                emoji: '🕸️',
+                title: 'Spider Web Details',
+                stats: {
+                    'Owner ID': getShortId(web.ownerId),
+                    'Strength': web.strength,
+                    'Lifespan': `${web.lifespan} ticks`,
+                    'Trapped Actor': web.trappedActorId ? getShortId(web.trappedActorId) : 'None',
                 }
             };
         }
