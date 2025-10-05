@@ -10,7 +10,7 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { processCorpseTick } from './behaviors/corpseBehavior';
-import { processCocoonTick } from './behaviors/CocoonBehavior';
+import { processCocoonTick } from './behaviors/cocoonBehavior';
 import { processSlimeTrailTick } from './behaviors/slimeTrailBehavior';
 import { processHiveTick } from './behaviors/hiveBehavior';
 import { processTerritoryMarkTick } from './behaviors/territoryMarkBehavior';

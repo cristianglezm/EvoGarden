@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { processCocoonTick } from './CocoonBehavior';
+import { processCocoonTick } from './cocoonBehavior';
 import type { Cocoon, CellContent, AppEvent, Insect } from '../../types';
 import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../../constants';
 import { ACTOR_NAMES } from '../../utils';
