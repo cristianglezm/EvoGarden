@@ -442,6 +442,7 @@ export default function App(): React.ReactNode {
             case 'territoryMark':
             case 'antColony':
             case 'pheromoneTrail':
+            case 'spiderweb':
                 return <GenericActorDetailsPanel 
                             actor={selectedActor} 
                             onClose={() => handleActorSelection(null)}

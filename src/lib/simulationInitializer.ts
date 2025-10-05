@@ -55,8 +55,8 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
 
     for (let i = 0; i < initialInsects; i++) {
         const id = `insect-init-${i}`;
-        // Exclude bees and ants from the initial random population pool. They will be spawned by hives/colonies.
-        const emoji = getInsectEmoji(id, ['🐝', '🐜']);
+        // Exclude bees, ants, and spiders from the initial random population pool.
+        const emoji = getInsectEmoji(id, ['🐝', '🐜', '🕷️']);
         const baseStats = INSECT_DATA.get(emoji);
         
         if (baseStats) {
@@ -179,4 +179,28 @@ export const initializeAntColonies = (actors: CellContent[], params: SimulationP
             ant.colonyId = closestColony.colonyId;
         }
     });
+};
+
+export const initializeSpiders = (actors: CellContent[], params: SimulationParams) => {
+    const { gridWidth, gridHeight, spiderGridArea } = params;
+    const baseStats = INSECT_DATA.get('🕷️')!;
+
+    for (let y = 0; y < gridHeight; y += spiderGridArea) {
+        for (let x = 0; x < gridWidth; x += spiderGridArea) {
+            const spiderX = x + Math.floor(Math.random() * spiderGridArea);
+            const spiderY = y + Math.floor(Math.random() * spiderGridArea);
+
+            if (spiderX < gridWidth && spiderY < gridHeight) {
+                const id = `insect-spider-${spiderX}-${spiderY}-${Date.now()}`;
+                const newSpider: Insect = {
+                    id, type: 'insect', x: spiderX, y: spiderY,
+                    pollen: null, emoji: '🕷️',
+                    genome: generateRandomInsectGenome(),
+                    health: baseStats.maxHealth, maxHealth: baseStats.maxHealth,
+                    stamina: baseStats.maxStamina, maxStamina: baseStats.maxStamina
+                };
+                actors.push(newSpider);
+            }
+        }
+    }
 };

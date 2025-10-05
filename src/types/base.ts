@@ -68,6 +68,16 @@ export interface SimulationParams {
     antColonySpawnCost: number;
     pheromoneLifespan: number;
     pheromoneStrengthDecay: number;
+    // Spider Parameters
+    spiderGridArea: number;
+    spiderWebStamina: number;
+    spiderWebStaminaRegen: number;
+    spiderWebBuildCost: number;
+    spiderMaxWebs: number;
+    spiderWebLifespan: number;
+    spiderWebStrength: number;
+    spiderWebTrapChance: number;
+    spiderEscapeChanceModifier: number;
 }
 
 export interface Coord {
@@ -112,6 +122,7 @@ export interface TickSummary {
     beeCount: number;
     scorpionCount: number;
     antCount: number;
+    spiderCount: number;
     hiveCount: number;
     colonyCount: number;
     totalHoney: number;

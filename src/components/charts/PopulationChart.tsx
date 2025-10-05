@@ -24,6 +24,7 @@ export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = (
         'Bees': true,
         'Scorpions': true,
         'Ants': true,
+        'Spiders': true,
     });
     const handleLegendChange = createLegendSelectHandler(setLegend);
 
@@ -33,7 +34,7 @@ export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = (
             ...baseChartOptions,
             title: { text: 'Population Dynamics & Food Web', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
             legend: { 
-                data: ['Total Insects', 'Birds', 'Eagles', 'Eggs', 'Cocoons', 'Butterflies', 'Caterpillars', 'Beetles', 'Ladybugs', 'Cockroaches', 'Snails', 'Bees', 'Scorpions', 'Ants'], 
+                data: ['Total Insects', 'Birds', 'Eagles', 'Eggs', 'Cocoons', 'Butterflies', 'Caterpillars', 'Beetles', 'Ladybugs', 'Cockroaches', 'Snails', 'Bees', 'Scorpions', 'Ants', 'Spiders'], 
                 top: 35, 
                 textStyle: { color: '#bbf7d0' }, 
                 selected: legend 
@@ -54,6 +55,7 @@ export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = (
                 { name: 'Bees', type: 'line', data: history.map(h => h.bees || 0), color: '#FBBF24' },
                 { name: 'Scorpions', type: 'line', data: history.map(h => h.scorpionCount || 0), color: '#8B0000' },
                 { name: 'Ants', type: 'line', data: history.map(h => h.antCount || 0), color: '#6B4423' },
+                { name: 'Spiders', type: 'line', data: history.map(h => h.spiderCount || 0), color: '#718096' },
             ],
         };
     }, [history, legend]);
