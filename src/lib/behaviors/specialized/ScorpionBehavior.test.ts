@@ -22,6 +22,7 @@ describe('ScorpionBehavior', () => {
     let nextActorState: Map<string, CellContent>;
     let qtree: Quadtree<CellContent>;
     let events: AppEvent[];
+    const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
     
     const createMockPrey = (id: string, x: number, y: number, emoji: '🪲' | '🐌' | '🪳' | '🐞'): Insect => {
@@ -46,6 +47,7 @@ describe('ScorpionBehavior', () => {
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
         qtree = new Quadtree(boundary, 4);
         events = [];
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = (): any => ({
@@ -59,6 +61,7 @@ describe('ScorpionBehavior', () => {
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
         newActorQueue: [],
+        getNextId,
     });
 
     it('should prioritize and move towards a Beetle over a Ladybug', () => {

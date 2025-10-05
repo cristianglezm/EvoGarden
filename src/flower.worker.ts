@@ -59,7 +59,7 @@ const processQueue = async () => {
         return;
     }
     
-    const newFlower = await createNewFlower(flowerService, currentParams!, request.x, request.y, request.parentGenome1, request.parentGenome2);
+    const newFlower = await createNewFlower(flowerService, currentParams!, request.x, request.y, request.parentGenome1, request.parentGenome2, request.flowerId);
     
     // After async work, check if the request was cancelled while processing.
     const wasCancelled = cancellationQueue.some(id => id === request.requestId);

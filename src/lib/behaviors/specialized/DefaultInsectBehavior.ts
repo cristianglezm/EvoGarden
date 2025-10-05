@@ -10,7 +10,7 @@ import {
     INSECT_STAMINA_GAIN_FROM_EATING,
     INSECT_DAMAGE_FROM_TOXIC_FLOWER
 } from '../../../constants';
-import { findCellForFlowerSpawn, scoreFlower } from '../../simulationUtils';
+import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 
@@ -45,19 +45,19 @@ export class DefaultInsectBehavior extends InsectBehavior {
         }
 
         // 2. Movement phase
-        this.handleMovement(insect, hasInteracted, context);
+        const hasMoved = this.handleMovement(insect, hasInteracted, context);
 
         // 3. Regenerate stamina if idle
-        if (!hasInteracted) {
+        if (!hasInteracted && !hasMoved) {
              insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
     
     protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return Array.from(context.nextActorState.values()).find(
-            (actor) => actor.x === x && actor.y === y && actor.type === 'flower'
+         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
+            (actor) => actor.type === 'flower'
         ) as Flower | undefined;
-    }
+   }
     
     protected handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get(insect.emoji)!;
@@ -92,7 +92,7 @@ export class DefaultInsectBehavior extends InsectBehavior {
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });
             if (spawnSpot) {
-                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome);
+                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
                 if (seed) {
                     context.newActorQueue.push(seed);
                 }
@@ -100,27 +100,31 @@ export class DefaultInsectBehavior extends InsectBehavior {
         }
     }
     
-    protected handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext) {
+    protected handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext): boolean {
         const moveCost = INSECT_MOVE_COST * (context.currentTemperature < INSECT_DORMANCY_TEMP ? 2 : 1);
-        if (insect.stamina < moveCost) return;
-
-        insect.stamina -= moveCost;
-
-        if (hasInteracted) {
-            this.wander(insect, context);
-            return;
-        }
+        if (insect.stamina < moveCost) return false;
 
         let moved = false;
-        if (Math.random() > INSECT_WANDER_CHANCE) {
-            const targetFlower = this.findBestFlowerTarget(insect, context);
-            if (targetFlower) {
-                moved = this.moveTowards(insect, targetFlower, context);
+
+        if (hasInteracted) {
+            moved = this.wander(insect, context);
+        } else {
+            if (Math.random() > INSECT_WANDER_CHANCE) {
+                const targetFlower = this.findBestFlowerTarget(insect, context);
+                if (targetFlower) {
+                    moved = this.moveTowards(insect, targetFlower, context);
+                }
+            }
+            
+            if (!moved) {
+                moved = this.wander(insect, context);
             }
         }
-        
-        if (!moved) {
-            this.wander(insect, context);
+
+        if (moved) {
+            insect.stamina -= moveCost;
         }
+
+        return moved;
     }
 }
