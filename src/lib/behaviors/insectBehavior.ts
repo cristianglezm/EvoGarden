@@ -11,6 +11,7 @@ import { SnailBehavior } from './specialized/SnailBehavior';
 import { ScorpionBehavior } from './specialized/ScorpionBehavior';
 import { HoneybeeBehavior } from './specialized/HoneybeeBehavior';
 import { AntBehavior } from './specialized/AntBehavior';
+import { SpiderBehavior } from './specialized/SpiderBehavior';
 
 // The context object passed to each behavior's update method
 export interface InsectBehaviorContext {
@@ -37,6 +38,7 @@ const behaviorMap: Map<string, InsectBehavior> = new Map<string, InsectBehavior>
     ['🪲', new BeetleBehavior()],
     ['🦂', new ScorpionBehavior()],
     ['🐜', new AntBehavior()],
+    ['🕷️', new SpiderBehavior()],
 ]);
 
 /**
@@ -48,6 +50,11 @@ export const processInsectTick = (
     insect: Insect | Cockroach,
     context: InsectBehaviorContext
 ) => {
+    // Universal check: if an insect is trapped, it can't do anything else.
+    if ('isTrapped' in insect && insect.isTrapped) {
+        return;
+    }
+
     const behavior = behaviorMap.get(insect.emoji);
     if (behavior) {
         behavior.update(insect, context);
