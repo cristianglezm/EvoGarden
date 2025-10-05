@@ -1,5 +1,5 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail } from '../types';
-import { getInsectEmoji, generateRandomInsectGenome } from '../utils';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail, SpiderWeb } from '../types';
+import { getInsectEmoji, generateRandomInsectGenome, ACTOR_NAMES } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
@@ -16,6 +16,7 @@ import { processHiveTick } from './behaviors/hiveBehavior';
 import { processTerritoryMarkTick } from './behaviors/territoryMarkBehavior';
 import { processAntColonyTick } from './behaviors/antColonyBehavior';
 import { processPheromoneTrailTick } from './behaviors/pheromoneTrailBehavior';
+import { processSpiderWebTick } from './behaviors/spiderWebBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
 import { AsyncFlowerFactory } from './asyncFlowerFactory';
@@ -281,6 +282,9 @@ export class SimulationEngine {
                 case 'pheromoneTrail':
                     processPheromoneTrailTick(actor as PheromoneTrail, { nextActorState, params: this.params });
                     break;
+                case 'spiderweb':
+                    processSpiderWebTick(actor as SpiderWeb, { nextActorState, events, params: this.params });
+                    break;
             }
         }
     }
@@ -292,7 +296,7 @@ export class SimulationEngine {
         let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
         let healingFlowerCount = 0, toxicFlowerCount = 0;
-        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0, antCount = 0;
+        let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0, antCount = 0, spiderCount = 0;
         let hiveCount = 0, totalHoney = 0, colonyCount = 0, totalAntFood = 0;
 
 
@@ -331,6 +335,8 @@ export class SimulationEngine {
                     scorpionCount++;
                 } else if (insect.emoji === '🐜') {
                     antCount++;
+                } else if (insect.emoji === '🕷️') {
+                    spiderCount++;
                 }
             } else if (actor.type === 'bird') {
                 birdCount++;
@@ -368,7 +374,7 @@ export class SimulationEngine {
             insectCount: totalInsectCount,
             birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
             caterpillarCount, butterflyCount, beetleCount, ladybugCount, snailCount, beeCount, scorpionCount,
-            antCount,
+            antCount, spiderCount,
             hiveCount,
             colonyCount,
             totalHoney,
@@ -548,10 +554,12 @@ export class SimulationEngine {
                          const pos = findEmptyCell(tempGridForPlacement, this.params);
                          if (pos) {
                             const id = `insect-repop-${i}-${Date.now()}`;
-                            // Exclude bees from random repopulation; they should only come from hives.
-                            const emoji = getInsectEmoji(id, ['🐝']);
+                            // Exclude bees and ants from random repopulation; they should only come from hives/colonies.
+                            const emoji = getInsectEmoji(id, ['🐝', '🐜']);
                             const baseStats = INSECT_DATA.get(emoji);
                             if (baseStats) {
+                                const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
+                                const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
                                 const newInsect: Insect = { 
                                     id, type: 'insect', x: pos.x, y: pos.y, 
                                     pollen: null, emoji, 

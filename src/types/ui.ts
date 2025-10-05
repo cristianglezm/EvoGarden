@@ -61,6 +61,7 @@ export interface AnalyticsDataPoint {
     bees: number;
     scorpionCount: number;
     antCount: number;
+    spiderCount: number;
     hiveCount: number;
     colonyCount: number;
     totalHoney: number;

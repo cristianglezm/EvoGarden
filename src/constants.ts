@@ -52,6 +52,16 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     antColonySpawnCost: 20,
     pheromoneLifespan: 200,
     pheromoneStrengthDecay: 0.05,
+    // Spider Parameters
+    spiderGridArea: 15,
+    spiderWebStamina: 100,
+    spiderWebStaminaRegen: 0.5,
+    spiderWebBuildCost: 25,
+    spiderMaxWebs: 5,
+    spiderWebLifespan: 500,
+    spiderWebStrength: 20,
+    spiderWebTrapChance: 0.4,
+    spiderEscapeChanceModifier: 0.5,
 };
 
 // --- FLOWER CONSTANTS ---
@@ -154,6 +164,8 @@ export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     ['🦂', { role: 'hunter', attack: 12, maxHealth: 220, maxStamina: 60, speed: 1, eggHatchTime: 35, reproductionCost: 15 }],
     // Ants are colony builders and scavengers
     ['🐜', { role: 'colony-builder', attack: 4, maxHealth: 80, maxStamina: 60, speed: 2, eggHatchTime: 10, reproductionCost: 5 }],
+    // Spiders are trappers/hunters
+    ['🕷️', { role: 'hunter', attack: 15, maxHealth: 180, maxStamina: 80, speed: 1, eggHatchTime: 20, reproductionCost: 20 }],
 ]);
 
 // --- FOOD VALUES for Ants ---
@@ -174,3 +186,6 @@ export const COCKROACH_SPAWN_COOLDOWN = 15;
 
 // --- SCORPION CONSTANTS ---
 export const SCORPION_HEAL_FROM_PREY = 30;
+
+// --- SPIDER CONSTANTS ---
+export const SPIDER_HEAL_FROM_PREY = 40;
