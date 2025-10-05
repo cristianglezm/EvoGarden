@@ -27,7 +27,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount', 'beeWinterHoneyConsumption', 'hivePollenToHoneyRatio', 'beePollinationWanderChance', 'pheromoneStrengthDecay'].includes(name);
+        const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount', 'beeWinterHoneyConsumption', 'hivePollenToHoneyRatio', 'beePollinationWanderChance', 'pheromoneStrengthDecay', 'spiderWebStaminaRegen', 'spiderWebTrapChance', 'spiderEscapeChanceModifier'].includes(name);
         const isString = ['windDirection', 'notificationMode'].includes(name);
         
         setLocalParams(prev => {
@@ -231,6 +231,45 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                             <input type="range" name="pheromoneStrengthDecay" id="pheromoneStrengthDecay" min="0.01" max="0.2" step="0.01" value={localParams.pheromoneStrengthDecay} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                         </label>
                     </div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="Spider Rules" defaultOpen={false}>
+                    <label className="block" htmlFor="spiderGridArea">
+                        <span className="text-secondary text-sm">Spider Grid Area: {localParams.spiderGridArea}x{localParams.spiderGridArea}</span>
+                        <input type="range" name="spiderGridArea" id="spiderGridArea" min="5" max="20" value={localParams.spiderGridArea} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderWebStamina">
+                        <span className="text-secondary text-sm">Web Stamina: {localParams.spiderWebStamina}</span>
+                        <input type="range" name="spiderWebStamina" id="spiderWebStamina" min="20" max="200" step="10" value={localParams.spiderWebStamina} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderWebStaminaRegen">
+                        <span className="text-secondary text-sm">Web Stamina Regen: {localParams.spiderWebStaminaRegen.toFixed(2)}/tick</span>
+                        <input type="range" name="spiderWebStaminaRegen" id="spiderWebStaminaRegen" min="0.1" max="2" step="0.05" value={localParams.spiderWebStaminaRegen} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderWebBuildCost">
+                        <span className="text-secondary text-sm">Web Build Cost: {localParams.spiderWebBuildCost}</span>
+                        <input type="range" name="spiderWebBuildCost" id="spiderWebBuildCost" min="5" max="50" step="5" value={localParams.spiderWebBuildCost} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderMaxWebs">
+                        <span className="text-secondary text-sm">Max Webs: {localParams.spiderMaxWebs}</span>
+                        <input type="range" name="spiderMaxWebs" id="spiderMaxWebs" min="1" max="15" value={localParams.spiderMaxWebs} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderWebLifespan">
+                        <span className="text-secondary text-sm">Web Lifespan: {localParams.spiderWebLifespan} ticks</span>
+                        <input type="range" name="spiderWebLifespan" id="spiderWebLifespan" min="100" max="1000" step="50" value={localParams.spiderWebLifespan} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderWebStrength">
+                        <span className="text-secondary text-sm">Web Strength: {localParams.spiderWebStrength}</span>
+                        <input type="range" name="spiderWebStrength" id="spiderWebStrength" min="5" max="50" value={localParams.spiderWebStrength} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                    <label className="block" htmlFor="spiderWebTrapChance">
+                        <span className="text-secondary text-sm">Trap Chance: {(localParams.spiderWebTrapChance * 100).toFixed(0)}%</span>
+                        <input type="range" name="spiderWebTrapChance" id="spiderWebTrapChance" min="0.1" max="1" step="0.05" value={localParams.spiderWebTrapChance} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
+                     <label className="block" htmlFor="spiderEscapeChanceModifier">
+                        <span className="text-secondary text-sm">Escape Modifier: {(localParams.spiderEscapeChanceModifier * 100).toFixed(0)}%</span>
+                        <input type="range" name="spiderEscapeChanceModifier" id="spiderEscapeChanceModifier" min="0.1" max="2" step="0.05" value={localParams.spiderEscapeChanceModifier} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
+                    </label>
                 </CollapsibleSection>
 
                 <CollapsibleSection title="Ecosystem Rules" defaultOpen={false}>

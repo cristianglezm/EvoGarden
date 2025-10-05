@@ -8,6 +8,7 @@ import {
     SNAIL_MOVE_COOLDOWN,
     SLIME_TRAIL_LIFESPAN,
     FLOWER_STAT_INDICES,
+    INSECT_WANDER_CHANCE,
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -124,9 +125,45 @@ describe('SnailBehavior', () => {
         // The moveTowards method in the base class should see the snail emoji and not apply the slow factor.
         // It moves from (10,10) towards (12,12). Speed is 1. Should move to (11,11).
         // If it were slowed, speed would be 0.5, and it might not move a full cell.
+        
+        // Mock random to ensure the snail targets the flower instead of wandering
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
+
         behavior.update(snail, context);
 
         expect(snail.x).toBe(11);
         expect(snail.y).toBe(11);
+        
+        randomSpy.mockRestore();
+    });
+
+    it('should wander, reset cooldown, and leave slime if no flower is found', () => {
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0); // Make wander deterministic
+        const initialX = snail.x;
+        const initialY = snail.y;
+
+        // No flowers in the qtree
+        behavior.update(snail, setupContext());
+
+        const moved = snail.x !== initialX || snail.y !== initialY;
+        expect(moved, "Snail should have moved from its initial position.").toBe(true);
+        
+        // Check it's a valid neighbor
+        const dx = Math.abs(snail.x - initialX);
+        const dy = Math.abs(snail.y - initialY);
+        expect(dx).toBeLessThanOrEqual(1);
+        expect(dy).toBeLessThanOrEqual(1);
+
+        // Cooldown should be reset
+        expect(snail.moveCooldown).toBe(SNAIL_MOVE_COOLDOWN);
+        
+        // Slime trail should be created at the old position
+        expect(newActorQueue.length).toBe(1);
+        const slimeTrail = newActorQueue[0] as SlimeTrail;
+        expect(slimeTrail.type).toBe('slimeTrail');
+        expect(slimeTrail.x).toBe(initialX);
+        expect(slimeTrail.y).toBe(initialY);
+
+        randomSpy.mockRestore();
     });
 });

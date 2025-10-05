@@ -131,7 +131,8 @@ export class RenderingEngine {
             actor.type === 'cockroach' ? '🪳' :
             actor.type === 'cocoon' ? '⚪️' : 
             actor.type === 'hive' ? '🛖' :
-            actor.type === 'antColony' ? '⛰️' : '';
+            actor.type === 'antColony' ? '⛰️' :
+            actor.type === 'spiderweb' ? '🕸️' : '';
         
         if (emoji) {
             ctx.save();

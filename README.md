@@ -90,6 +90,10 @@ The garden is no longer static. It features a fully dynamic climate system that 
         -   **Slime Trails**: When a snail moves, it leaves behind a temporary `SlimeTrail` (`💧`). This trail slows down any other insect that moves onto its cell, creating a unique environmental hazard.
         -   **Sturdy**: They are sturdy herbivores that eat flowers like default insects but can take more damage.
     -   **Scorpions (`🦂`)**: A deadly ground predator that specializes in hunting other tough insects. Scorpions have a prey preference, prioritizing beetles (`🪲`), then snails (`🐌`), cockroaches (`🪳`), and finally ladybugs (`🐞`). When a scorpion kills its prey, it leaves behind a corpse and receives a significant health and stamina boost.
+    -   **Spiders (`🕷️`) & Spider Webs (`🕸️`)**: A "trapper" class predator that creates a network of webs to catch prey.
+        -   **Web Building**: Spiders use a special "web stamina" to build a limited number of webs in strategic, high-traffic locations.
+        -   **Trapping**: Webs have a chance to trap any non-flying insect that moves onto their cell. Stronger insects have a higher chance to break free, damaging the web in the process.
+        -   **Ambush & Consumption**: The spider waits on its web network. When an insect is trapped, the spider moves to the location, consumes the prey to restore its own health and stamina, and resets the trap.
     -   **Honeybees (`🐝`), Hives (`🛖`), & Territory (`📍`)**: A complex social insect system.
         -   **Honeybees**: Gather pollen from flowers and return it to their home `Hive`. Each bee is loyal to its hive.
         -   **Hives**: A central colony that converts collected pollen into honey. When honey reserves are high, the hive spawns new bees. Hives are distributed across the map based on a configurable grid area.

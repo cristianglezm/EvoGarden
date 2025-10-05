@@ -142,6 +142,10 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
         -   **`BeetleBehavior`**: Implements a support AI for Beetles (`🪲`). They transfer health from healthy flowers to heal weak ones.
         -   **`SnailBehavior`**: Manages the unique logic for Snails (`🐌`). They move on a cooldown, and when they do move, they create a new `SlimeTrail` actor. They extend the `DefaultInsectBehavior` to reuse flower-eating logic.
         -   **`ScorpionBehavior`**: Implements a predator AI for Scorpions (`🦂`). They are ground-based hunters with a prey preference list (e.g., beetles, snails, cockroaches).
+        -   **`SpiderBehavior` (`🕷️`) & `SpiderWebBehavior` (`🕸️`)**: Implements a "trapper" class predator that creates a network of webs to catch prey.
+            -   **Web Building**: Spiders use a special "web stamina" to build a limited number of webs in strategic, high-traffic locations.
+            -   **Trapping**: Webs have a chance to trap any non-flying insect that moves onto their cell. Stronger insects have a higher chance to break free, damaging the web in the process.
+            -   **Ambush & Consumption**: The spider waits on its web network. When an insect is trapped, the spider moves to the location, consumes the prey to restore its own health and stamina, and resets the trap.
         -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
         -   **`HoneybeeBehavior`**: A state-driven AI for social bees. Manages states like `seeking_food`, `returning_to_hive`, and `hunting`. Bees interact with their assigned `Hive` to deposit pollen. They leave `TerritoryMark` actors as they move, which can be used to detect rival bees or propagate signals.
         -   **`AntBehavior`**: A state-driven AI for social ants. Manages states like `seeking_food` and `returning_to_colony`. Ants search for food (prioritizing corpses), carry it back, and leave pheromone trails.
@@ -176,6 +180,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   `antColonyBehavior`: A stationary actor that converts stored food into new ants and manages stored ants during dormancy.
     -   `territoryMarkBehavior`: A temporary, invisible actor that decays over time. It can hold a `Signal` which also has a time-to-live (`ttl`).
     -   `pheromoneTrailBehavior`: A temporary, invisible actor that decays over time. Its `strength` also decays, guiding other ants.
+    -   `spiderWebBehavior`: Manages the web's lifecycle, trapping logic, and interactions with trapped prey.
 
 -   **Spring Repopulation**: To prevent total ecosystem collapse, the engine checks for the transition from Winter to Spring. If either the flower or insect populations are at zero, it repopulates. If the Seed Bank contains champion genomes, they are used to create new flowers; otherwise, new random flowers are spawned.
 
@@ -256,7 +261,9 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, `slimeTrailBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
     -   `src/lib/behaviors/antColonyBehavior.ts`: The behavior for Ant Colonies.
     -   `src/lib/behaviors/pheromoneTrailBehavior.ts`: The behavior for Pheromone Trails.
+    -   `src/lib/behaviors/spiderWebBehavior.ts`: The behavior for Spider Webs.
     -   `src/lib/behaviors/specialized/AntBehavior.ts`: The specialized behavior for Ants.
+    -   `src/lib/behaviors/specialized/SpiderBehavior.ts`: The specialized behavior for Spiders.
     -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
     -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
     -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.
