@@ -10,7 +10,7 @@ import { processEagleTick } from './behaviors/eagleBehavior';
 import { processHerbicidePlaneTick } from './behaviors/herbicidePlaneBehavior';
 import { processHerbicideSmokeTick } from './behaviors/herbicideSmokeBehavior';
 import { processCorpseTick } from './behaviors/corpseBehavior';
-import { processCocoonTick } from './behaviors/cocoonBehavior';
+import { processCocoonTick } from './behaviors/CocoonBehavior';
 import { processSlimeTrailTick } from './behaviors/slimeTrailBehavior';
 import { processHiveTick } from './behaviors/hiveBehavior';
 import { processTerritoryMarkTick } from './behaviors/territoryMarkBehavior';
@@ -161,6 +161,10 @@ export class SimulationEngine {
         await Promise.all(promises);
     }
     
+    private getNextId(type: string, x: number, y: number): string {
+        return `${type}-${x}-${y}-${this.tick}-${Math.random()}`;
+    }
+
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
         this.asyncFlowerFactory.setFlowerWorkerPort(port, params);
     }
@@ -212,6 +216,7 @@ export class SimulationEngine {
             currentTemperature: this.environmentState.currentTemperature,
             nextActorState,
             claimedCellsThisTick,
+            getNextId: this.getNextId.bind(this),
         };
         const insectContext = {
             ...flowerContext,
@@ -220,6 +225,7 @@ export class SimulationEngine {
             events,
             incrementInsectsDiedOfOldAge: () => { this.insectsDiedOfOldAgeThisTick++; },
             newActorQueue,
+            getNextId: this.getNextId.bind(this),
         };
         
         for (const currentActor of actorsToProcess) {
@@ -232,6 +238,7 @@ export class SimulationEngine {
                         incrementInsectsEaten: () => { this.insectsEatenThisTick++; this.totalInsectsEaten++; },
                         incrementEggsEaten: () => { this.eggsEatenThisTick++; },
                         incrementCocoonsEaten: () => { this.cocoonsEatenThisTick++; },
+                        getNextId: this.getNextId.bind(this),
                     });
                     break;
                 case 'eagle':
@@ -240,7 +247,7 @@ export class SimulationEngine {
                     }
                     break;
                 case 'herbicidePlane':
-                    processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState });
+                    processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'herbicideSmoke':
                     processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
@@ -256,28 +263,28 @@ export class SimulationEngine {
                     processFlowerSeedTick(actor as FlowerSeed, flowerContext);
                     break;
                 case 'egg':
-                    processEggTick(actor as Egg, { nextActorState, events, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params });
+                    processEggTick(actor as Egg, { nextActorState, events, incrementInsectsBorn: () => { this.insectsBornThisTick++; }, params: this.params, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'nutrient':
                     processNutrientTick(actor as Nutrient, { nextActorState });
                     break;
                 case 'corpse':
-                    processCorpseTick(actor as Corpse, { nextActorState });
+                    processCorpseTick(actor as Corpse, { nextActorState, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'cocoon':
-                    processCocoonTick(actor as Cocoon, { nextActorState, events });
+                    processCocoonTick(actor as Cocoon, { nextActorState, events, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'slimeTrail':
                     processSlimeTrailTick(actor as SlimeTrail, { nextActorState });
                     break;
                 case 'hive':
-                    processHiveTick(actor as Hive, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature });
+                    processHiveTick(actor as Hive, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'territoryMark':
                     processTerritoryMarkTick(actor as TerritoryMark, { nextActorState });
                     break;
                 case 'antColony':
-                    processAntColonyTick(actor as AntColony, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature });
+                    processAntColonyTick(actor as AntColony, { nextActorState, events, newActorQueue, params: this.params, currentTemperature: this.environmentState.currentTemperature, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'pheromoneTrail':
                     processPheromoneTrailTick(actor as PheromoneTrail, { nextActorState, params: this.params });
@@ -537,9 +544,9 @@ export class SimulationEngine {
                             let seed: FlowerSeed | null;
                             if (seedsFromBank.length > 0) {
                                 const randomSeed = seedsFromBank[Math.floor(Math.random() * seedsFromBank.length)];
-                                seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, pos.x, pos.y, randomSeed.genome);
+                                seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, pos.x, pos.y, randomSeed.genome, undefined, this.getNextId.bind(this));
                             } else {
-                                seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, pos.x, pos.y);
+                                seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, pos.x, pos.y, undefined, undefined, this.getNextId.bind(this));
                             }
                             if (seed) {
                                nextActorState.set(seed.id, seed);
@@ -555,7 +562,7 @@ export class SimulationEngine {
                          if (pos) {
                             const id = `insect-repop-${i}-${Date.now()}`;
                             // Exclude bees and ants from random repopulation; they should only come from hives/colonies.
-                            const emoji = getInsectEmoji(id, ['🐝', '🐜']);
+                            const emoji = getInsectEmoji(id, ['🐝', '🐜', '🕷️']);
                             const baseStats = INSECT_DATA.get(emoji);
                             if (baseStats) {
                                 const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
@@ -619,7 +626,7 @@ export class SimulationEngine {
             nextActorState.set(actor.id, actor);
         }
 
-        this.eggsLaidThisTick += ecosystemManager.handleInsectReproduction(nextActorState, this.params, events);
+        this.eggsLaidThisTick += ecosystemManager.handleInsectReproduction(nextActorState, this.params, events, this.getNextId.bind(this));
         
         // Enforce one flower/seed per cell rule before summarizing and creating deltas
         this._resolveFlowerAndSeedConflicts(nextActorState);

@@ -15,10 +15,11 @@ export interface BirdContext {
     incrementInsectsEaten: () => void;
     incrementEggsEaten: () => void;
     incrementCocoonsEaten: () => void;
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
 export const processBirdTick = (bird: Bird, context: BirdContext) => {
-    const { grid, params, qtree, flowerQtree, nextActorState, events, incrementInsectsEaten, incrementEggsEaten, incrementCocoonsEaten } = context;
+    const { grid, params, qtree, flowerQtree, nextActorState, events, incrementInsectsEaten, incrementEggsEaten, incrementCocoonsEaten, getNextId } = context;
     const { gridWidth, gridHeight } = params;
     const { x, y } = bird;
     let moved = false;
@@ -109,7 +110,7 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                 moved = true;
                 
                 if (targetActor.type === 'insect') {
-                    const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;
+                    const nutrientId = getNextId('nutrient', newX, newY);
                     // Nutrient lifespan is proportional to the insect's max health
                     const nutrientLifespan = 2 + Math.floor((targetActor as Insect).maxHealth / 30);
                     const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: nutrientLifespan };
@@ -123,7 +124,7 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                 } else if (targetActor.type === 'cocoon') {
                     events.push({ message: '🐦 A cocoon was eaten!', type: 'info', importance: 'low' });
                     incrementCocoonsEaten();
-                    const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;
+                    const nutrientId = getNextId('nutrient', newX, newY);
                     const nutrientLifespan = 2; // small nutrient
                     const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: nutrientLifespan };
                     nextActorState.set(nutrientId, nutrient);
@@ -174,7 +175,7 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
     if (Math.random() < BIRD_DROP_NUTRIENT_CHANCE) {
          const pos = findCellForStationaryActor(grid, params, 'nutrient');
          if (pos) {
-            const nutrientId = `nutrient-${pos.x}-${pos.y}-${Date.now()}`;
+            const nutrientId = getNextId('nutrient', pos.x, pos.y);
             const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: pos.x, y: pos.y, lifespan: NUTRIENT_LIFESPAN };
             nextActorState.set(nutrientId, nutrient);
          }

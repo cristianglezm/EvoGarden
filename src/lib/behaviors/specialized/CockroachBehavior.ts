@@ -14,6 +14,7 @@ import {
 import { Rectangle, type Point } from '../../Quadtree';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
+import { getActorsOnCell } from '../../simulationUtils';
 
 export class CockroachBehavior extends InsectBehavior {
     public update(cockroach: Cockroach, context: InsectBehaviorContext): void {
@@ -31,19 +32,20 @@ export class CockroachBehavior extends InsectBehavior {
         // --- Action Phase ---
 
         // 1. Eat corpse on current cell (highest priority)
-        const corpseOnCell = Array.from(nextActorState.values()).find(a => a.x === cockroach.x && a.y === cockroach.y && a.type === 'corpse') as Corpse | undefined;
+        const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, cockroach.x, cockroach.y);
+        const corpseOnCell = actorsOnCell.find(a => a.type === 'corpse') as Corpse | undefined;
         if (corpseOnCell) {
             this.handleEatCorpse(cockroach, corpseOnCell, context);
             return;
         }
         
         // 2. Eat egg or cocoon on current cell
-        if (this.handleEatEggOrCocoon(cockroach, context)) {
+        if (this.handleEatEggOrCocoon(cockroach, actorsOnCell, context)) {
             return;
         }
 
         // 3. Attack flower on current cell
-        const flowerOnCell = Array.from(nextActorState.values()).find(a => a.x === cockroach.x && a.y === cockroach.y && a.type === 'flower') as Flower | undefined;
+        const flowerOnCell = actorsOnCell.find(a => a.type === 'flower') as Flower | undefined;
         if (flowerOnCell) {
             this.handleAttackFlower(cockroach, flowerOnCell, context);
             return;
@@ -61,14 +63,13 @@ export class CockroachBehavior extends InsectBehavior {
         cockroach.health = Math.min(cockroach.maxHealth, cockroach.health + CORPSE_NUTRITION_VALUE);
         cockroach.stamina = Math.min(cockroach.maxStamina, cockroach.stamina + CORPSE_NUTRITION_VALUE);
         
-        const nutrientId = `nutrient-${cockroach.x}-${cockroach.y}-${Date.now()}`;
+        const nutrientId = context.getNextId('nutrient', cockroach.x, cockroach.y);
         const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: cockroach.x, y: cockroach.y, lifespan: NUTRIENT_FROM_COCKROACH_LIFESPAN };
         context.nextActorState.set(nutrientId, nutrient);
     }
 
-    private handleEatEggOrCocoon(cockroach: Cockroach, context: InsectBehaviorContext): boolean {
-        const preyOnCell = Array.from(context.nextActorState.values())
-            .find(a => a.x === cockroach.x && a.y === cockroach.y && (a.type === 'egg' || a.type === 'cocoon')) as Egg | Cocoon | undefined;
+    private handleEatEggOrCocoon(cockroach: Cockroach, actorsOnCell: CellContent[], context: InsectBehaviorContext): boolean {
+        const preyOnCell = actorsOnCell.find(a => a.type === 'egg' || a.type === 'cocoon') as Egg | Cocoon | undefined;
 
         if (preyOnCell) {
             // Don't eat its own eggs
@@ -92,7 +93,7 @@ export class CockroachBehavior extends InsectBehavior {
             cockroach.stamina -= INSECT_ATTACK_COST;
             
             if (flower.health <= 0) {
-                const nutrientId = `nutrient-${cockroach.x}-${cockroach.y}-${Date.now()}`;
+                const nutrientId = context.getNextId('nutrient', cockroach.x, cockroach.y);
                 const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: cockroach.x, y: cockroach.y, lifespan: NUTRIENT_FROM_FLOWER_DEATH_LIFESPAN };
                 context.nextActorState.set(nutrientId, nutrient);
             }

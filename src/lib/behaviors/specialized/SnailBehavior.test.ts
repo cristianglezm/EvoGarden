@@ -24,6 +24,7 @@ describe('SnailBehavior', () => {
     let events: AppEvent[];
     let newActorQueue: CellContent[];
     let grid: Grid;
+    const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
     
     const createMockFlower = (id: string, x: number, y: number, health: number = 100): Flower => ({
@@ -51,6 +52,7 @@ describe('SnailBehavior', () => {
         flowerQtree = new Quadtree(boundary, 4);
         events = [];
         newActorQueue = [];
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = (): any => ({
@@ -64,6 +66,7 @@ describe('SnailBehavior', () => {
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
+        getNextId,
     });
 
     it('should not move if its moveCooldown is greater than 0', () => {
@@ -105,8 +108,11 @@ describe('SnailBehavior', () => {
         const flower = createMockFlower('f1', 10, 10);
         nextActorState.set(flower.id, flower);
         const initialFlowerHealth = flower.health;
+
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
         
-        behavior.update(snail, setupContext());
+        behavior.update(snail, context);
 
         const updatedFlower = nextActorState.get('f1') as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth - SNAIL_DATA.attack);

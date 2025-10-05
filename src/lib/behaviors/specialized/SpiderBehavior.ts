@@ -9,7 +9,7 @@ import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 import { Rectangle } from '../../Quadtree';
 import { SPIDER_HEAL_FROM_PREY } from '../../../constants';
-import { neighborVectors, scoreFlower } from '../../simulationUtils';
+import { neighborVectors, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 
 const SPIDER_DECISION_COOLDOWN = 10;
 
@@ -55,6 +55,14 @@ export class SpiderBehavior extends InsectBehavior {
         
         // --- Strategic Decisions (when not consuming) ---
         const repairCost = context.params.spiderWebBuildCost / 2;
+
+        if (spider.webStamina! < repairCost) {
+            // Not enough stamina to build or repair, just ambush and recover.
+            spider.behaviorState = 'ambushing';
+            spider.targetId = undefined;
+            spider.targetPosition = undefined;
+            return;
+        }
         
         // 2. Repair an old web
         const oldWeb = this.findOldWeb(spider, context);
@@ -187,7 +195,7 @@ export class SpiderBehavior extends InsectBehavior {
     }
 
     private findWebExpansionSpot(spider: Insect, context: InsectBehaviorContext): { x: number; y: number } | null {
-        const { nextActorState, params, flowerQtree } = context;
+        const { params, flowerQtree, qtree, nextActorState } = context;
         const searchRadius = 3;
         
         const possibleSpots: { x: number; y: number }[] = [];
@@ -209,7 +217,7 @@ export class SpiderBehavior extends InsectBehavior {
 
         // Evaluate all possible spots (current + neighbors)
         for (const spot of possibleSpots) {
-            const actorsOnCell = Array.from(nextActorState.values()).filter(a => a.x === spot.x && a.y === spot.y);
+            const actorsOnCell = getActorsOnCell(qtree, nextActorState, spot.x, spot.y);
             // A spot is valid if it doesn't have a web or another colony-like structure.
             if (actorsOnCell.some(a => a.type === 'spiderweb' || a.type === 'hive' || a.type === 'antColony')) {
                 continue; // Skip invalid spots
@@ -239,7 +247,7 @@ export class SpiderBehavior extends InsectBehavior {
 
     private buildWeb(spider: Insect, context: InsectBehaviorContext): boolean {
         if (spider.webStamina! >= context.params.spiderWebBuildCost) {
-            const webId = `web-${spider.x}-${spider.y}-${Date.now()}`;
+            const webId = context.getNextId('web', spider.x, spider.y);
             const newWeb: SpiderWeb = {
                 id: webId, type: 'spiderweb', x: spider.x, y: spider.y,
                 ownerId: spider.id, strength: context.params.spiderWebStrength,
@@ -282,7 +290,7 @@ export class SpiderBehavior extends InsectBehavior {
         if (prey) {
             context.nextActorState.delete(prey.id);
             
-            const corpseId = `corpse-${prey.x}-${prey.y}-${Date.now()}`;
+            const corpseId = context.getNextId('corpse', prey.x, prey.y);
             context.newActorQueue.push({ id: corpseId, type: 'corpse', x: prey.x, y: prey.y, originalEmoji: prey.emoji, decayTimer: CORPSE_DECAY_TIME });
 
             spider.health = Math.min(spider.maxHealth, spider.health + SPIDER_HEAL_FROM_PREY);

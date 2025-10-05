@@ -7,10 +7,11 @@ interface EggContext {
     events: AppEvent[];
     incrementInsectsBorn: () => void;
     params: SimulationParams;
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
 export const processEggTick = (egg: Egg, context: EggContext) => {
-    const { nextActorState, events, incrementInsectsBorn } = context;
+    const { nextActorState, events, incrementInsectsBorn, getNextId } = context;
     
     egg.hatchTimer--;
     if (egg.hatchTimer <= 0) {
@@ -23,7 +24,7 @@ export const processEggTick = (egg: Egg, context: EggContext) => {
         }
 
         const typeName = (ACTOR_NAMES[egg.insectEmoji] || 'insect').toLowerCase();
-        const newInsectId = `insect-${typeName}-${egg.x}-${egg.y}-${Date.now()}`;
+        const newInsectId = getNextId(typeName, egg.x, egg.y);
         const newInsect: Insect = {
             id: newInsectId,
             type: 'insect',

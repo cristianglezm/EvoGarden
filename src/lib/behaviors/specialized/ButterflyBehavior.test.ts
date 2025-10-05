@@ -17,6 +17,7 @@ describe('ButterflyBehavior', () => {
     let requestNewFlower: Mock;
     let events: AppEvent[];
     let newActorQueue: CellContent[];
+    const getNextId = vi.fn((type: string, x: number, y: number) => `mock-${type}-${x}-${y}`);
     
     const mockFlower: Flower = {
         id: 'flower1', type: 'flower', x: 8, y: 8,
@@ -52,6 +53,7 @@ describe('ButterflyBehavior', () => {
         flowerQtree = new Quadtree(boundary, 4);
         newActorQueue = [];
         events = [];
+        getNextId.mockClear();
     });
     
     const setupContext = (): any => ({ // Using any to simplify mock context setup
@@ -65,6 +67,7 @@ describe('ButterflyBehavior', () => {
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: DEFAULT_SIM_PARAMS.temperature,
         newActorQueue,
+        getNextId,
     });
 
     it('should not damage a flower it interacts with, but picks up pollen', () => {
@@ -73,7 +76,11 @@ describe('ButterflyBehavior', () => {
         nextActorState.set(flower.id, flower);
         const initialFlowerHealth = flower.health;
 
-        behavior.update(butterfly, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
+
+        behavior.update(butterfly, context);
         
         const flowerState = nextActorState.get(flower.id) as Flower;
         expect(flowerState.health).toBe(initialFlowerHealth); // No damage
@@ -90,10 +97,13 @@ describe('ButterflyBehavior', () => {
         butterfly.pollen = { genome: 'g1', sourceFlowerId: 'flower1', score: 10 };
         
         const context = setupContext();
+        context.qtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+        context.flowerQtree.insert({ x: targetFlower.x, y: targetFlower.y, data: targetFlower });
+
         behavior.update(butterfly, context);
         
         expect(requestNewFlower).toHaveBeenCalledTimes(1);
-        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1');
+        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1', expect.any(Function));
         expect(newActorQueue.length).toBe(1);
 
         randomSpy.mockRestore();
@@ -119,10 +129,14 @@ describe('ButterflyBehavior', () => {
         grid[5][5].push(flower);
         nextActorState.set(flower.id, flower);
         
+        const context = setupContext();
+        context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
+        
         const initialX = butterfly.x;
         const initialY = butterfly.y;
 
-        behavior.update(butterfly, setupContext());
+        behavior.update(butterfly, context);
         
         const moved = butterfly.x !== initialX || butterfly.y !== initialY;
         expect(moved, 'Butterfly should have moved to a different cell').toBe(true);
@@ -130,7 +144,9 @@ describe('ButterflyBehavior', () => {
 
     it('should regenerate stamina when idle (no flower interaction)', () => {
         const initialStamina = butterfly.stamina;
-        // Logic: move first (cost), then regenerate (capped).
+        // Logic: move first (cost), then regenerate (capped). But in this behavior, movement happens before regen.
+        // The default insect behavior moves first, then idles.
+        // Here, it checks interaction (false), then moves (cost), then regenerates because hasInteracted is false.
         const expectedStamina = Math.min(butterfly.maxStamina, (initialStamina - INSECT_MOVE_COST) + INSECT_STAMINA_REGEN_PER_TICK);
         
         behavior.update(butterfly, setupContext());

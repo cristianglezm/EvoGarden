@@ -22,6 +22,7 @@ describe('SpiderBehavior', () => {
     let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
     let newActorQueue: CellContent[];
+    const getNextId = vi.fn();
     const params: SimulationParams = { 
         ...DEFAULT_SIM_PARAMS, 
         gridWidth: 20, 
@@ -49,6 +50,7 @@ describe('SpiderBehavior', () => {
         qtree = new Quadtree(boundary, 4);
         flowerQtree = new Quadtree(boundary, 4);
         newActorQueue = [];
+        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
     
     const setupContext = (): any => ({
@@ -62,6 +64,7 @@ describe('SpiderBehavior', () => {
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
+        getNextId,
     });
 
     it('should wander when ambushing with no webs and no good build spots', () => {

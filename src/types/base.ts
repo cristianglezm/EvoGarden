@@ -164,6 +164,7 @@ export interface TickSummary {
 
 export interface FlowerCreationRequest {
     requestId: string;
+    flowerId: string;
     x: number;
     y: number;
     parentGenome1?: string;
