@@ -563,23 +563,25 @@ export class SimulationEngine {
                          const pos = findEmptyCell(tempGridForPlacement, this.params);
                          if (pos) {
                             const id = `insect-repop-${i}-${Date.now()}`;
-                            // Exclude bees and ants from random repopulation; they should only come from hives/colonies.
-                            const emoji = getInsectEmoji(id, ['🐝', '🐜', '🕷️']);
-                            const baseStats = INSECT_DATA.get(emoji);
-                            if (baseStats) {
-                                const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
-                                const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
-                                const newInsect: Insect = { 
-                                    id, type: 'insect', x: pos.x, y: pos.y, 
-                                    pollen: null, emoji, 
-                                    genome: generateRandomInsectGenome(),
-                                    health: baseStats.maxHealth,
-                                    maxHealth: baseStats.maxHealth,
-                                    stamina: baseStats.maxStamina,
-                                    maxStamina: baseStats.maxStamina
-                                };
-                                nextActorState.set(id, newInsect);
-                                tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                            // Exclude social insects from random initial spawn, and respect the whitelist
+                            const emoji = getInsectEmoji(id, { allowed: this.params.allowedActors, exclude: ['🐝', '🐜', '🕷️'] });
+                            if (emoji) {
+                                const baseStats = INSECT_DATA.get(emoji);
+                                if (baseStats) {
+                                    const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
+                                    const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
+                                    const newInsect: Insect = { 
+                                        id, type: 'insect', x: pos.x, y: pos.y, 
+                                        pollen: null, emoji, 
+                                        genome: generateRandomInsectGenome(),
+                                        health: baseStats.maxHealth,
+                                        maxHealth: baseStats.maxHealth,
+                                        stamina: baseStats.maxStamina,
+                                        maxStamina: baseStats.maxStamina
+                                    };
+                                    nextActorState.set(id, newInsect);
+                                    tempGridForPlacement[pos.y][pos.x].push(newInsect);
+                                }
                             }
                          }
                     }

@@ -78,6 +78,8 @@ export interface SimulationParams {
     spiderWebStrength: number;
     spiderWebTrapChance: number;
     spiderEscapeChanceModifier: number;
+    // Permitted Actors
+    allowedActors: string[];
 }
 
 export interface Coord {
