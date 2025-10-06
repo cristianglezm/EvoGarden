@@ -300,7 +300,7 @@ export class SimulationEngine {
         let flowerCountForStats = 0, seedCount = 0, insectCount = 0, birdCount = 0, eagleCount = 0, eggCount = 0;
         let herbicidePlaneCount = 0, herbicideSmokeCount = 0, maxFlowerAge = 0, nutrientCount = 0, corpseCount = 0, cockroachCount = 0, cocoonCount = 0;
         let totalHealth = 0, totalStamina = 0, totalNutrientEfficiency = 0, totalMaturationPeriod = 0;
-        let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0;
+        let maxHealthSoFar = 0, maxStaminaSoFar = 0, maxToxicitySoFar = 0, maxHealingSoFar = 0;
         let totalVitality = 0, totalAgility = 0, totalStrength = 0, totalIntelligence = 0, totalLuck = 0;
         let healingFlowerCount = 0, toxicFlowerCount = 0;
         let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0, antCount = 0, spiderCount = 0;
@@ -314,6 +314,7 @@ export class SimulationEngine {
                 totalNutrientEfficiency += f.nutrientEfficiency; totalMaturationPeriod += f.maturationPeriod;
                 maxHealthSoFar = Math.max(maxHealthSoFar, f.maxHealth); maxStaminaSoFar = Math.max(maxStaminaSoFar, f.maxStamina);
                 maxToxicitySoFar = Math.max(maxToxicitySoFar, f.toxicityRate);
+                maxHealingSoFar = Math.max(maxHealingSoFar, -f.toxicityRate);
                 totalVitality += f.effects.vitality; totalAgility += f.effects.agility; totalStrength += f.effects.strength;
                 totalIntelligence += f.effects.intelligence; totalLuck += f.effects.luck;
                 if (f.toxicityRate < 0) {
@@ -396,6 +397,7 @@ export class SimulationEngine {
             avgHealth: flowerCountForStats > 0 ? totalHealth / flowerCountForStats : 0,
             avgStamina: flowerCountForStats > 0 ? totalStamina / flowerCountForStats : 0,
             maxHealth: maxHealthSoFar, maxToxicity: maxToxicitySoFar,
+            maxHealingRate: maxHealingSoFar,
             maxStamina: maxStaminaSoFar,
             avgNutrientEfficiency: flowerCountForStats > 0 ? totalNutrientEfficiency / flowerCountForStats : 0,
             avgMaturationPeriod: flowerCountForStats > 0 ? totalMaturationPeriod / flowerCountForStats : 0,
