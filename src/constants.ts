@@ -62,6 +62,8 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     spiderWebStrength: 20,
     spiderWebTrapChance: 0.4,
     spiderEscapeChanceModifier: 0.5,
+    // Permitted Actors
+    allowedActors: ['🦋', '🐛', '🐌', '🐞', '🪲', '🦂', '🐝', '🐜', '🕷️', '🪳', '🐦', '🦅'],
 };
 
 // --- FLOWER CONSTANTS ---

@@ -1,17 +1,29 @@
 import { INSECT_GENOME_LENGTH } from "./constants";
 import type { CellContent, Corpse, Insect } from "./types";
 
-const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🪲', '🦂', '🐝', '🐜', '🕷️'];
+const insectEmojis = ['🦋', '🐛', '🐌', '🐞', '🪲', '🦂', '🐝', '🐜', '🕷️', '🪳'];
 
-export const getInsectEmoji = (insectId: string, exclude: string[] = []): string => {
-    const availableEmojis = insectEmojis.filter(e => !exclude.includes(e));
-    if (availableEmojis.length === 0) {
-        // Fallback in case all are excluded, though this shouldn't happen.
-        return insectEmojis[0];
+export const getInsectEmoji = (insectId: string, options: { allowed?: string[], exclude?: string[] } = {}): string => {
+    let pool: string[];
+
+    // If an `allowed` list is provided, filter it to only include actual insects.
+    if (options.allowed !== undefined) {
+        pool = options.allowed.filter(actor => insectEmojis.includes(actor));
+    } else {
+        // Otherwise, start with all emojis.
+        pool = [...insectEmojis];
     }
+    
+    // Then filter by exclude list
+    if (options.exclude && options.exclude.length > 0) {
+        pool = pool.filter(e => !options.exclude!.includes(e));
+    }
+
+    if (pool.length === 0) return '';
+    
     // Simple hash to get a consistent emoji for each insect
     const hash = insectId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return availableEmojis[hash % availableEmojis.length];
+    return pool[hash % pool.length];
 };
 
 export const generateRandomInsectGenome = (): number[] => {

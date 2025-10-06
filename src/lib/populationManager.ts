@@ -77,7 +77,7 @@ export class PopulationManager {
         }
 
         // Spawn birds
-        if (insectTrend === 'growing' && this.birdSpawnCooldown === 0) {
+        if (this.params.allowedActors.includes('🐦') && insectTrend === 'growing' && this.birdSpawnCooldown === 0) {
             const spot = findCellForStationaryActor(grid, this.params, 'bird');
             if (spot) {
                 const birdId = `bird-dyn-${Date.now()}`;
@@ -89,7 +89,7 @@ export class PopulationManager {
         }
         
         // Spawn eagles
-        else if (insectTrend === 'declining') {
+        else if (this.params.allowedActors.includes('🦅') && insectTrend === 'declining') {
             const currentBirdCount = Array.from(nextActorState.values()).filter(a => a.type === 'bird').length;
             if (this.eagleSpawnCooldown === 0 && currentBirdCount > 2) {
                 const spot = findCellForStationaryActor(grid, this.params, 'eagle');
@@ -103,9 +103,9 @@ export class PopulationManager {
             }
         }
 
-        // Spawn cockroaches if there is a growing number of corpses
+        // Spawn cockroaches if there is a growing number of corpses and they are permitted
         const corpseTrend = calculatePopulationTrend(this.corpseCountHistory, POPULATION_GROWTH_THRESHOLD_CORPSE, POPULATION_DECLINE_THRESHOLD_CORPSE);
-        if (corpseTrend === 'growing' && this.cockroachSpawnCooldown === 0) {
+        if (this.params.allowedActors.includes('🪳') && corpseTrend === 'growing' && this.cockroachSpawnCooldown === 0) {
             const spot = findCellForStationaryActor(grid, this.params, 'cockroach');
             if (spot) {
                 const cockroachId = `insect-cockroach-${spot.x}-${spot.y}-${Date.now()}`;

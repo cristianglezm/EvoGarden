@@ -52,32 +52,36 @@ export const createNewFlower = async (
  * The actual placement is handled by the simulation worker.
  */
 export const createInitialMobileActors = (params: SimulationParams): CellContent[] => {
-    const { initialInsects, initialBirds } = params;
+    const { initialInsects, initialBirds, allowedActors } = params;
     const actors: CellContent[] = [];
 
     for (let i = 0; i < initialInsects; i++) {
         const id = `insect-init-${i}`;
-        // Exclude bees, ants, and spiders from the initial random population pool.
-        const emoji = getInsectEmoji(id, ['🐝', '🐜', '🕷️']);
-        const baseStats = INSECT_DATA.get(emoji);
+        // Exclude social insects from random initial spawn and respect the whitelist
+        const emoji = getInsectEmoji(id, { allowed: allowedActors, exclude: ['🐝', '🐜', '🕷️'] });
         
-        if (baseStats) {
-            const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
-            const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
-            const newInsect: Insect = { 
-                id, type: 'insect', x: -1, y: -1, 
-                pollen: null, emoji, 
-                genome: generateRandomInsectGenome(),
-                health: baseStats.maxHealth,
-                maxHealth: baseStats.maxHealth,
-                stamina: baseStats.maxStamina,
-                maxStamina: baseStats.maxStamina
-            };
-            actors.push(newInsect);
+        if (emoji) {
+            const baseStats = INSECT_DATA.get(emoji);
+            if (baseStats) {
+                const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
+                const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
+                const newInsect: Insect = { 
+                    id, type: 'insect', x: -1, y: -1, 
+                    pollen: null, emoji, 
+                    genome: generateRandomInsectGenome(),
+                    health: baseStats.maxHealth,
+                    maxHealth: baseStats.maxHealth,
+                    stamina: baseStats.maxStamina,
+                    maxStamina: baseStats.maxStamina
+                };
+                actors.push(newInsect);
+            }
         }
     }
-    for (let i = 0; i < initialBirds; i++) {
-        actors.push({ id: `bird-init-${i}`, type: 'bird', x: -1, y: -1, target: null, patrolTarget: null });
+    if (allowedActors.includes('🐦')) {
+        for (let i = 0; i < initialBirds; i++) {
+            actors.push({ id: `bird-init-${i}`, type: 'bird', x: -1, y: -1, target: null, patrolTarget: null });
+        }
     }
 
     return actors;
