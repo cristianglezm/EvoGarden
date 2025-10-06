@@ -32,6 +32,9 @@ Define the core data structures for the simulation state.
     -   `Flower`: Must include its current state (`health`, `stamina`, `age`), its genetic properties (`genome`, `imageData`, `maxHealth`, `maxStamina`, `toxicityRate` etc.), and its position.
     -   `FlowerSeed`: A lightweight placeholder for a flower that is being generated asynchronously in the background. Includes position, `health`, `maxHealth`, and a placeholder `imageData` for the stem.
     -   `Insect`: Includes `emoji`, position, `health`, `maxHealth`, `stamina`, `maxStamina`, a genetic `genome` that dictates its flower preferences, a `reproductionCooldown`, a `moveCooldown` (for snails), and `pollen` (tracking the genome and source ID of the last flower visited). `lifespan` is kept for backward compatibility with older save files. It also includes properties for social insects: `hiveId`, `colonyId`, `isReturningToHive`, `carriedItem`, and a `behaviorState`.
+    -   **Permitted Actors**: The `allowedActors` array in `SimulationParams` controls which actors can be spawned dynamically by the `PopulationManager` or through initial setup. The default list includes:
+        -   **Birds**: Bird (`🐦`), Eagle (`🦅`).
+        -   **Insects**: Butterfly (`🦋`), Caterpillar (`🐛`), Snail (`🐌`), Ladybug (`🐞`), Beetle (`🪲`), Scorpion (`🦂`), Honeybee (`🐝`), Ant (`🐜`), Spider (`🕷️`), Cockroach (`🪳`).
     -   `InsectStats`: A new interface defining the base stats for each insect type (`attack`, `maxHealth`, `maxStamina`, `speed`, `role`, `eggHatchTime`, `reproductionCost`).
     -   `Hive`: A stationary actor representing a bee colony, with properties for `honey` and `pollen` reserves and a `spawnCooldown`.
     -   `AntColony`: A stationary actor representing an ant colony, with properties for `foodReserves`, `spawnCooldown`, a genetic `genome` for pollen preference, and a count of `storedAnts`.
