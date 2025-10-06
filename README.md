@@ -59,6 +59,10 @@ EvoGarden is more than just a visual simulation; it's a complex, self-regulating
 
 4.  **Ecosystem Balance**: The simulation actively works to prevent ecological collapse. If the insect population booms, the engine will spawn predatory birds. If the insect population crashes (leaving birds with no food), an apex predator (the eagle) may be introduced to cull the bird population. If flowers grow too dense, an herbicide plane is deployed. This creates a constantly shifting balance of power.
 
+5.  **Diverse Permitted Actors**: The simulation allows for a diverse range of creatures, which can be enabled or disabled from the controls panel. The default ecosystem includes:
+    *   **Birds**: Bird (`🐦`), Eagle (`🦅`).
+    *   **Insects**: Butterfly (`🦋`), Caterpillar (`🐛`), Snail (`🐌`), Ladybug (`🐞`), Beetle (`🪲`), Scorpion (`🦂`), Honeybee (`🐝`), Ant (`🐜`), Spider (`🕷️`), Cockroach (`🪳`).
+
 ## 🔬 Simulation Deep Dive
 
 ### Performance & Architecture
@@ -195,7 +199,7 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
     -   `src/stores/`: Contains all Zustand global state management stores.
     -   `src/utils.ts`: A module for shared utility functions.
-    -   `src/constants.ts`: Global constants for the simulation.
+    -   `src/constants.ts`: Global simulation constants.
     -   `src/types.ts`: Shared TypeScript types for the simulation.
 
 ## 🚀 Getting Started

@@ -273,6 +273,51 @@ test.describe('Ant Colony Simulation', () => {
   });
 });
 
+test.describe('Permitted Actors', () => {
+    test('should not spawn birds if they are disabled', async ({ page }) => {
+        const controls = new ControlPanelController(page);
+        const eventLog = new EventLogPanelController(page);
+
+        // Setup for bird spawn: high insect count, no initial birds
+        await controls.open();
+        await controls.getInsectsInput().fill('30');
+        await controls.getBirdsInput().fill('0');
+
+        // Uncheck birds from the permitted list
+        await controls.openCollapsibleSection('Permitted Actors');
+        await controls.page.getByLabel('🐦 Bird').uncheck();
+
+        await controls.getApplyAndReset().click();
+        
+        // Run sim for a few seconds to trigger population manager
+        await controls.runSimulation(5);
+
+        // Check the log for bird spawn events
+        await eventLog.open();
+        await expect(eventLog.getFullPanel().getByText('A new bird has arrived to hunt!')).not.toBeVisible();
+    });
+
+    test('should spawn birds if they are enabled under the right conditions', async ({ page }) => {
+        const controls = new ControlPanelController(page);
+        const eventLog = new EventLogPanelController(page);
+
+        // Setup for bird spawn
+        await controls.open();
+        await controls.getInsectsInput().fill('30');
+        await controls.getBirdsInput().fill('0');
+        
+        // Ensure birds are checked (they are by default)
+        await controls.getApplyAndReset().click();
+        
+        await controls.runSimulation(5);
+
+        await eventLog.open();
+        // Use a less strict locator to avoid flakes if multiple events happen
+        const birdSpawnEvent = eventLog.getFullPanel().getByText(/A new bird has arrived/);
+        await expect(birdSpawnEvent.first()).toBeVisible({ timeout: 10000 });
+    });
+});
+
 test.describe('Full Environment Parameter Test', () => {
   test('should set Flower Detail multiplier', async ({ page }) => {
     const controls = new ControlPanelController(page);

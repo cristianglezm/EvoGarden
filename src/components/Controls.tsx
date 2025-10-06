@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { SimulationParams, WindDirection } from '../types';
 import { PlayIcon, PauseIcon, RefreshCwIcon, SaveIcon, UploadIcon, LoaderIcon } from './icons';
 import { CollapsibleSection } from './CollapsibleSection';
+import { INSECT_DATA } from '../constants';
+import { ACTOR_NAMES } from '../utils';
 
 interface ControlsProps {
     params: SimulationParams;
@@ -17,6 +19,9 @@ interface ControlsProps {
 
 const WIND_DIRECTIONS: WindDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const FLOWER_DETAIL_OPTIONS = [4, 8, 16, 32, 64];
+// Create a list of all spawnable actors for the UI
+const ACTOR_LIST = ['🐦', '🦅', ...Array.from(INSECT_DATA.keys())];
+
 
 export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRunning, setIsRunning, onSave, onLoad, hasSavedState, isSaving, onStart }) => {
     const [localParams, setLocalParams] = useState<SimulationParams>(params);
@@ -52,6 +57,23 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
             }
             
             return newParams;
+        });
+    };
+    
+    const handleAllowedActorsChange = (emoji: string, checked: boolean) => {
+        setLocalParams(prev => {
+            const currentAllowed = new Set(prev.allowedActors);
+            const linkedEmoji = emoji === '🦋' ? '🐛' : emoji === '🐛' ? '🦋' : null;
+    
+            if (checked) {
+                currentAllowed.add(emoji);
+                if (linkedEmoji) currentAllowed.add(linkedEmoji);
+            } else {
+                currentAllowed.delete(emoji);
+                if (linkedEmoji) currentAllowed.delete(linkedEmoji);
+            }
+    
+            return { ...prev, allowedActors: Array.from(currentAllowed) };
         });
     };
 
@@ -165,6 +187,22 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         <span className="text-secondary text-sm">Birds: {localParams.initialBirds}</span>
                         <input type="range" name="initialBirds" id="initialBirds" min="0" max="20" value={localParams.initialBirds} onChange={handleParamChange} className="w-full h-2 bg-surface-hover rounded-lg appearance-none cursor-pointer" />
                     </label>
+                </CollapsibleSection>
+
+                 <CollapsibleSection title="Permitted Actors" defaultOpen={false}>
+                    <div className="grid grid-cols-2 gap-2">
+                        {ACTOR_LIST.map(emoji => (
+                            <label key={emoji} className="flex items-center space-x-2 text-sm text-secondary cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={localParams.allowedActors.includes(emoji)}
+                                    onChange={(e) => handleAllowedActorsChange(emoji, e.target.checked)}
+                                    className="h-4 w-4 rounded bg-surface border-border text-accent-green focus:ring-accent-green"
+                                />
+                                <span>{emoji} {ACTOR_NAMES[emoji]}</span>
+                            </label>
+                        ))}
+                    </div>
                 </CollapsibleSection>
 
                  <CollapsibleSection title="Hive & Colony Rules" defaultOpen={false}>

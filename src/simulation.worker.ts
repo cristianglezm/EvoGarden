@@ -112,9 +112,15 @@ self.onmessage = async (e: MessageEvent) => {
             
             const allActors = [...initialFlowers, ...initialMobileActors];
             
-            initializeHivesAndBees(allActors, params);
-            initializeAntColonies(allActors, params);
-            initializeSpiders(allActors, params);
+            if (params.allowedActors.includes('🐝')) {
+                initializeHivesAndBees(allActors, params);
+            }
+            if (params.allowedActors.includes('🐜')) {
+                initializeAntColonies(allActors, params);
+            }
+            if (params.allowedActors.includes('🕷️')) {
+                initializeSpiders(allActors, params);
+            }
 
             engine.initializeGridWithActors(allActors);
             self.postMessage({ type: 'init-complete', payload: engine.getGridState() });
