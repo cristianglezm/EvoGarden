@@ -9,7 +9,7 @@ interface FlowerTraitsChartProps {
 }
 
 export const FlowerTraitsChart: React.FC<FlowerTraitsChartProps> = ({ history }) => {
-    const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true });
+    const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true, 'Max Healing': true });
     const handleTraitsLegendChange = createLegendSelectHandler(setTraitsLegend);
 
     const flowerTraitsOption = useMemo<EChartsOption>(() => {
@@ -18,7 +18,7 @@ export const FlowerTraitsChart: React.FC<FlowerTraitsChartProps> = ({ history })
             ...baseChartOptions,
             title: { text: 'Flower Genetic Traits', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
             legend: {
-                data: ['Avg Health', 'Max Health', 'Avg Stamina', 'Max Stamina', 'Avg Maturation', 'Avg Nutrient Efficiency', 'Max Toxicity'],
+                data: ['Avg Health', 'Max Health', 'Avg Stamina', 'Max Stamina', 'Avg Maturation', 'Avg Nutrient Efficiency', 'Max Toxicity', 'Max Healing'],
                 top: 35,
                 textStyle: { color: '#bbf7d0' },
                 selected: traitsLegend,
@@ -44,6 +44,7 @@ export const FlowerTraitsChart: React.FC<FlowerTraitsChartProps> = ({ history })
                 { name: 'Avg Maturation', type: 'line', yAxisIndex: 0, data: history.map(h => h.avgMaturationPeriod.toFixed(0)), color: '#d69e2e' },
                 { name: 'Avg Nutrient Efficiency', type: 'line', yAxisIndex: 1, data: history.map(h => h.avgNutrientEfficiency.toFixed(2)), color: '#38a169' },
                 { name: 'Max Toxicity', type: 'line', yAxisIndex: 1, data: history.map(h => h.maxToxicity.toFixed(2)), color: '#c05621' },
+                { name: 'Max Healing', type: 'line', yAxisIndex: 1, data: history.map(h => h.maxHealingRate.toFixed(2)), color: '#48bb78' },
             ],
         };
     }, [history, traitsLegend]);

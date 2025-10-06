@@ -144,6 +144,7 @@ export interface TickSummary {
     avgStamina: number;
     maxHealth: number;
     maxToxicity: number;
+    maxHealingRate: number;
     maxStamina: number;
     avgNutrientEfficiency: number;
     avgMaturationPeriod: number;
