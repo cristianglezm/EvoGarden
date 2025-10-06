@@ -49,6 +49,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     avgHealth: summary.avgHealth,
                     maxHealth: summary.maxHealth,
                     maxToxicity: summary.maxToxicity,
+                    maxHealingRate: summary.maxHealingRate,
                     avgStamina: summary.avgStamina,
                     maxStamina: summary.maxStamina,
                     avgNutrientEfficiency: summary.avgNutrientEfficiency,
