@@ -5,7 +5,9 @@ import {
     INSECT_MOVE_COST,
     INSECT_DATA,
     CATERPILLAR_EAT_AMOUNT_FOR_COCOON,
-    COCOON_HATCH_TIME
+    COCOON_HATCH_TIME,
+    INSECT_HEAL_FROM_HEALING_FLOWER,
+    INSECT_DAMAGE_FROM_TOXIC_FLOWER,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
@@ -64,6 +66,16 @@ export class CaterpillarBehavior extends InsectBehavior {
         
         flower.health = Math.max(0, flower.health - damageDealt);
         insect.healthEaten = (insect.healthEaten || 0) + damageDealt;
+
+        // Apply healing or toxicity from the flower
+        if (flower.toxicityRate < 0) {
+            // Healing flower
+            insect.health = Math.min(insect.maxHealth, insect.health + (INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate)));
+        } else {
+            // Toxic or neutral flower
+            const damageToInsect = INSECT_DAMAGE_FROM_TOXIC_FLOWER * flower.toxicityRate;
+            insect.health = Math.max(0, insect.health - damageToInsect);
+        }
     }
     
     private metamorphose(insect: Insect, context: InsectBehaviorContext) {
