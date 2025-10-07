@@ -595,6 +595,10 @@ export class SimulationEngine {
             nextActorState.delete(seedId);
         }
         for (const flower of flowersToAdd) {
+            flower.age += (nextActorState.get(flower.id) as FlowerSeed)?.age || 0;
+            if (flower.age >= flower.maturationPeriod) {
+                flower.isMature = true;
+            }
             nextActorState.set(flower.id, flower);
             newFlowerCount++;
             events.push({ message: '🌱 A new flower has bloomed!', type: 'success', importance: 'low' });
@@ -729,19 +733,21 @@ export class SimulationEngine {
         await Promise.all(regenerationPromises);
     }
 
-    public setParams(newParams: SimulationParams) {
+    public setParams(newParams: SimulationParams, reset = true) {
         this.params = newParams;
-        this.tick = 0;
-        this.totalInsectsEaten = 0;
-        this.populationManager.updateParams(newParams);
-        this.asyncFlowerFactory.reset();
+        this.populationManager.updateParams(newParams, reset);
         this.asyncFlowerFactory.updateParams(this.params);
-        this.environmentState = {
-            currentTemperature: newParams.temperature,
-            currentHumidity: newParams.humidity,
-            season: 'Summer',
-            currentWeatherEvent: { type: 'none', duration: 0 },
-        };
-        this.loadChampionsFromDb();
+        if (reset) {
+            this.tick = 0;
+            this.totalInsectsEaten = 0;
+            this.asyncFlowerFactory.reset();
+            this.environmentState = {
+                currentTemperature: newParams.temperature,
+                currentHumidity: newParams.humidity,
+                season: 'Summer',
+                currentWeatherEvent: { type: 'none', duration: 0 },
+            };
+            this.loadChampionsFromDb();
+        }
     }
 }

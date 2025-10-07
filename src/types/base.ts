@@ -35,6 +35,7 @@ export interface SimulationParams {
     herbicideCooldown: number;
     herbicideSmokeExpansionCount: number;
     notificationMode: NotificationMode;
+    simulationSpeed: number;
     // Seasonal Cycle Parameters
     seasonLengthInTicks: number;
     temperatureAmplitude: number;
