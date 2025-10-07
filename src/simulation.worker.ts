@@ -2,7 +2,7 @@
 
 import { SimulationEngine } from './lib/simulationEngine';
 import { flowerService } from './services/flowerService';
-import { TICK_RATE_MS } from './constants';
+import { BASE_TICK_RATE_MS } from './constants';
 import type { SimulationParams, Flower } from './types';
 import { createNewFlower, createInitialMobileActors, initializeHivesAndBees, initializeAntColonies, initializeSpiders } from './lib/simulationInitializer';
 
@@ -34,8 +34,11 @@ const gameLoop = async () => {
     const { events, summary, deltas } = await engine.calculateNextTick();
 
     self.postMessage({ type: 'tick-update', payload: { deltas, events, summary } });
+    
+    const currentParams = engine.getGridState().params;
+    const tickRate = BASE_TICK_RATE_MS / (currentParams.simulationSpeed || 1);
 
-    gameLoopTimeoutId = self.setTimeout(gameLoop, TICK_RATE_MS);
+    gameLoopTimeoutId = self.setTimeout(gameLoop, tickRate);
 };
 
 self.onmessage = async (e: MessageEvent) => {
@@ -124,6 +127,13 @@ self.onmessage = async (e: MessageEvent) => {
 
             engine.initializeGridWithActors(allActors);
             self.postMessage({ type: 'init-complete', payload: engine.getGridState() });
+            break;
+        }
+        
+        case 'set-live-params': {
+            if (engine) {
+                engine.setParams(payload, false);
+            }
             break;
         }
 

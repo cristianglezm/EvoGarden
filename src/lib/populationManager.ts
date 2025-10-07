@@ -22,9 +22,11 @@ export class PopulationManager {
         this.params = params;
     }
 
-    public updateParams(params: SimulationParams) {
+    public updateParams(params: SimulationParams, reset = true) {
         this.params = params;
-        this.reset();
+        if (reset) {
+            this.reset();
+        }
     }
     
     public reset() {
