@@ -66,25 +66,25 @@ describe('Controls component', () => {
         const applyButton = screen.getByRole('button', { name: /Apply & Reset/i });
         fireEvent.click(applyButton);
         expect(mockOnParamsChange).toHaveBeenCalledTimes(1);
-        expect(mockOnParamsChange).toHaveBeenCalledWith(DEFAULT_SIM_PARAMS);
+        expect(mockOnParamsChange).toHaveBeenCalledWith(DEFAULT_SIM_PARAMS, true);
     });
 
     it('updates local state on input change and applies it on button click', () => {
         render(<Controls {...defaultProps} />);
         
         const gridWidthSlider = screen.getByLabelText(/Grid Width/i);
-        fireEvent.change(gridWidthSlider, { target: { value: '15' } });
+        fireEvent.change(gridWidthSlider, { target: { value: '20' } });
         
         const applyButton = screen.getByRole('button', { name: /Apply & Reset/i });
         fireEvent.click(applyButton);
         
         expect(mockOnParamsChange).toHaveBeenCalledTimes(1);
         expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
-            gridWidth: 15
-        }));
+            gridWidth: 20
+        }), true);
     });
 
-    it('updates multiple local state values and applies them', () => {
+    it('updates multiple local state values and applies them', async () => {
         render(<Controls {...defaultProps} />);
     
         fireEvent.change(screen.getByLabelText(/Flowers/i), { target: { value: '50' } });
@@ -97,7 +97,7 @@ describe('Controls component', () => {
             initialFlowers: 50,
             initialInsects: 25,
             temperature: 30,
-        }));
+        }), true);
     });
     
     it('updates select input value and applies it', () => {
@@ -109,7 +109,7 @@ describe('Controls component', () => {
         
         expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
             windDirection: 'NW'
-        }));
+        }), true);
     });
 
     it('updates hive grid area and applies it', async () => {
@@ -128,7 +128,7 @@ describe('Controls component', () => {
         
         expect(mockOnParamsChange).toHaveBeenCalledWith(expect.objectContaining({
             hiveGridArea: 15
-        }));
+        }), true);
     });
 
     it('updates honeybee parameters and applies them', async () => {
@@ -169,7 +169,7 @@ describe('Controls component', () => {
             hiveSpawnCost: 25,
             territoryMarkLifespan: 150,
             signalTTL: 15,
-        }));
+        }), true);
     });
     
     it('disables Save button when simulation is running', () => {
