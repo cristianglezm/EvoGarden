@@ -540,6 +540,19 @@ export class SimulationEngine {
                     }
                 }
 
+                // Boost ant colonies at the start of spring
+                const colonies = Array.from(nextActorState.values()).filter(a => a.type === 'antColony') as AntColony[];
+                if (colonies.length > 0) {
+                    let boosted = false;
+                    for (const colony of colonies) {
+                        colony.foodReserves = this.params.antColonySpawnThreshold + (2 * this.params.antColonySpawnCost);
+                        boosted = true;
+                    }
+                    if (boosted) {
+                         events.push({ message: '⛰️ Spring has revitalized the ant colonies!', type: 'success', importance: 'high' });
+                    }
+                }
+
                 events.push({ message: '🌱 Spring has arrived, and new life stirs in the garden!', type: 'success', importance: 'high' });                          
                 const tempGridForPlacement = this.grid.map(row => row.map(cell => [...cell]));
                 
