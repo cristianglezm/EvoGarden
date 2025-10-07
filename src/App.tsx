@@ -93,7 +93,7 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary } = useSimulation({ setIsLoading });
   const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
 
   useEffect(() => {
@@ -180,17 +180,23 @@ export default function App(): React.ReactNode {
       }
   }, [latestSummaryRef]);
 
-  const handleParamsChange = (newParams: SimulationParams) => {
-    setLoadingMessage('Resetting simulation...');
-    setIsLoading(true);
-    setIsRunning(false); // Stop the simulation on reset
-    setParams(newParams);
-    resetWithNewParams(newParams); // Explicitly tell the worker to reset
-    setSelectedActor(null);
-    setActorsInSelectedCell([]);
-    setIsControlsOpen(false); // Close panel on apply
-    useAnalyticsStore.getState().reset(); // Reset analytics data
-    useEventLogStore.getState().reset(); // Reset event log
+  const handleParamsChange = (newParams: SimulationParams, shouldReset = true) => {
+    setParams(newParams); // Always update main state
+
+    if (shouldReset) {
+        setLoadingMessage('Resetting simulation...');
+        setIsLoading(true);
+        setIsRunning(false);
+        resetWithNewParams(newParams);
+        setSelectedActor(null);
+        setActorsInSelectedCell([]);
+        setIsControlsOpen(false);
+        useAnalyticsStore.getState().reset();
+        useEventLogStore.getState().reset();
+    } else {
+        // Just update worker params live without resetting
+        updateLiveParams(newParams);
+    }
   };
 
   const handleActorSelection = useCallback((actor: CellContent | null) => {
