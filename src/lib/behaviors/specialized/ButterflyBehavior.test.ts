@@ -149,6 +149,7 @@ describe('ButterflyBehavior', () => {
         // Here, it checks interaction (false), then moves (cost), then regenerates because hasInteracted is false.
         const expectedStamina = Math.min(butterfly.maxStamina, (initialStamina - INSECT_MOVE_COST) + INSECT_STAMINA_REGEN_PER_TICK);
         
+        
         behavior.update(butterfly, setupContext());
 
         expect(butterfly.stamina).toBe(expectedStamina);
