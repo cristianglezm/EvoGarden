@@ -5,6 +5,7 @@ import {
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     INSECT_WANDER_CHANCE,
+    INSECT_STAMINA_GAIN_FROM_EATING,
 } from '../../../constants';
 import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
@@ -40,8 +41,12 @@ export class ButterflyBehavior extends InsectBehavior {
         
         this.handleMovement(insect, hasInteracted, context);
 
-        if (!hasInteracted) {
-             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+        if (hasInteracted) {
+            // Regenerate stamina from "eating" after moving away from the flower.
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_GAIN_FROM_EATING);
+        } else {
+            // If it didn't interact (i.e., it was idle or just wandering), regenerate stamina.
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
     
@@ -53,6 +58,8 @@ export class ButterflyBehavior extends InsectBehavior {
     
     private handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         // Butterflies don't eat or damage flowers, they only interact for pollination.
+        // Add stamina regeneration upon pollinating to prevent getting stuck
+        insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_GAIN_FROM_EATING);
         this.handlePollination(insect, flower, context);
         const pollenScore = scoreFlower(insect, flower);
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
@@ -71,26 +78,30 @@ export class ButterflyBehavior extends InsectBehavior {
         }
     }
     
-    private handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext) {
-        if (insect.stamina < INSECT_MOVE_COST) return;
-
-        insect.stamina -= INSECT_MOVE_COST;
-
-        if (hasInteracted) {
-            this.wander(insect, context);
-            return;
-        }
+    private handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext): boolean {
+        if (insect.stamina < INSECT_MOVE_COST) return false;
 
         let moved = false;
-        if (Math.random() > INSECT_WANDER_CHANCE) {
-            const targetFlower = this.findBestFlowerTarget(insect, context);
-            if (targetFlower) {
-                moved = this.moveTowards(insect, targetFlower, context);
+
+        if (hasInteracted) {
+            moved = this.wander(insect, context);
+        } else {
+            if (Math.random() > INSECT_WANDER_CHANCE) {
+                const targetFlower = this.findBestFlowerTarget(insect, context);
+                if (targetFlower) {
+                    moved = this.moveTowards(insect, targetFlower, context);
+                }
+            }
+            
+            if (!moved) {
+                moved = this.wander(insect, context);
             }
         }
-        
-        if (!moved) {
-            this.wander(insect, context);
+
+        if (moved) {
+            insect.stamina -= INSECT_MOVE_COST;
         }
+
+        return moved;
     }
 }
