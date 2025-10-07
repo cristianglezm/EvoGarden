@@ -7,7 +7,7 @@ import { ACTOR_NAMES } from '../utils';
 
 interface ControlsProps {
     params: SimulationParams;
-    onParamsChange: (params: SimulationParams) => void;
+    onParamsChange: (params: SimulationParams, shouldReset: boolean) => void;
     isRunning: boolean;
     setIsRunning: (running: React.SetStateAction<boolean>) => void;
     onSave: () => void;
@@ -19,6 +19,8 @@ interface ControlsProps {
 
 const WIND_DIRECTIONS: WindDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const FLOWER_DETAIL_OPTIONS = [4, 8, 16, 32, 64];
+const SIMULATION_SPEED_OPTIONS = [0.5, 1, 2, 4];
+const LIVE_UPDATABLE_PARAMS = ['simulationSpeed', 'notificationMode'];
 // Create a list of all spawnable actors for the UI
 const ACTOR_LIST = ['🐦', '🦅', ...Array.from(INSECT_DATA.keys())];
 
@@ -32,10 +34,11 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
     const handleParamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount', 'beeWinterHoneyConsumption', 'hivePollenToHoneyRatio', 'beePollinationWanderChance', 'pheromoneStrengthDecay', 'spiderWebStaminaRegen', 'spiderWebTrapChance', 'spiderEscapeChanceModifier'].includes(name);
-        const isString = ['windDirection', 'notificationMode'].includes(name);
         
         setLocalParams(prev => {
+            const isFloat = ['humidity', 'herbicideFlowerDensityThreshold', 'humidityAmplitude', 'weatherEventChance', 'heavyRainHumidityIncrease', 'droughtHumidityDecrease', 'mutationChance', 'mutationAmount', 'beeWinterHoneyConsumption', 'hivePollenToHoneyRatio', 'beePollinationWanderChance', 'pheromoneStrengthDecay', 'spiderWebStaminaRegen', 'spiderWebTrapChance', 'spiderEscapeChanceModifier', 'simulationSpeed'].includes(name);
+            const isString = ['windDirection', 'notificationMode'].includes(name);
+        
             let processedValue: string | number | boolean = value;
             if (type === 'checkbox') {
                 processedValue = (e.target as HTMLInputElement).checked;
@@ -54,6 +57,10 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                 if (newParams.initialFlowers > maxFlowers) {
                     newParams.initialFlowers = maxFlowers;
                 }
+            }
+
+            if (LIVE_UPDATABLE_PARAMS.includes(name)) {
+                onParamsChange(newParams, false);
             }
             
             return newParams;
@@ -78,7 +85,7 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
     };
 
     const handleApply = () => {
-        onParamsChange(localParams);
+        onParamsChange(localParams, true);
     };
     
     const maxFlowers = localParams.gridWidth * localParams.gridHeight;
@@ -356,6 +363,12 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                 </CollapsibleSection>
 
                 <CollapsibleSection title="Graphics & UI" defaultOpen={false}>
+                    <label className="block" htmlFor="simulationSpeed">
+                        <span className="text-secondary text-sm">Simulation Speed</span>
+                        <select name="simulationSpeed" id="simulationSpeed" value={localParams.simulationSpeed} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">
+                            {SIMULATION_SPEED_OPTIONS.map(val => <option key={val} value={val}>{val}x</option>)}
+                        </select>
+                    </label>
                     <label className="block" htmlFor="flowerDetailRadius">
                         <span className="text-secondary text-sm">Flower Detail</span>
                         <select name="flowerDetailRadius" id="flowerDetailRadius" value={localParams.flowerDetailRadius} onChange={handleParamChange} className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white">

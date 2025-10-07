@@ -1,6 +1,6 @@
 import type { SimulationParams, InsectStats } from './types';
 
-export const TICK_RATE_MS = 250;
+export const BASE_TICK_RATE_MS = 250;
 
 export const DEFAULT_SIM_PARAMS: SimulationParams = {
     gridWidth: 15,
@@ -19,6 +19,7 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
     herbicideCooldown: 90,
     herbicideSmokeExpansionCount: 2,
     notificationMode: 'both',
+    simulationSpeed: 1,
     // Seasonal Cycle Parameters
     seasonLengthInTicks: 150,
     temperatureAmplitude: 15, // Varies by ±15°C from base
