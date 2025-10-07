@@ -1,6 +1,6 @@
-import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, AppEvent, Flower } from '../../types';
+import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, AppEvent, Flower, Cocoon } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { NUTRIENT_FROM_PREY_LIFESPAN, BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
+import { BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
 import { findCellForStationaryActor } from '../simulationUtils';
 
 const BIRD_VISION_RANGE = 7;
@@ -14,10 +14,12 @@ export interface BirdContext {
     events: AppEvent[];
     incrementInsectsEaten: () => void;
     incrementEggsEaten: () => void;
+    incrementCocoonsEaten: () => void;
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
 export const processBirdTick = (bird: Bird, context: BirdContext) => {
-    const { grid, params, qtree, flowerQtree, nextActorState, events, incrementInsectsEaten, incrementEggsEaten } = context;
+    const { grid, params, qtree, flowerQtree, nextActorState, events, incrementInsectsEaten, incrementEggsEaten, incrementCocoonsEaten, getNextId } = context;
     const { gridWidth, gridHeight } = params;
     const { x, y } = bird;
     let moved = false;
@@ -46,24 +48,44 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                 bird.target = { x: closestInsect.x, y: closestInsect.y };
             }
         } else {
-            // Priority 2: Find unprotected eggs if no insects are available
-            const nearbyEggs = nearbyPoints
+            // Priority 2: Find unprotected cocoons
+            const nearbyCocoons = nearbyPoints
                 .map(p => p.data)
                 .filter(a => {
-                    if (a?.type !== 'egg' || !nextActorState.has(a.id)) return false;
+                    if (a?.type !== 'cocoon' || !nextActorState.has(a.id)) return false;
                     const isProtected = grid[a.y][a.x].some(c => c.type === 'flower');
                     return !isProtected;
-                }) as Egg[];
+                }) as Cocoon[];
             
-            if (nearbyEggs.length > 0) {
-                 const closestEgg = nearbyEggs.reduce((closest, egg) => {
-                    const dist = Math.hypot(x - egg.x, y - egg.y);
-                    return (dist < closest.dist) ? { egg, dist } : closest;
-                 }, { egg: null as Egg | null, dist: Infinity }).egg;
+            if (nearbyCocoons.length > 0) {
+                 const closestCocoon = nearbyCocoons.reduce((closest, cocoon) => {
+                    const dist = Math.hypot(x - cocoon.x, y - cocoon.y);
+                    return (dist < closest.dist) ? { cocoon, dist } : closest;
+                 }, { cocoon: null as Cocoon | null, dist: Infinity }).cocoon;
                  
-                 if (closestEgg) {
-                     bird.target = { x: closestEgg.x, y: closestEgg.y };
+                 if (closestCocoon) {
+                     bird.target = { x: closestCocoon.x, y: closestCocoon.y };
                  }
+            } else {
+                // Priority 3: Find unprotected eggs if no insects or cocoons are available
+                const nearbyEggs = nearbyPoints
+                    .map(p => p.data)
+                    .filter(a => {
+                        if (a?.type !== 'egg' || !nextActorState.has(a.id)) return false;
+                        const isProtected = grid[a.y][a.x].some(c => c.type === 'flower');
+                        return !isProtected;
+                    }) as Egg[];
+                
+                if (nearbyEggs.length > 0) {
+                     const closestEgg = nearbyEggs.reduce((closest, egg) => {
+                        const dist = Math.hypot(x - egg.x, y - egg.y);
+                        return (dist < closest.dist) ? { egg, dist } : closest;
+                     }, { egg: null as Egg | null, dist: Infinity }).egg;
+                     
+                     if (closestEgg) {
+                         bird.target = { x: closestEgg.x, y: closestEgg.y };
+                     }
+                }
             }
         }
     }
@@ -72,7 +94,7 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
     if (bird.target) {
         // Use original grid to find target, but check `nextActorState` for existence
         const targetCellContent = grid[bird.target.y]?.[bird.target.x] ?? [];
-        const targetActor = targetCellContent.find(c => (c.type === 'insect' || c.type === 'egg')) as Insect | Egg | undefined;
+        const targetActor = targetCellContent.find(c => (c.type === 'insect' || c.type === 'egg' || c.type === 'cocoon')) as Insect | Egg | Cocoon | undefined;
         
         if (targetActor && nextActorState.has(targetActor.id)) {
             const dx = Math.sign(bird.target.x - x);
@@ -88,15 +110,24 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
                 moved = true;
                 
                 if (targetActor.type === 'insect') {
-                    const nutrientId = `nutrient-${newX}-${newY}-${Date.now()}`;
-                    const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: NUTRIENT_FROM_PREY_LIFESPAN };
+                    const nutrientId = getNextId('nutrient', newX, newY);
+                    // Nutrient lifespan is proportional to the insect's max health
+                    const nutrientLifespan = 2 + Math.floor((targetActor as Insect).maxHealth / 30);
+                    const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: nutrientLifespan };
                     nextActorState.set(nutrientId, nutrient);
                     events.push({ message: '🐦 An insect was eaten!', type: 'info', importance: 'low' });
                     incrementInsectsEaten();
-                } else { // It's an egg
+                } else if (targetActor.type === 'egg') {
                     events.push({ message: '🐦 An egg was eaten!', type: 'info', importance: 'low' });
                     incrementEggsEaten();
                     // Eating an egg provides no nutrient
+                } else if (targetActor.type === 'cocoon') {
+                    events.push({ message: '🐦 A cocoon was eaten!', type: 'info', importance: 'low' });
+                    incrementCocoonsEaten();
+                    const nutrientId = getNextId('nutrient', newX, newY);
+                    const nutrientLifespan = 2; // small nutrient
+                    const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: newX, y: newY, lifespan: nutrientLifespan };
+                    nextActorState.set(nutrientId, nutrient);
                 }
 
             } else if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight && !grid[newY][newX].some(c => c.type ==='bird')) {
@@ -144,7 +175,7 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
     if (Math.random() < BIRD_DROP_NUTRIENT_CHANCE) {
          const pos = findCellForStationaryActor(grid, params, 'nutrient');
          if (pos) {
-            const nutrientId = `nutrient-${pos.x}-${pos.y}-${Date.now()}`;
+            const nutrientId = getNextId('nutrient', pos.x, pos.y);
             const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: pos.x, y: pos.y, lifespan: NUTRIENT_LIFESPAN };
             nextActorState.set(nutrientId, nutrient);
          }

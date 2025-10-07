@@ -51,8 +51,9 @@ export class AsyncFlowerFactory {
         nextActorState: Map<string, CellContent>,
         x: number,
         y: number,
-        parentGenome1?: string,
-        parentGenome2?: string
+        parentGenome1: string | undefined,
+        parentGenome2: string | undefined,
+        getNextId: (type: string, x: number, y: number) => string
     ): FlowerSeed | null {
         if (!this.flowerWorkerPort || !this.stemImageData) {
             console.error("AsyncFlowerFactory not ready to request a new flower.");
@@ -71,10 +72,11 @@ export class AsyncFlowerFactory {
         const avgHealth = flowerCount > 0 ? totalHealth / flowerCount : SEED_HEALTH;
         const seedHealth = Math.max(1, Math.round(avgHealth));
 
-        const requestId = `seed-${x}-${y}-${Date.now()}-${Math.random()}`;
+        const requestId = getNextId('seed', x, y);
+        const flowerId = getNextId('flower', x, y);
         
         const requestPayload: FlowerCreationRequest = {
-            requestId, x, y, parentGenome1, parentGenome2
+            requestId, flowerId, x, y, parentGenome1, parentGenome2
         };
 
         this.flowerWorkerPort.postMessage({

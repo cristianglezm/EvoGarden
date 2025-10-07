@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useToastStore } from './toastStore';
 import { act } from '@testing-library/react';
+import type { AppEvent } from '../types';
 
 describe('toastStore', () => {
     // Reset store state before each test
@@ -16,7 +17,7 @@ describe('toastStore', () => {
     });
 
     it('addToast should add a new toast message', () => {
-        const newToast = { message: 'Test toast', type: 'success' as const };
+        const newToast: AppEvent = { message: 'Test toast', type: 'success', importance: 'low' };
 
         act(() => {
             useToastStore.getState().addToast(newToast);
@@ -30,8 +31,8 @@ describe('toastStore', () => {
     });
 
     it('removeToast should remove a toast by its id', () => {
-        const toast1 = { message: 'Toast 1', type: 'info' as const };
-        const toast2 = { message: 'Toast 2', type: 'error' as const };
+        const toast1: AppEvent = { message: 'Toast 1', type: 'info', importance: 'high' };
+        const toast2: AppEvent = { message: 'Toast 2', type: 'error', importance: 'high' };
 
         // Add two toasts
         act(() => {
@@ -55,7 +56,7 @@ describe('toastStore', () => {
     });
 
     it('removeToast should do nothing if id does not exist', () => {
-        const toast = { message: 'My Toast', type: 'info' as const };
+        const toast: AppEvent = { message: 'My Toast', type: 'info', importance: 'low' };
         
         act(() => {
             useToastStore.getState().addToast(toast);

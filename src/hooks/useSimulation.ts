@@ -109,6 +109,10 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         latestSummaryRef.current = null;
         setLatestSummary(null);
     }, []);
+    
+    const updateLiveParams = useCallback((params: SimulationParams) => {
+        workerRef.current?.postMessage({ type: 'set-live-params', payload: params });
+    }, []);
 
 
     const setIsRunning = (running: React.SetStateAction<boolean>) => {
@@ -123,5 +127,5 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         }
     };
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary };
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary };
 };

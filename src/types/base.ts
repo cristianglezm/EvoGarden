@@ -35,6 +35,7 @@ export interface SimulationParams {
     herbicideCooldown: number;
     herbicideSmokeExpansionCount: number;
     notificationMode: NotificationMode;
+    simulationSpeed: number;
     // Seasonal Cycle Parameters
     seasonLengthInTicks: number;
     temperatureAmplitude: number;
@@ -47,6 +48,39 @@ export interface SimulationParams {
     droughtHumidityDecrease: number;
     weatherEventMinDuration: number;
     weatherEventMaxDuration: number;
+    // Insect Evolution
+    reproductionCooldown: number;
+    mutationChance: number;
+    mutationAmount: number;
+    // Hive Parameters
+    hiveGridArea: number;
+    beeDormancyTemp: number;
+    beeWinterHoneyConsumption: number;
+    hivePollenToHoneyRatio: number;
+    hiveSpawnThreshold: number;
+    hiveSpawnCost: number;
+    territoryMarkLifespan: number;
+    signalTTL: number;
+    beePollinationWanderChance: number;
+    // Ant Colony Parameters
+    colonyGridArea: number;
+    antDormancyTemp: number;
+    antColonySpawnThreshold: number;
+    antColonySpawnCost: number;
+    pheromoneLifespan: number;
+    pheromoneStrengthDecay: number;
+    // Spider Parameters
+    spiderGridArea: number;
+    spiderWebStamina: number;
+    spiderWebStaminaRegen: number;
+    spiderWebBuildCost: number;
+    spiderMaxWebs: number;
+    spiderWebLifespan: number;
+    spiderWebStrength: number;
+    spiderWebTrapChance: number;
+    spiderEscapeChanceModifier: number;
+    // Permitted Actors
+    allowedActors: string[];
 }
 
 export interface Coord {
@@ -80,6 +114,22 @@ export interface TickSummary {
     eggCount: number;
     herbicidePlaneCount: number;
     herbicideSmokeCount: number;
+    corpseCount: number;
+    cockroachCount: number;
+    caterpillarCount: number;
+    butterflyCount: number;
+    cocoonCount: number;
+    beetleCount: number;
+    ladybugCount: number;
+    snailCount: number;
+    beeCount: number;
+    scorpionCount: number;
+    antCount: number;
+    spiderCount: number;
+    hiveCount: number;
+    colonyCount: number;
+    totalHoney: number;
+    totalAntFood: number;
     reproductions: number;
     insectsEaten: number; // In this tick
     totalInsectsEaten: number; // Cumulative
@@ -91,11 +141,13 @@ export interface TickSummary {
     eggsLaid: number;
     insectsBorn: number;
     eggsEaten: number;
+    cocoonsEaten: number;
     insectsDiedOfOldAge: number;
     avgHealth: number;
     avgStamina: number;
     maxHealth: number;
     maxToxicity: number;
+    maxHealingRate: number;
     maxStamina: number;
     avgNutrientEfficiency: number;
     avgMaturationPeriod: number;
@@ -110,10 +162,13 @@ export interface TickSummary {
     season: Season;
     weatherEvent: WeatherEventType;
     pendingFlowerRequests: number;
+    healingFlowerCount: number;
+    toxicFlowerCount: number;
 }
 
 export interface FlowerCreationRequest {
     requestId: string;
+    flowerId: string;
     x: number;
     y: number;
     parentGenome1?: string;

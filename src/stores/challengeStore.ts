@@ -18,7 +18,19 @@ const initialChallenges: Challenge[] = [
     { id: 'the-swarm-2', title: 'Kill it with fire', description: 'Reach a total insect population of 1,000.', goal: 1000, progress: 0, completed: false, metric: 'insectCount', aggregator: 'max' },
     { id: 'unchecked-growth', title: 'Unchecked Growth', description: 'Fill 95% of the grid with flowers and seeds.', goal: 0.95, progress: 0, completed: false, metric: 'flowerDensity', aggregator: 'max' },
     { id: 'poison-garden', title: 'Poison Garden', description: 'Evolve a flower with a toxicity level over 80%.', goal: 0.8, progress: 0, completed: false, metric: 'maxToxicity', aggregator: 'max' },
-    { id: 'peak-performer', title: 'Peak Performer', description: 'Evolve a flower with over 100 max health.', goal: 100, progress: 0, completed: false, metric: 'maxHealth', aggregator: 'max' },
+    { id: 'peak-performer', title: 'Peak Performer', description: 'Evolve a flower with 100 max health.', goal: 100, progress: 0, completed: false, metric: 'maxHealth', aggregator: 'max' },
+    { id: 'hive-1', title: 'Apiary Ascendancy', description: 'Sustain a hive with a total of 50 bees.', goal: 50, progress: 0, completed: false, metric: 'beeCount', aggregator: 'max' },
+    { id: 'hive-2', title: 'Sweet Success', description: 'Accumulate 500 honey across all hives.', goal: 500, progress: 0, completed: false, metric: 'totalHoney', aggregator: 'max' },
+    { id: 'colony-1', title: 'For the Colony!', description: 'Grow the total ant population to 50.', goal: 50, progress: 0, completed: false, metric: 'antCount', aggregator: 'max' },
+    { id: 'pest-1', title: 'Infestation', description: 'Reach a population of 20 cockroaches.', goal: 20, progress: 0, completed: false, metric: 'cockroachCount', aggregator: 'max' },
+    { id: 'metamorphosis-1', title: 'Butterfly Effect', description: 'Evolve a thriving butterfly population of 25.', goal: 25, progress: 0, completed: false, metric: 'butterflyCount', aggregator: 'max' },
+    { id: 'healing-garden', title: 'Garden of Life', description: 'Evolve a flower with a healing property of 20% or more.', goal: 0.2, progress: 0, completed: false, metric: 'maxHealingRate', aggregator: 'max' },
+    // New challenges for specialized insects
+    { id: 'specialist-ladybug', title: 'Pest Patrol', description: 'Establish a ladybug population of 20 to control pests.', goal: 20, progress: 0, completed: false, metric: 'ladybugCount', aggregator: 'max' },
+    { id: 'specialist-beetle', title: 'A Helping Hand', description: 'Cultivate a beetle population of 15 to support your garden.', goal: 15, progress: 0, completed: false, metric: 'beetleCount', aggregator: 'max' },
+    { id: 'specialist-snail', title: 'Slow and Steady', description: 'Reach a population of 25 snails.', goal: 25, progress: 0, completed: false, metric: 'snailCount', aggregator: 'max' },
+    { id: 'specialist-scorpion', title: 'Desert Predators', description: 'Sustain a formidable group of 5 scorpions.', goal: 5, progress: 0, completed: false, metric: 'scorpionCount', aggregator: 'max' },
+    { id: 'specialist-spider', title: 'Arachnophilia', description: 'Host a population of 10 spiders in your garden.', goal: 10, progress: 0, completed: false, metric: 'spiderCount', aggregator: 'max' },
 ];
 
 export const useChallengeStore = create<ChallengeState>()(

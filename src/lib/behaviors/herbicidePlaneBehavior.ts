@@ -4,15 +4,16 @@ export interface HerbicidePlaneContext {
     grid: Grid;
     params: SimulationParams;
     nextActorState: Map<string, CellContent>;
+    getNextId: (type: string, x: number, y: number) => string;
 }
 
 export const processHerbicidePlaneTick = (plane: HerbicidePlane, context: HerbicidePlaneContext) => {
-    const { nextActorState, params } = context;
+    const { nextActorState, params, getNextId } = context;
     const { gridWidth, gridHeight, herbicideSmokeLifespan } = params;
     const { x, y, dx, dy, turnDx, turnDy } = plane;
 
     // 1. Drop smoke at current location
-    const smokeId = `smoke-${x}-${y}-${Date.now()}`;
+    const smokeId = getNextId('smoke', x, y);
     const newSmoke: HerbicideSmoke = {
         id: smokeId,
         type: 'herbicideSmoke',

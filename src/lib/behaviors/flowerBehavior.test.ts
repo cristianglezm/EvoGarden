@@ -13,6 +13,7 @@ describe('flowerBehavior', () => {
     let requestNewFlower: Mock;
     let newActorQueue: CellContent[];
     let claimedCellsThisTick: Set<string>;
+    const getNextId = vi.fn((type: string, x: number, y: number) => `mock-${type}-${x}-${y}`);
 
     const mockFlower: Flower = {
         id: 'flower1', type: 'flower', x: 5, y: 5,
@@ -30,8 +31,7 @@ describe('flowerBehavior', () => {
         grid = Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => []));
         grid[5][5].push(flower);
         
-        // DYNAMIC MOCK: The mock now creates a seed based on the coordinates it receives.
-        requestNewFlower = vi.fn().mockImplementation((_state, x, y, _parent1, _parent2) => {
+        requestNewFlower = vi.fn().mockImplementation((_state, x, y, _parent1, _parent2, _id) => {
             return { ...mockSeed, id: `seed-${x}-${y}`, x, y };
         });
         mockAsyncFlowerFactory = new (AsyncFlowerFactory as any)();
@@ -39,6 +39,7 @@ describe('flowerBehavior', () => {
 
         newActorQueue = [];
         claimedCellsThisTick = new Set<string>();
+        getNextId.mockClear();
     });
     
     const setupContext = () => ({
@@ -48,6 +49,7 @@ describe('flowerBehavior', () => {
         currentTemperature: DEFAULT_SIM_PARAMS.temperature, // Default to a neutral temperature
         nextActorState: new Map<string, CellContent>(),
         claimedCellsThisTick,
+        getNextId,
     });
 
     it('should age and consume stamina', () => {
@@ -81,11 +83,10 @@ describe('flowerBehavior', () => {
         const context = setupContext();
         processFlowerTick(flower, context, newActorQueue);
         expect(requestNewFlower).toHaveBeenCalled();
-        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), flower.genome);
+        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), flower.genome, undefined, expect.any(Function));
         expect(newActorQueue.length).toBe(1);
         
         const createdSeed = newActorQueue[0] as FlowerSeed;
-        // DYNAMIC ASSERTION: Check against the coordinates of the seed that was actually created.
         expect(claimedCellsThisTick.has(`${createdSeed.x},${createdSeed.y}`)).toBe(true);
         vi.spyOn(Math, 'random').mockRestore();
     });
@@ -100,9 +101,9 @@ describe('flowerBehavior', () => {
 
         expect(requestNewFlower).toHaveBeenCalled();
         try {
-            expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g1', 'g2');
+            expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g1', 'g2', expect.any(Function));
         } catch {
-            expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1');
+            expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), 'g2', 'g1', expect.any(Function));
         }
         expect(newActorQueue.length).toBe(1);
         const createdSeed = newActorQueue[0] as FlowerSeed;
@@ -165,6 +166,7 @@ describe('flowerBehavior', () => {
             currentTemperature: DEFAULT_SIM_PARAMS.temperature,
             nextActorState,
             claimedCellsThisTick: new Set<string>(), // Not used by seed tick, but required by context type
+            getNextId,
         });
 
         it('should age the seed', () => {

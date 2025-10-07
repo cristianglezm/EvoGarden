@@ -1,7 +1,7 @@
-import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower } from '../types';
+import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower, Egg, TerritoryMark } from '../types';
 import { Quadtree, Rectangle } from './Quadtree';
-import { FLOWER_NUTRIENT_HEAL, INSECT_REPRODUCTION_CHANCE, EGG_HATCH_TIME, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
-import { findCellForStationaryActor } from './simulationUtils';
+import { FLOWER_NUTRIENT_HEAL, MUTATION_CHANCE, MUTATION_AMOUNT, INSECT_DATA, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
+import { findCellForStationaryActor, neighborVectors } from './simulationUtils';
 
 export const processNutrientHealing = (nextActorState: Map<string, CellContent>, qtree: Quadtree<CellContent>): void => {
     const nutrientsToProcess = Array.from(nextActorState.values()).filter(a => a.type === 'nutrient') as Nutrient[];
@@ -23,15 +23,70 @@ export const processNutrientHealing = (nextActorState: Map<string, CellContent>,
     }
 };
 
+export const propagateSignal = (startMark: TerritoryMark, nextActorState: Map<string, CellContent>, params: SimulationParams) => {
+    if (!startMark.signal || startMark.signal.ttl <= 0) return;
+
+    const queue: { mark: TerritoryMark; ttl: number }[] = [{ mark: startMark, ttl: startMark.signal.ttl }];
+    const visited = new Set<string>([startMark.id]);
+
+    while (queue.length > 0) {
+        const { mark, ttl } = queue.shift()!;
+
+        // Update the current mark with the signal, creating a new object
+        // to avoid reference sharing issues.
+        mark.signal = {
+            type: startMark.signal.type,
+            origin: startMark.signal.origin,
+            ttl: ttl,
+        };
+
+        if (ttl > 0) {
+            for (const [dx, dy] of neighborVectors) {
+                const nx = mark.x + dx;
+                const ny = mark.y + dy;
+
+                if (nx >= 0 && nx < params.gridWidth && ny >= 0 && ny < params.gridHeight) {
+                    const neighborActors = Array.from(nextActorState.values()).filter(a => a.x === nx && a.y === ny);
+                    for (const actor of neighborActors) {
+                        if (actor.type === 'territoryMark' && (actor as TerritoryMark).hiveId === startMark.hiveId && !visited.has(actor.id)) {
+                            const neighborMark = actor as TerritoryMark;
+                            // Check if the neighbor already has this signal or a stronger one
+                            if (!neighborMark.signal || (neighborMark.signal.type === startMark.signal.type && neighborMark.signal.ttl < ttl - 1)) {
+                                visited.add(neighborMark.id);
+                                queue.push({ mark: neighborMark, ttl: ttl - 1 });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+
+
+const createOffspringGenome = (genome1: number[], genome2: number[]): number[] => {
+    const newGenome = genome1.map((gene, i) => {
+        return Math.random() < 0.5 ? gene : genome2[i];
+    });
+
+    // Mutation
+    for (let i = 0; i < newGenome.length; i++) {
+        if (Math.random() < MUTATION_CHANCE) {
+            newGenome[i] *= 1 + (Math.random() * MUTATION_AMOUNT * 2) - MUTATION_AMOUNT;
+        }
+    }
+    return newGenome;
+};
+
 export const handleInsectReproduction = (
     nextActorState: Map<string, CellContent>,
     params: SimulationParams,
-    events: AppEvent[]
+    events: AppEvent[],
+    getNextId: (type: string, x: number, y: number) => string,
 ): number => {
     let eggsLaidThisTick = 0;
     const { gridWidth, gridHeight } = params;
 
-    // Create a temporary grid based on the current state of this tick's actors
     const currentTickGrid: Grid = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => []));
     for (const actor of nextActorState.values()) {
         if (actor.x >= 0 && actor.x < gridWidth && actor.y >= 0 && actor.y < gridHeight) {
@@ -46,6 +101,8 @@ export const handleInsectReproduction = (
     for (const actor of nextActorState.values()) {
         if (actor.type === 'insect') {
             const insect = actor as Insect;
+            // Social insects (bees, ants) reproduce via their colony/hive, not directly.
+            if (insect.emoji === '🐝' || insect.emoji === '🐜') continue;
             insectQtree.insert({ x: insect.x, y: insect.y, data: insect });
             allInsects.push(insect);
         }
@@ -55,17 +112,32 @@ export const handleInsectReproduction = (
     for (const insect of allInsects) {
         if (reproducedInsects.has(insect.id) || insect.reproductionCooldown) continue;
 
+        const baseStats = INSECT_DATA.get(insect.emoji);
+        if (!baseStats || baseStats.reproductionCost === 0) continue; // Skip if no stats or cannot reproduce (e.g., caterpillar)
+
+        // Check for partners on the same cell
         const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
         const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id) && !other.reproductionCooldown);
 
-        if (partners.length > 0 && Math.random() < INSECT_REPRODUCTION_CHANCE) {
-            // Use the temporary, up-to-date grid for placement checks
-            const spot = findCellForStationaryActor(currentTickGrid, params, 'egg', { x: insect.x, y: insect.y });
+        if (partners.length > 0 && insect.stamina >= baseStats.reproductionCost) {
             const partner = partners[0];
+            const spot = findCellForStationaryActor(currentTickGrid, params, 'egg', { x: insect.x, y: insect.y });
+            
             if (spot) {
-                const eggId = `egg-${spot.x}-${spot.y}-${Date.now()}`;
-                nextActorState.set(eggId, { id: eggId, type: 'egg', x: spot.x, y: spot.y, hatchTimer: EGG_HATCH_TIME, insectEmoji: insect.emoji });
+                // Determine what the egg will hatch into
+                const offspringEmoji = insect.emoji === '🦋' ? '🐛' : insect.emoji;
+
+                const eggId = getNextId('egg', spot.x, spot.y);
+                const offspringGenome = createOffspringGenome(insect.genome, partner.genome);
+                const newEgg: Egg = { 
+                    id: eggId, type: 'egg', x: spot.x, y: spot.y, 
+                    hatchTimer: baseStats.eggHatchTime, 
+                    insectEmoji: offspringEmoji, 
+                    genome: offspringGenome 
+                };
+                nextActorState.set(eggId, newEgg);
                 
+                insect.stamina -= baseStats.reproductionCost;
                 insect.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
                 partner.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
 

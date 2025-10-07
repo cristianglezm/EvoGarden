@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processBirdTick } from './birdBehavior';
-import type { Bird, Insect, Grid, CellContent, AppEvent, Flower, Egg } from '../../types';
+import type { Bird, Insect, Grid, CellContent, AppEvent, Flower, Egg, Cocoon } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
-import { DEFAULT_SIM_PARAMS } from '../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_DATA } from '../../constants';
 
 describe('birdBehavior', () => {
     let bird: Bird;
@@ -10,9 +10,21 @@ describe('birdBehavior', () => {
     let events: AppEvent[];
     let incrementInsectsEaten: () => void;
     let incrementEggsEaten: () => void;
+    let incrementCocoonsEaten: () => void;
+    let getNextId: (type: string, x: number, y: number) => string;
     let grid: Grid;
     let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
+    const mockInsectStats = INSECT_DATA.get('🦋')!;
+
+    const createMockInsect = (id: string, x: number, y: number): Insect => ({
+        id, type: 'insect', x, y, emoji: '🦋', pollen: null,
+        health: mockInsectStats.maxHealth,
+        maxHealth: mockInsectStats.maxHealth,
+        stamina: mockInsectStats.maxStamina,
+        maxStamina: mockInsectStats.maxStamina,
+        genome: [],
+    });
 
     beforeEach(() => {
         bird = { id: 'bird1', type: 'bird', x: 5, y: 5, target: null, patrolTarget: null };
@@ -21,6 +33,8 @@ describe('birdBehavior', () => {
         events = [];
         incrementInsectsEaten = vi.fn();
         incrementEggsEaten = vi.fn();
+        incrementCocoonsEaten = vi.fn();
+        getNextId = vi.fn((type, x, y) => `${type}-${x}-${y}`);
         grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => []));
         qtree = new Quadtree(new Rectangle(DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2, DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2), 4);
         flowerQtree = new Quadtree(new Rectangle(DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2, DEFAULT_SIM_PARAMS.gridWidth / 2, DEFAULT_SIM_PARAMS.gridHeight / 2), 4);
@@ -35,11 +49,13 @@ describe('birdBehavior', () => {
         events,
         incrementInsectsEaten,
         incrementEggsEaten,
+        incrementCocoonsEaten,
+        getNextId,
     });
     
     it('should find the closest unprotected insect as a target', () => {
-        const closeInsect: Insect = { id: 'insect1', type: 'insect', x: 7, y: 7, emoji: '🦋', pollen: null, lifespan: 100 };
-        const farInsect: Insect = { id: 'insect2', type: 'insect', x: 9, y: 9, emoji: '🦋', pollen: null, lifespan: 100 };
+        const closeInsect = createMockInsect('insect1', 7, 7);
+        const farInsect = createMockInsect('insect2', 9, 9);
         grid[7][7].push(closeInsect);
         grid[9][9].push(farInsect);
         nextActorState.set(closeInsect.id, closeInsect);
@@ -53,8 +69,8 @@ describe('birdBehavior', () => {
     });
 
     it('should ignore insects that are protected by a flower', () => {
-        const protectedInsect: Insect = { id: 'insect1', type: 'insect', x: 6, y: 6, emoji: '🦋', pollen: null, lifespan: 100 };
-        const unprotectedInsect: Insect = { id: 'insect2', type: 'insect', x: 8, y: 8, emoji: '🦋', pollen: null, lifespan: 100 };
+        const protectedInsect = createMockInsect('insect1', 6, 6);
+        const unprotectedInsect = createMockInsect('insect2', 8, 8);
         const flower = { id: 'flower1', type: 'flower', x: 6, y: 6 } as Flower;
         
         grid[6][6].push(protectedInsect, flower);
@@ -80,8 +96,7 @@ describe('birdBehavior', () => {
     });
 
     it('should move one step towards its prey target', () => {
-        // Setup the target insect in the grid and state so the bird can "see" it
-        const targetInsect: Insect = { id: 'insect-target', type: 'insect', x: 8, y: 8, emoji: '🦋', pollen: null, lifespan: 100 };
+        const targetInsect = createMockInsect('insect-target', 8, 8);
         grid[8][8].push(targetInsect);
         nextActorState.set(targetInsect.id, targetInsect);
 
@@ -100,8 +115,8 @@ describe('birdBehavior', () => {
         expect(bird.y).toBe(6);
     });
 
-    it('should prey on an insect and create a nutrient', () => {
-        const targetInsect: Insect = { id: 'insect1', type: 'insect', x: 6, y: 6, emoji: '🦋', pollen: null, lifespan: 100 };
+    it('should prey on an insect and create a nutrient with lifespan based on insect maxHealth', () => {
+        const targetInsect = createMockInsect('insect1', 6, 6);
         bird.x = 5; bird.y = 5;
         bird.target = { x: 6, y: 6 };
         
@@ -119,13 +134,16 @@ describe('birdBehavior', () => {
         expect(nutrient).toBeDefined();
         expect(nutrient?.x).toBe(6);
         expect(nutrient?.y).toBe(6);
+        // Check nutrient lifespan calculation
+        const expectedLifespan = 2 + Math.floor(targetInsect.maxHealth / 30);
+        expect((nutrient as any).lifespan).toBe(expectedLifespan);
         expect(bird.target).toBeNull();
     });
 
     it('should prey on an egg and not create a nutrient', () => {
         const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(1.0); // Ensure random nutrient drop doesn't happen
         
-        const targetEgg: Egg = { id: 'egg1', type: 'egg', x: 6, y: 6, hatchTimer: 10, insectEmoji: '🐛' };
+        const targetEgg: Egg = { id: 'egg1', type: 'egg', x: 6, y: 6, hatchTimer: 10, insectEmoji: '🐛', genome: [] };
         bird.x = 5; bird.y = 5;
         bird.target = { x: 6, y: 6 };
         
@@ -144,5 +162,41 @@ describe('birdBehavior', () => {
         expect(bird.target).toBeNull();
 
         randomSpy.mockRestore();
+    });
+
+    it('should prioritize cocoons over eggs', () => {
+        const cocoon = { id: 'cocoon1', type: 'cocoon', x: 7, y: 7, hatchTimer: 10, butterflyGenome: [] } as Cocoon;
+        const egg: Egg = { id: 'egg1', type: 'egg', x: 8, y: 8, hatchTimer: 10, insectEmoji: '🐛', genome: [] };
+        grid[7][7].push(cocoon);
+        grid[8][8].push(egg);
+        nextActorState.set(cocoon.id, cocoon);
+        nextActorState.set(egg.id, egg);
+        qtree.insert({ x: 7, y: 7, data: cocoon });
+        qtree.insert({ x: 8, y: 8, data: egg });
+
+        processBirdTick(bird, setupContext());
+
+        expect(bird.target).toEqual({ x: 7, y: 7 });
+    });
+
+    it('should prey on a cocoon and create a small nutrient', () => {
+        const targetCocoon: Cocoon = { id: 'cocoon1', type: 'cocoon', x: 6, y: 6, hatchTimer: 10, butterflyGenome: [] };
+        bird.x = 5; bird.y = 5;
+        bird.target = { x: 6, y: 6 };
+        
+        grid[6][6].push(targetCocoon);
+        nextActorState.set(targetCocoon.id, targetCocoon);
+
+        processBirdTick(bird, setupContext());
+
+        expect(nextActorState.has(targetCocoon.id)).toBe(false);
+        expect(incrementCocoonsEaten).toHaveBeenCalledTimes(1);
+        expect(events.length).toBe(1);
+        expect(events[0].message).toBe('🐦 A cocoon was eaten!');
+        
+        const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient');
+        expect(nutrient).toBeDefined();
+        expect((nutrient as any).lifespan).toBe(2);
+        expect(bird.target).toBeNull();
     });
 });

@@ -1,22 +1,25 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
-import type { CellContent, Flower, SimulationParams, Grid, Insect } from './types';
+import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
+import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
 import { flowerService } from './services/flowerService';
 import { eventService } from './services/eventService';
 import { DataPanel } from './components/DataPanel';
 import { useAnalyticsStore } from './stores/analyticsStore';
 import { db } from './services/db';
-import { EventLog } from './components/EventLog';
 import { useEventLogStore } from './stores/eventLogStore';
 import { FullEventLogPanel } from './components/FullEventLogPanel';
-import { EnvironmentDisplay } from './components/EnvironmentDisplay';
-import { WorkerStatusDisplay } from './components/WorkerStatusDisplay';
+import { ActorSelectionPanel } from './components/ActorSelectionPanel';
+import { InsectDetailsPanel } from './components/InsectDetailsPanel';
+import { EggDetailsPanel } from './components/EggDetailsPanel';
+import { GenericActorDetailsPanel } from './components/GenericActorDetailsPanel';
+import { StatusPanel } from './components/StatusPanel';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -64,7 +67,8 @@ const rehydrateGrid = async (metadata: any): Promise<Grid> => {
 
 export default function App(): React.ReactNode {
   const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
-  const [selectedFlowerId, setSelectedFlowerId] = useState<string | null>(null);
+  const [selectedActor, setSelectedActor] = useState<CellContent | null>(null);
+  const [actorsInSelectedCell, setActorsInSelectedCell] = useState<CellContent[]>([]);
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
   const [isFullLogOpen, setIsFullLogOpen] = useState(false);
@@ -89,7 +93,8 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary } = useSimulation({ setIsLoading });
+  const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
 
   useEffect(() => {
     if (workerError) {
@@ -134,7 +139,7 @@ export default function App(): React.ReactNode {
                 const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
                 setParams(loadedParams);
                 setIsRunning(false);
-                setSelectedFlowerId(null);
+                setSelectedActor(null);
                 eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
             } else {
                 // Initialize with default params
@@ -164,13 +169,6 @@ export default function App(): React.ReactNode {
       }
   }, [params.flowerDetailRadius, isServiceInitialized]);
 
-
-  const selectedFlower = useMemo(() => {
-    if (!selectedFlowerId) return null;
-    const actor = actors.get(selectedFlowerId);
-    return actor?.type === 'flower' ? actor : null;
-  }, [selectedFlowerId, actors]);
-
   const handleFrameRendered = useCallback((renderTimeMs: number) => {
       if (latestSummaryRef.current) {
           useAnalyticsStore.getState().addDataPoint({
@@ -182,57 +180,93 @@ export default function App(): React.ReactNode {
       }
   }, [latestSummaryRef]);
 
-  const handleParamsChange = (newParams: SimulationParams) => {
-    setLoadingMessage('Resetting simulation...');
-    setIsLoading(true);
-    setIsRunning(false); // Stop the simulation on reset
-    setParams(newParams);
-    resetWithNewParams(newParams); // Explicitly tell the worker to reset
-    setSelectedFlowerId(null);
-    setIsControlsOpen(false); // Close panel on apply
-    useAnalyticsStore.getState().reset(); // Reset analytics data
-    useEventLogStore.getState().reset(); // Reset event log
-  };
-  
-  const handleSelectFlower = useCallback((flower: Flower | null) => {
-    setSelectedFlowerId(flower?.id ?? null);
-    if (flower) {
-        // A flower is selected. Store the current running state and then pause.
-        wasRunningBeforeSelectionRef.current = isRunning;
+  const handleParamsChange = (newParams: SimulationParams, shouldReset = true) => {
+    setParams(newParams); // Always update main state
+
+    if (shouldReset) {
+        setLoadingMessage('Resetting simulation...');
+        setIsLoading(true);
         setIsRunning(false);
+        resetWithNewParams(newParams);
+        setSelectedActor(null);
+        setActorsInSelectedCell([]);
+        setIsControlsOpen(false);
+        useAnalyticsStore.getState().reset();
+        useEventLogStore.getState().reset();
     } else {
-        // Deselecting. If the simulation was running before, resume it.
-        if (wasRunningBeforeSelectionRef.current) {
-            setIsRunning(true);
-        }
+        // Just update worker params live without resetting
+        updateLiveParams(newParams);
     }
-  }, [isRunning, setIsRunning]);
+  };
+
+  const handleActorSelection = useCallback((actor: CellContent | null) => {
+      if (trackedActorId) return; // Ignore selection changes while tracking
+      setSelectedActor(actor);
+      setActorsInSelectedCell([]); // Clear the list view once a final selection is made
+      
+      if (actor) {
+          wasRunningBeforeSelectionRef.current = isRunning;
+          setIsRunning(false);
+      } else {
+          if (wasRunningBeforeSelectionRef.current) {
+              setIsRunning(true);
+          }
+      }
+  }, [isRunning, setIsRunning, trackedActorId]);
+  
+  const handleHighlightActorById = useCallback((id: string | null) => {
+    if (trackedActorId) return; 
+    if (id === null) {
+        if (actorsInSelectedCell.length === 0) {
+            setSelectedActor(null);
+        }
+        return;
+    }
+    const actor = actors.get(id);
+    setSelectedActor(actor || null);
+}, [actors, trackedActorId, actorsInSelectedCell.length]);
+
+
+  const handleCellClick = useCallback((actorsInCell: CellContent[]) => {
+      if (trackedActorId) return; // If tracking, ignore cell clicks
+
+      if (actorsInCell.length === 0) {
+          handleActorSelection(null);
+      } else if (actorsInCell.length === 1) {
+          handleActorSelection(actorsInCell[0]);
+      } else {
+          // Multiple actors, show selection panel
+          wasRunningBeforeSelectionRef.current = isRunning;
+          setIsRunning(false);
+          setActorsInSelectedCell(actorsInCell);
+          setSelectedActor(null);
+      }
+  }, [handleActorSelection, isRunning, setIsRunning, trackedActorId]);
 
   // Effect to handle clicking outside of the details panel to close it.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (!selectedFlowerId) return; // Only run if a flower is selected
+        if (trackedActorId) return; // Ignore clicks when tracking
+
+        if (!selectedActor && actorsInSelectedCell.length === 0) return;
 
         const isClickInsideDetails = detailsPanelRef.current?.contains(event.target as Node);
         const isClickInsideControlsButton = controlsButtonRef.current?.contains(event.target as Node);
         const isClickInsideControlsPanel = controlsPanelRef.current?.contains(event.target as Node);
         const isClickInsideSimulationView = simulationViewRef.current?.contains(event.target as Node);
 
-        // If the click is on the canvas, its own handler will manage selection/deselection.
-        // If the click is inside any other interactive panel, do nothing.
         if (isClickInsideSimulationView || isClickInsideDetails || isClickInsideControlsButton || isClickInsideControlsPanel) {
             return;
         }
 
-        // Otherwise, the click was outside all interactive areas, so deselect the flower.
-        handleSelectFlower(null);
+        handleActorSelection(null);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
         document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [selectedFlowerId, handleSelectFlower]);
+  }, [selectedActor, actorsInSelectedCell, handleActorSelection, trackedActorId]);
 
   const handleSaveSimulation = useCallback(async () => {
     if (!workerRef.current || isSaving) return;
@@ -260,7 +294,7 @@ export default function App(): React.ReactNode {
 
         const fullState = stateFromWorker as { params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten: number };
         const flowersToSave: Flower[] = [];
-        const insectsToSave: Insect[] = [];
+        const insectsToSave: (Insect | Cockroach)[] = [];
 
         // Create a "skeleton" grid with placeholders for flowers and insects
         const skeletonGrid = fullState.grid.map(row => 
@@ -270,9 +304,9 @@ export default function App(): React.ReactNode {
                         flowersToSave.push(actor as Flower);
                         return { id: actor.id, type: 'flower', x: actor.x, y: actor.y };
                     }
-                    if (actor.type === 'insect') {
-                        insectsToSave.push(actor as Insect);
-                        return { id: actor.id, type: 'insect', x: actor.x, y: actor.y };
+                    if (actor.type === 'insect' || actor.type === 'cockroach') {
+                        insectsToSave.push(actor as (Insect | Cockroach));
+                        return { id: actor.id, type: actor.type, x: actor.x, y: actor.y };
                     }
                     return actor;
                 })
@@ -289,7 +323,7 @@ export default function App(): React.ReactNode {
             await db.savedFlowers.clear();
             await db.savedInsects.clear();
             await db.savedFlowers.bulkAdd(flowersToSave);
-            await db.savedInsects.bulkAdd(insectsToSave);
+            await db.savedInsects.bulkAdd(insectsToSave as any); // Cast because Dexie types are strict
         });
 
         localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
@@ -325,7 +359,7 @@ export default function App(): React.ReactNode {
         const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
         setParams(loadedParams);
         setIsRunning(false);
-        setSelectedFlowerId(null);
+        setSelectedActor(null);
         setIsControlsOpen(false);
         eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
     } catch (err) {
@@ -369,52 +403,117 @@ export default function App(): React.ReactNode {
     );
   }
 
+  const renderDetailsPanel = () => {
+    if (actorsInSelectedCell.length > 0 && !trackedActorId) {
+        return <ActorSelectionPanel actors={actorsInSelectedCell} onSelect={handleActorSelection} onClose={() => handleActorSelection(null)} />;
+    }
+    if (selectedActor) {
+        switch(selectedActor.type) {
+            case 'flower':
+                return <FlowerDetailsPanel 
+                            flower={selectedActor} 
+                            isRunning={isRunning} 
+                            setIsRunning={setIsRunning} 
+                            onClose={() => handleActorSelection(null)}
+                            onTrackActor={handleTrackActor}
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                        />;
+            case 'insect':
+            case 'cockroach':
+                return <InsectDetailsPanel 
+                            insect={selectedActor as (Insect | Cockroach)} 
+                            onClose={() => handleActorSelection(null)} 
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                            onTrackActor={handleTrackActor}
+                        />;
+            case 'egg':
+                return <EggDetailsPanel 
+                            egg={selectedActor} 
+                            onClose={() => handleActorSelection(null)}
+                            onTrackActor={handleTrackActor}
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                        />;
+            case 'bird':
+            case 'eagle':
+            case 'nutrient':
+            case 'herbicidePlane':
+            case 'herbicideSmoke':
+            case 'flowerSeed':
+            case 'corpse':
+            case 'cocoon':
+            case 'hive':
+            case 'territoryMark':
+            case 'antColony':
+            case 'pheromoneTrail':
+            case 'spiderweb':
+                return <GenericActorDetailsPanel 
+                            actor={selectedActor} 
+                            onClose={() => handleActorSelection(null)}
+                            onTrackActor={handleTrackActor}
+                            onStopTracking={handleStopTracking}
+                            trackedActorId={trackedActorId}
+                        />;
+            default:
+                // Fallback for any unhandled type
+                handleActorSelection(null);
+                return null;
+        }
+    }
+    return null;
+  };
+const detailsPanel = renderDetailsPanel();
+
+
   return (
     <div className="min-h-screen bg-background text-primary flex flex-col font-sans relative overflow-hidden">
-      <header className="bg-background p-2 shadow-lg flex items-stretch justify-between z-10 h-20 gap-4">
-        <div className="flex items-center space-x-3 flex-shrink-0">
-            <LogoIcon className="h-8 w-8 text-tertiary" />
-            <div className="flex flex-col">
+        <header className="bg-background p-2 shadow-lg flex items-start justify-between z-10 gap-4">
+            <div className="flex items-center space-x-3 flex-shrink-0 pt-2">
+                <LogoIcon className="h-8 w-8 text-tertiary" />
                 <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
-                 <div className="flex items-center space-x-4">
-                    <EnvironmentDisplay summary={latestSummary} />
-                    <WorkerStatusDisplay pendingRequests={latestSummary?.pendingFlowerRequests} />
-                </div>
             </div>
-        </div>
-        <div className="w-1/3 max-w-sm">
-            <EventLog onClick={handleOpenFullLog} />
-        </div>
-        <a 
-            href="https://github.com/cristianglezm/EvoGarden" 
-            target="_blank" 
-            rel="noopener"
-            className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center"
-            aria-label="View on GitHub"
-            title="View on GitHub"
-        >
-            <GitHubIcon className="h-7 w-7" />
-        </a>
-      </header>
+            
+            <div className="flex-grow min-w-0 mx-4">
+                <StatusPanel 
+                    summary={latestSummary} 
+                    onLogClick={handleOpenFullLog}
+                    actors={actors}
+                    onTrackActor={handleTrackActor}
+                    onStopTracking={handleStopTracking}
+                    trackedActorId={trackedActorId}
+                    isRunning={isRunning}
+                    setIsRunning={setIsRunning}
+                    onHighlightActor={handleHighlightActorById}
+                />
+            </div>
+
+            <a 
+                href="https://github.com/cristianglezm/EvoGarden" 
+                target="_blank" 
+                rel="noopener"
+                className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center pt-2 m-auto"
+                aria-label="View on GitHub"
+                title="View on GitHub"
+            >
+                <GitHubIcon className="h-7 w-7" />
+            </a>
+        </header>
       
       <main className="grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">
-        {selectedFlower && (
-          <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
-            <FlowerDetailsPanel 
-              flower={selectedFlower} 
-              isRunning={isRunning}
-              setIsRunning={setIsRunning}
-              onClose={() => handleSelectFlower(null)}
-            />
-          </aside>
+        {detailsPanel && (
+            <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
+                {detailsPanel}
+            </aside>
         )}
         
         <div ref={simulationViewRef} className="grow flex flex-col h-full">
           <SimulationView 
             params={params}
             actors={actors}
-            onSelectFlower={handleSelectFlower}
-            selectedFlowerId={selectedFlowerId}
+            onCellClick={handleCellClick}
+            selectedActorId={selectedActor?.id ?? null}
             onFrameRendered={handleFrameRendered}
           />
         </div>
@@ -468,7 +567,7 @@ export default function App(): React.ReactNode {
                     <XIcon className="w-6 h-6" />
                 </button>
             </header>
-            <div className="p-4 overflow-y-auto">
+            <div className="p-4 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                 <Controls 
                     params={params} 
                     onParamsChange={handleParamsChange} 
