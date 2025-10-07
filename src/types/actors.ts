@@ -204,6 +204,8 @@ export interface Cockroach extends Actor {
     genome: number[];
     emoji: string;
     reproductionCooldown?: number;
+    nutrientDropCooldown?: number;
+    pendingNutrientValue?: number;
 }
 
 export interface HerbicidePlane extends Actor {
