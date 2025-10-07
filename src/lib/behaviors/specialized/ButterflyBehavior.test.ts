@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { ButterflyBehavior } from './ButterflyBehavior';
 import type { Insect, Flower, Grid, CellContent, AppEvent, FlowerSeed } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_MOVE_COST, INSECT_STAMINA_REGEN_PER_TICK, INSECT_DATA, INSECT_DORMANCY_TEMP, INSECT_POLLINATION_CHANCE } from '../../../constants';
+import { DEFAULT_SIM_PARAMS, INSECT_MOVE_COST, INSECT_STAMINA_REGEN_PER_TICK, INSECT_DATA, INSECT_DORMANCY_TEMP, INSECT_POLLINATION_CHANCE, INSECT_HEALTH_DECAY_PER_TICK, INSECT_HEAL_FROM_HEALING_FLOWER, INSECT_DAMAGE_FROM_TOXIC_FLOWER } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
 vi.mock('../../asyncFlowerFactory');
@@ -153,5 +153,55 @@ describe('ButterflyBehavior', () => {
         behavior.update(butterfly, setupContext());
 
         expect(butterfly.stamina).toBe(expectedStamina);
+    });
+
+    it('should be healed by a healing flower', () => {
+        const healingFlower: Flower = { ...mockFlower, id: 'h-flower', x: 5, y: 5, toxicityRate: -0.5 };
+        grid[5][5].push(healingFlower);
+        nextActorState.set(healingFlower.id, healingFlower);
+        butterfly.health = 50;
+        const initialHealth = butterfly.health;
+
+        const context = setupContext();
+        context.qtree.insert({ x: healingFlower.x, y: healingFlower.y, data: healingFlower });
+        
+        behavior.update(butterfly, context);
+        
+        const expectedHeal = INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(healingFlower.toxicityRate);
+        const expectedHealth = Math.min(butterfly.maxHealth, initialHealth - INSECT_HEALTH_DECAY_PER_TICK + expectedHeal);
+        expect(butterfly.health).toBeCloseTo(expectedHealth);
+    });
+
+    it('should be damaged by a toxic flower', () => {
+        const toxicFlower: Flower = { ...mockFlower, id: 't-flower', x: 5, y: 5, toxicityRate: 0.8 };
+        grid[5][5].push(toxicFlower);
+        nextActorState.set(toxicFlower.id, toxicFlower);
+        butterfly.health = 50;
+        const initialHealth = butterfly.health;
+
+        const context = setupContext();
+        context.qtree.insert({ x: toxicFlower.x, y: toxicFlower.y, data: toxicFlower });
+        
+        behavior.update(butterfly, context);
+        
+        const expectedDamage = INSECT_DAMAGE_FROM_TOXIC_FLOWER * toxicFlower.toxicityRate;
+        const expectedHealth = Math.max(0, initialHealth - INSECT_HEALTH_DECAY_PER_TICK - expectedDamage);
+        expect(butterfly.health).toBeCloseTo(expectedHealth);
+    });
+
+    it('should only decay health on a neutral flower', () => {
+        const neutralFlower: Flower = { ...mockFlower, id: 'n-flower', x: 5, y: 5, toxicityRate: 0 };
+        grid[5][5].push(neutralFlower);
+        nextActorState.set(neutralFlower.id, neutralFlower);
+        butterfly.health = 50;
+        const initialHealth = butterfly.health;
+
+        const context = setupContext();
+        context.qtree.insert({ x: neutralFlower.x, y: neutralFlower.y, data: neutralFlower });
+        
+        behavior.update(butterfly, context);
+        
+        const expectedHealth = initialHealth - INSECT_HEALTH_DECAY_PER_TICK;
+        expect(butterfly.health).toBeCloseTo(expectedHealth);
     });
 });

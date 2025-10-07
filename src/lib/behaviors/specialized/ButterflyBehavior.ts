@@ -6,6 +6,8 @@ import {
     INSECT_MOVE_COST,
     INSECT_WANDER_CHANCE,
     INSECT_STAMINA_GAIN_FROM_EATING,
+    INSECT_HEAL_FROM_HEALING_FLOWER,
+    INSECT_DAMAGE_FROM_TOXIC_FLOWER,
 } from '../../../constants';
 import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
@@ -60,6 +62,17 @@ export class ButterflyBehavior extends InsectBehavior {
         // Butterflies don't eat or damage flowers, they only interact for pollination.
         // Add stamina regeneration upon pollinating to prevent getting stuck
         insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_GAIN_FROM_EATING);
+        
+        // Apply healing or toxicity from the flower
+        if (flower.toxicityRate < 0) {
+            // Healing flower
+            insect.health = Math.min(insect.maxHealth, insect.health + (INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate)));
+        } else {
+            // Toxic or neutral flower
+            const damageToInsect = INSECT_DAMAGE_FROM_TOXIC_FLOWER * flower.toxicityRate;
+            insect.health = Math.max(0, insect.health - damageToInsect);
+        }
+
         this.handlePollination(insect, flower, context);
         const pollenScore = scoreFlower(insect, flower);
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
