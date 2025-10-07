@@ -127,6 +127,7 @@ export const COCKROACH_STAMINA_REGEN_PER_TICK = 3;
 export const COCKROACH_MOVE_STAMINA_COST = 1;
 export const COCKROACH_MIN_STAMINA_TO_MOVE = 2;
 export const CORPSE_NUTRITION_VALUE = 10; // Health/stamina restored to cockroach
+export const COCKROACH_NUTRIENT_DROP_COOLDOWN = 3; // ticks
 
 // --- SNAIL & SLIME CONSTANTS ---
 export const SNAIL_MOVE_COOLDOWN = 3; // Snail only moves every 3 ticks

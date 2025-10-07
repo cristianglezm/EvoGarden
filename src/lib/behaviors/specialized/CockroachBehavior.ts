@@ -7,9 +7,9 @@ import {
     COCKROACH_STAMINA_REGEN_PER_TICK,
     COCKROACH_MIN_STAMINA_TO_MOVE,
     COCKROACH_MOVE_STAMINA_COST,
-    NUTRIENT_FROM_FLOWER_DEATH_LIFESPAN,
     COCKROACH_HEALTH_DECAY_PER_TICK,
     INSECT_ATTACK_COST,
+    COCKROACH_NUTRIENT_DROP_COOLDOWN,
 } from '../../../constants';
 import { Rectangle, type Point } from '../../Quadtree';
 import { InsectBehavior } from '../base/InsectBehavior';
@@ -25,6 +25,16 @@ export class CockroachBehavior extends InsectBehavior {
         if (cockroach.health <= 0) {
             nextActorState.delete(cockroach.id);
             return;
+        }
+
+        // Handle nutrient drop cooldown
+        if (cockroach.nutrientDropCooldown !== undefined) {
+            if (cockroach.nutrientDropCooldown > 0) {
+                cockroach.nutrientDropCooldown--;
+            }
+            if (cockroach.nutrientDropCooldown === 0) {
+                this.handleDropNutrient(cockroach, context);
+            }
         }
 
         cockroach.stamina = Math.min(cockroach.maxStamina, cockroach.stamina + COCKROACH_STAMINA_REGEN_PER_TICK);
@@ -58,6 +68,20 @@ export class CockroachBehavior extends InsectBehavior {
         }
     }
 
+    private handleDropNutrient(cockroach: Cockroach, context: InsectBehaviorContext) {
+        const { getNextId } = context;
+        const nutrientValue = cockroach.pendingNutrientValue || 0;
+        if (nutrientValue > 0) {
+            const nutrientId = getNextId('nutrient', cockroach.x, cockroach.y);
+            const lifespan = 2 + Math.floor(0.5 * nutrientValue);
+            const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: cockroach.x, y: cockroach.y, lifespan };
+            context.nextActorState.set(nutrientId, nutrient);
+        }
+
+        cockroach.nutrientDropCooldown = undefined;
+        cockroach.pendingNutrientValue = undefined;
+    }
+
     private handleEatCorpse(cockroach: Cockroach, corpse: Corpse, context: InsectBehaviorContext) {
         context.nextActorState.delete(corpse.id);
         cockroach.health = Math.min(cockroach.maxHealth, cockroach.health + CORPSE_NUTRITION_VALUE);
@@ -86,16 +110,16 @@ export class CockroachBehavior extends InsectBehavior {
         return false;
     }
 
-    private handleAttackFlower(cockroach: Cockroach, flower: Flower, context: InsectBehaviorContext) {
+    private handleAttackFlower(cockroach: Cockroach, flower: Flower, _context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get('🪳')!;
         if (cockroach.stamina >= INSECT_ATTACK_COST) {
             flower.health = Math.max(0, flower.health - baseStats.attack);
             cockroach.stamina -= INSECT_ATTACK_COST;
             
             if (flower.health <= 0) {
-                const nutrientId = context.getNextId('nutrient', cockroach.x, cockroach.y);
-                const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: cockroach.x, y: cockroach.y, lifespan: NUTRIENT_FROM_FLOWER_DEATH_LIFESPAN };
-                context.nextActorState.set(nutrientId, nutrient);
+                // Instead of spawning nutrient, set a cooldown on the cockroach
+                cockroach.nutrientDropCooldown = COCKROACH_NUTRIENT_DROP_COOLDOWN;
+                cockroach.pendingNutrientValue = flower.maxHealth;
             }
         }
     }
