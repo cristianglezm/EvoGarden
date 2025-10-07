@@ -305,6 +305,7 @@ export class SimulationEngine {
         let healingFlowerCount = 0, toxicFlowerCount = 0;
         let caterpillarCount = 0, butterflyCount = 0, beetleCount = 0, ladybugCount = 0, snailCount = 0, beeCount = 0, scorpionCount = 0, antCount = 0, spiderCount = 0;
         let hiveCount = 0, totalHoney = 0, colonyCount = 0, totalAntFood = 0;
+        let storedBeesCount = 0, storedAntsCount = 0;
 
 
         for (const actor of nextActorState.values()) {
@@ -367,22 +368,27 @@ export class SimulationEngine {
             } else if (actor.type === 'hive') {
                 hiveCount++;
                 totalHoney += (actor as Hive).honey;
+                storedBeesCount += (actor as Hive).storedBees || 0;
             } else if (actor.type === 'antColony') {
                 colonyCount++;
                 totalAntFood += (actor as AntColony).foodReserves;
+                storedAntsCount += (actor as AntColony).storedAnts || 0;
             }
         }
 
         const flowerDensity = (flowerCountForStats + seedCount) / (this.params.gridWidth * this.params.gridHeight);
-        const totalInsectCount = insectCount + cockroachCount;
+        const totalInsectCount = insectCount + cockroachCount + storedBeesCount + storedAntsCount;
 
         return {
             tick: this.tick,
             flowerCount: flowerCountForStats + seedCount,
             insectCount: totalInsectCount,
             birdCount, eagleCount, eggCount, herbicidePlaneCount, herbicideSmokeCount, corpseCount, cockroachCount, cocoonCount,
-            caterpillarCount, butterflyCount, beetleCount, ladybugCount, snailCount, beeCount, scorpionCount,
-            antCount, spiderCount,
+            caterpillarCount, butterflyCount, beetleCount, ladybugCount, snailCount, 
+            beeCount: beeCount + storedBeesCount, 
+            scorpionCount,
+            antCount: antCount + storedAntsCount, 
+            spiderCount,
             hiveCount,
             colonyCount,
             totalHoney,
