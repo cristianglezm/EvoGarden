@@ -4,11 +4,12 @@ import {
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     CORPSE_DECAY_TIME,
+    FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
 import { Rectangle } from '../../Quadtree';
-import { SPIDER_HEAL_FROM_PREY } from '../../../constants';
+import { SPIDER_HEAL_FROM_PREY, INSECT_DATA } from '../../../constants';
 import { neighborVectors, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 
 const SPIDER_DECISION_COOLDOWN = 10;
@@ -291,7 +292,9 @@ export class SpiderBehavior extends InsectBehavior {
             context.nextActorState.delete(prey.id);
             
             const corpseId = context.getNextId('corpse', prey.x, prey.y);
-            context.newActorQueue.push({ id: corpseId, type: 'corpse', x: prey.x, y: prey.y, originalEmoji: prey.emoji, decayTimer: CORPSE_DECAY_TIME });
+            const preyBaseStats = INSECT_DATA.get(prey.emoji);
+            const foodValue = preyBaseStats ? preyBaseStats.maxHealth : FOOD_VALUE_CORPSE;
+            context.newActorQueue.push({ id: corpseId, type: 'corpse', x: prey.x, y: prey.y, originalEmoji: prey.emoji, decayTimer: CORPSE_DECAY_TIME, foodValue });
 
             spider.health = Math.min(spider.maxHealth, spider.health + SPIDER_HEAL_FROM_PREY);
             spider.stamina = Math.min(spider.maxStamina, spider.stamina + SPIDER_HEAL_FROM_PREY);
