@@ -4,6 +4,7 @@ import {
     INSECT_DATA,
     CORPSE_DECAY_TIME,
     SLIME_TRAIL_SLOW_FACTOR,
+    FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { neighborVectors, scoreFlower } from '../../simulationUtils';
 import { Rectangle } from '../../Quadtree';
@@ -34,9 +35,12 @@ export abstract class InsectBehavior {
         if (insect.health <= 0) {
             context.nextActorState.delete(insect.id);
             const corpseId = `corpse-${insect.x}-${insect.y}-${Date.now()}`;
+            const baseStats = INSECT_DATA.get(insect.emoji);
+            const foodValue = baseStats ? baseStats.maxHealth : FOOD_VALUE_CORPSE;
             context.nextActorState.set(corpseId, { 
                 id: corpseId, type: 'corpse', x: insect.x, y: insect.y, 
-                originalEmoji: insect.emoji, decayTimer: CORPSE_DECAY_TIME 
+                originalEmoji: insect.emoji, decayTimer: CORPSE_DECAY_TIME,
+                foodValue: foodValue 
             });
             context.events.push({ message: `💀 A ${insect.emoji} died.`, type: 'info', importance: 'low' });
             context.incrementInsectsDiedOfOldAge();

@@ -1,11 +1,11 @@
 import type { Insect, Flower, PheromoneTrail, AntColony, Corpse, Egg, Cocoon } from '../../../types';
 import { 
     INSECT_MOVE_COST,
-    FOOD_VALUE_CORPSE,
     FOOD_VALUE_EGG,
     FOOD_VALUE_COCOON,
     FOOD_VALUE_POLLEN,
     INSECT_STAMINA_REGEN_PER_TICK,
+    ANT_CARRY_CAPACITY,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
@@ -175,7 +175,11 @@ export class AntBehavior extends InsectBehavior {
     private findFoodOnCell(insect: Insect, context: InsectBehaviorContext): Corpse | Egg | Cocoon | Flower | null {
         const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
         for (const type of PREY_PRIORITY) {
-            const food = actorsOnCell.find(a => a.type === type);
+            const food = actorsOnCell.find(a => {
+                if (a.type !== type) return false;
+                if (a.type === 'corpse') return (a as Corpse).foodValue > 0;
+                return true;
+            });
             if (food) return food as Corpse | Egg | Cocoon;
         }
         return actorsOnCell.find(a => a.type === 'flower') as Flower || null;
@@ -187,7 +191,11 @@ export class AntBehavior extends InsectBehavior {
         for (const type of PREY_PRIORITY) {
             const potentialTargets = context.qtree.query(vision)
                 .map(p => p.data)
-                .filter(a => a?.type === type && context.nextActorState.has(a.id));
+                .filter(a => {
+                    if (a?.type !== type || !context.nextActorState.has(a.id)) return false;
+                    if (a.type === 'corpse') return (a as Corpse).foodValue > 0;
+                    return true;
+                });
             
             if (potentialTargets.length > 0) {
                 return potentialTargets.reduce((closest, current) => {
@@ -201,24 +209,41 @@ export class AntBehavior extends InsectBehavior {
     }
     
     private handleCollectFood(insect: Insect, food: Corpse | Egg | Cocoon | Flower, context: InsectBehaviorContext) {
-        let value = 0;
-        let type: 'corpse' | 'egg' | 'cocoon' | 'pollen' = 'pollen';
-        
-        if (food.type === 'corpse') { value = FOOD_VALUE_CORPSE; type = 'corpse'; }
-        else if (food.type === 'egg') { value = FOOD_VALUE_EGG; type = 'egg'; }
-        else if (food.type === 'cocoon') { value = FOOD_VALUE_COCOON; type = 'cocoon'; }
-        else if (food.type === 'flower') {
-            const score = scoreFlower(insect, food);
-            value = Math.max(0, score) > 0 ? FOOD_VALUE_POLLEN : 0;
-            type = 'pollen';
-            if (value === 0) return;
-        }
-        
-        insect.carriedItem = { type, value };
-        insect.behaviorState = 'returning_to_colony';
-        
-        if (food.type !== 'flower') {
+        let itemType: 'corpse' | 'egg' | 'cocoon' | 'pollen' | null = null;
+        let itemValue = 0;
+    
+        if (food.type === 'corpse') {
+            const corpse = food as Corpse;
+            const amountToHarvest = Math.min(ANT_CARRY_CAPACITY, corpse.foodValue);
+            if (amountToHarvest > 0) {
+                itemType = 'corpse';
+                itemValue = amountToHarvest;
+                corpse.foodValue -= amountToHarvest;
+                if (corpse.foodValue <= 0) {
+                    context.nextActorState.delete(corpse.id);
+                    context.events.push({ message: `🐜 An ant finished scavenging a corpse.`, type: 'info', importance: 'low' });
+                }
+            }
+        } else if (food.type === 'egg') {
+            itemType = 'egg';
+            itemValue = FOOD_VALUE_EGG;
             context.nextActorState.delete(food.id);
+        } else if (food.type === 'cocoon') {
+            itemType = 'cocoon';
+            itemValue = FOOD_VALUE_COCOON;
+            context.nextActorState.delete(food.id);
+        } else if (food.type === 'flower') {
+            const score = scoreFlower(insect, food);
+            const pollenValue = Math.max(0, score) > 0 ? FOOD_VALUE_POLLEN : 0;
+            if (pollenValue > 0) {
+                itemType = 'pollen';
+                itemValue = pollenValue;
+            }
+        }
+    
+        if (itemType && itemValue > 0) {
+            insect.carriedItem = { type: itemType as 'corpse' | 'egg' | 'cocoon' | 'pollen', value: itemValue };
+            insect.behaviorState = 'returning_to_colony';
         }
     }
     
