@@ -177,6 +177,7 @@ export const FOOD_VALUE_CORPSE = 50;
 export const FOOD_VALUE_EGG = 20;
 export const FOOD_VALUE_COCOON = 30;
 export const FOOD_VALUE_POLLEN = 5;
+export const ANT_CARRY_CAPACITY = 20;
 
 // --- POPULATION CONTROL ---
 export const POPULATION_TREND_WINDOW = 5;

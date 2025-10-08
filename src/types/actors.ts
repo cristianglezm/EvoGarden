@@ -182,6 +182,7 @@ export interface Corpse extends Actor {
     type: 'corpse';
     originalEmoji: string;
     decayTimer: number;
+    foodValue: number;
 }
 
 export interface Cocoon extends Actor {

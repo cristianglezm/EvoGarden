@@ -14,6 +14,7 @@ import {
     FLOWER_STAT_INDICES,
     INSECT_ATTACK_COST,
     INSECT_GENOME_LENGTH,
+    FOOD_VALUE_CORPSE
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -61,8 +62,8 @@ describe('CockroachBehavior', () => {
     });
 
     it('should search for and move towards the nearest corpse', () => {
-        const corpse1: Corpse = { id: 'corpse1', type: 'corpse', x: 8, y: 8, originalEmoji: '🦋', decayTimer: 10 };
-        const corpse2: Corpse = { id: 'corpse2', type: 'corpse', x: 0, y: 0, originalEmoji: '🐛', decayTimer: 10 };
+        const corpse1: Corpse = { id: 'corpse1', type: 'corpse', x: 8, y: 8, originalEmoji: '🦋', decayTimer: 10, foodValue: FOOD_VALUE_CORPSE };
+        const corpse2: Corpse = { id: 'corpse2', type: 'corpse', x: 0, y: 0, originalEmoji: '🐛', decayTimer: 10, foodValue: FOOD_VALUE_CORPSE };
         nextActorState.set(corpse1.id, corpse1);
         nextActorState.set(corpse2.id, corpse2);
         qtree.insert({ x: corpse1.x, y: corpse1.y, data: corpse1 });
@@ -77,7 +78,7 @@ describe('CockroachBehavior', () => {
     });
 
     it('should eat a corpse on the same cell, heal, and create a nutrient', () => {
-        const corpse: Corpse = { id: 'corpse1', type: 'corpse', x: 5, y: 5, originalEmoji: '🦋', decayTimer: 10 };
+        const corpse: Corpse = { id: 'corpse1', type: 'corpse', x: 5, y: 5, originalEmoji: '🦋', decayTimer: 10, foodValue: FOOD_VALUE_CORPSE };
         nextActorState.set(corpse.id, corpse);
         cockroach.health = 10;
         cockroach.stamina = 10;

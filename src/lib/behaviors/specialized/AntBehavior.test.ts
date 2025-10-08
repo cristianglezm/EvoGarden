@@ -6,7 +6,8 @@ import {
     INSECT_DATA, 
     DEFAULT_SIM_PARAMS, 
     INSECT_MOVE_COST,
-    FOOD_VALUE_CORPSE
+    FOOD_VALUE_CORPSE,
+    ANT_CARRY_CAPACITY
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -24,7 +25,7 @@ describe('AntBehavior', () => {
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
     
     const createMockCorpse = (id: string, x: number, y: number): Corpse => ({
-        id, type: 'corpse', x, y, originalEmoji: '🦋', decayTimer: 10,
+        id, type: 'corpse', x, y, originalEmoji: '🦋', decayTimer: 10, foodValue: FOOD_VALUE_CORPSE,
     });
     
     const createMockColony = (colonyId: string, x: number, y: number): AntColony => ({
@@ -80,16 +81,20 @@ describe('AntBehavior', () => {
         expect(ant.stamina).toBe(ANT_DATA.maxStamina - INSECT_MOVE_COST);
     });
 
-    it('should pick up a corpse and switch to returning_to_colony state', () => {
+    it('should harvest from a corpse and switch to returning_to_colony state', () => {
         const corpse = createMockCorpse('c1', 10, 10);
+        const initialFoodValue = corpse.foodValue;
         nextActorState.set(corpse.id, corpse);
         const context = setupContext();
         context.qtree.insert({ x: corpse.x, y: corpse.y, data: corpse });
 
         behavior.update(ant, context);
         
-        expect(nextActorState.has(corpse.id)).toBe(false); // Corpse is picked up
-        expect(ant.carriedItem).toEqual({ type: 'corpse', value: FOOD_VALUE_CORPSE });
+        expect(nextActorState.has(corpse.id)).toBe(true); // Corpse is NOT picked up, but harvested
+        const updatedCorpse = nextActorState.get(corpse.id) as Corpse;
+        const harvestedAmount = Math.min(ANT_CARRY_CAPACITY, initialFoodValue);
+        expect(updatedCorpse.foodValue).toBe(initialFoodValue - harvestedAmount);
+        expect(ant.carriedItem).toEqual({ type: 'corpse', value: harvestedAmount });
         expect(ant.behaviorState).toBe('returning_to_colony');
     });
 
