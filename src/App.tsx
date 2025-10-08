@@ -4,7 +4,7 @@ import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
 import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
-import { LogoIcon, SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
+import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
 import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
@@ -20,6 +20,7 @@ import { InsectDetailsPanel } from './components/InsectDetailsPanel';
 import { EggDetailsPanel } from './components/EggDetailsPanel';
 import { GenericActorDetailsPanel } from './components/GenericActorDetailsPanel';
 import { StatusPanel } from './components/StatusPanel';
+import { Logo } from './components/Logo';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -470,10 +471,7 @@ const detailsPanel = renderDetailsPanel();
   return (
     <div className="min-h-screen bg-background text-primary flex flex-col font-sans relative overflow-hidden">
         <header className="bg-background p-2 shadow-lg flex items-start justify-between z-10 gap-4">
-            <div className="flex items-center space-x-3 flex-shrink-0 pt-2">
-                <LogoIcon className="h-8 w-8 text-tertiary" />
-                <h1 className="text-2xl font-bold tracking-wider text-tertiary">Evo<span className="text-accent">Garden</span></h1>
-            </div>
+            <Logo />
             
             <div className="flex-grow min-w-0 mx-4">
                 <StatusPanel 
