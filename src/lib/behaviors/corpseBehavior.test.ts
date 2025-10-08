@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { processCorpseTick } from './corpseBehavior';
 import type { Corpse, CellContent, Nutrient } from '../../types';
-import { CORPSE_DECAY_TIME, NUTRIENT_FROM_OLD_AGE_LIFESPAN } from '../../constants';
+import { CORPSE_DECAY_TIME, NUTRIENT_FROM_OLD_AGE_LIFESPAN, FOOD_VALUE_CORPSE } from '../../constants';
 
 describe('corpseBehavior', () => {
     let corpse: Corpse;
@@ -9,7 +9,7 @@ describe('corpseBehavior', () => {
     const mockGetNextId = vi.fn();
 
     beforeEach(() => {
-        corpse = { id: 'corpse1', type: 'corpse', x: 1, y: 1, originalEmoji: '🦋', decayTimer: CORPSE_DECAY_TIME };
+        corpse = { id: 'corpse1', type: 'corpse', x: 1, y: 1, originalEmoji: '🦋', decayTimer: CORPSE_DECAY_TIME, foodValue: FOOD_VALUE_CORPSE };
         nextActorState = new Map();
         nextActorState.set(corpse.id, corpse);
         mockGetNextId.mockClear().mockReturnValue('new-nutrient-id');

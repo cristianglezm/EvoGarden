@@ -77,7 +77,8 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Insect Corpse',
                 stats: {
                     'Decay In': `${corpse.decayTimer} ticks`,
-                    'Original Type': `${corpse.originalEmoji}`
+                    'Original Type': `${corpse.originalEmoji}`,
+                    'Food Value': (corpse.foodValue || 0).toFixed(0)
                 }
             };
         }

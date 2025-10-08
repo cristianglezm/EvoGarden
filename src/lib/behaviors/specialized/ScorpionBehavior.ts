@@ -7,6 +7,7 @@ import {
     SCORPION_HEAL_FROM_PREY,
     INSECT_DATA,
     CORPSE_DECAY_TIME,
+    FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
@@ -55,9 +56,12 @@ export class ScorpionBehavior extends InsectBehavior {
                 context.nextActorState.delete(targetOnCell.id);
                 // Create a corpse
                 const corpseId = context.getNextId('corpse', targetOnCell.x, targetOnCell.y);
+                const preyBaseStats = INSECT_DATA.get(targetOnCell.emoji);
+                const foodValue = preyBaseStats ? preyBaseStats.maxHealth : FOOD_VALUE_CORPSE;
                 context.newActorQueue.push({ 
                     id: corpseId, type: 'corpse', x: targetOnCell.x, y: targetOnCell.y, 
-                    originalEmoji: targetOnCell.emoji, decayTimer: CORPSE_DECAY_TIME 
+                    originalEmoji: targetOnCell.emoji, decayTimer: CORPSE_DECAY_TIME,
+                    foodValue: foodValue 
                 });
 
                 // Scorpion gets reward
