@@ -7,7 +7,8 @@ import {
     DEFAULT_SIM_PARAMS, 
     INSECT_MOVE_COST,
     FOOD_VALUE_CORPSE,
-    ANT_CARRY_CAPACITY
+    ANT_CARRY_CAPACITY,
+    ANT_EAT_AMOUNT
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -94,7 +95,8 @@ describe('AntBehavior', () => {
         const updatedCorpse = nextActorState.get(corpse.id) as Corpse;
         const harvestedAmount = Math.min(ANT_CARRY_CAPACITY, initialFoodValue);
         expect(updatedCorpse.foodValue).toBe(initialFoodValue - harvestedAmount);
-        expect(ant.carriedItem).toEqual({ type: 'corpse', value: harvestedAmount });
+        const amountEaten = Math.min(ANT_EAT_AMOUNT, harvestedAmount);
+        expect(ant.carriedItem).toEqual({ type: 'corpse', value: harvestedAmount - amountEaten });
         expect(ant.behaviorState).toBe('returning_to_colony');
     });
 
@@ -114,11 +116,12 @@ describe('AntBehavior', () => {
         expect(ant.y).toBe(9);
     });
 
-    it('should deposit food at colony and switch to seeking_food', () => {
+    it('should deposit food at colony, restore stamina, and switch to seeking_food', () => {
         const colony = createMockColony('1', 10, 10);
         nextActorState.set(colony.id, colony);
         ant.behaviorState = 'returning_to_colony';
         ant.carriedItem = { type: 'corpse', value: FOOD_VALUE_CORPSE };
+        ant.stamina = 5; // Start with low stamina
 
         behavior.update(ant, setupContext());
 
@@ -126,6 +129,7 @@ describe('AntBehavior', () => {
         expect(updatedColony.foodReserves).toBe(50 + FOOD_VALUE_CORPSE);
         expect(ant.carriedItem).toBeUndefined();
         expect(ant.behaviorState).toBe('seeking_food');
+        expect(ant.stamina).toBe(ant.maxStamina - INSECT_MOVE_COST); // Check that stamina is restored
     });
     
     it('should leave a pheromone trail when returning to colony with food', () => {
@@ -138,13 +142,13 @@ describe('AntBehavior', () => {
         behavior.update(ant, context);
 
         // Ant moves from (10,10) to (9,9)
-        expect(context.newActorQueue.length).toBe(1);
-        const trail = context.newActorQueue[0] as PheromoneTrail;
-        expect(trail.type).toBe('pheromoneTrail');
+        const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail') as PheromoneTrail | undefined;
+        expect(trail).toBeDefined();
+        expect(trail!.type).toBe('pheromoneTrail');
         // The trail should be at the *new* position of the ant after moving.
-        expect(trail.x).toBe(9);
-        expect(trail.y).toBe(9);
-        expect(trail.strength).toBe(FOOD_VALUE_CORPSE);
+        expect(trail!.x).toBe(9);
+        expect(trail!.y).toBe(9);
+        expect(trail!.strength).toBe(FOOD_VALUE_CORPSE);
     });
 
     it('should follow a stronger pheromone trail', () => {

@@ -6,6 +6,11 @@ import {
     FOOD_VALUE_POLLEN,
     INSECT_STAMINA_REGEN_PER_TICK,
     ANT_CARRY_CAPACITY,
+    ANT_EAT_AMOUNT,
+    INSECT_ATTACK_COST,
+    INSECT_DATA,
+    CORPSE_DECAY_TIME,
+    FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../insectBehavior';
@@ -29,6 +34,8 @@ export class AntBehavior extends InsectBehavior {
 
         this.checkForSignals(insect, context);
         
+        this._handleEmergencyEat(insect, context);
+
         const hasInteracted = this.handleInteraction(insect, context);
         const hasMoved = this.handleMovement(insect, hasInteracted, context);
 
@@ -49,6 +56,28 @@ export class AntBehavior extends InsectBehavior {
             } else {
                 insect.behaviorState = 'returning_to_colony';
                 this.moveTowards(insect, colony, context);
+            }
+        }
+    }
+
+    private _handleEmergencyEat(insect: Insect, context: InsectBehaviorContext): void {
+        if (
+            insect.behaviorState === 'returning_to_colony' &&
+            insect.carriedItem &&
+            insect.carriedItem.value > 0 &&
+            insect.stamina < INSECT_MOVE_COST
+        ) {
+            const amountToEat = Math.min(ANT_EAT_AMOUNT, insect.carriedItem.value);
+            
+            insect.carriedItem.value -= amountToEat;
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + amountToEat);
+            insect.health = Math.min(insect.maxHealth, insect.health + amountToEat);
+            
+            context.events.push({ message: `🐜 An ant ate some of its carried food for energy.`, type: 'info', importance: 'low' });
+
+            if (insect.carriedItem.value <= 0) {
+                insect.carriedItem = undefined;
+                insect.behaviorState = 'seeking_food'; // Task failed, find new food
             }
         }
     }
@@ -92,12 +121,9 @@ export class AntBehavior extends InsectBehavior {
         const { params } = context;
         let bestTrail: { x: number, y: number, strength: number } | null = null;
         
-        // Find the strength on the current cell to establish a baseline.
-        // This prevents the ant from moving to a weaker or equal trail.
         const currentTrail = this.getPheromoneOnCell(insect.x, insect.y, context);
         let highestStrength = (currentTrail && currentTrail.colonyId === insect.colonyId) ? currentTrail.strength : -1;
     
-        // Check all neighbors for a stronger trail
         for (const [dx, dy] of neighborVectors) {
             const nx = insect.x + dx;
             const ny = insect.y + dy;
@@ -106,6 +132,10 @@ export class AntBehavior extends InsectBehavior {
                 const trailOnCell = this.getPheromoneOnCell(nx, ny, context);
     
                 if (trailOnCell && trailOnCell.colonyId === insect.colonyId) {
+                    if (insect.lastPheromonePosition && nx === insect.lastPheromonePosition.x && ny === insect.lastPheromonePosition.y) {
+                        continue;
+                    }
+
                     if (trailOnCell.strength > highestStrength) {
                         highestStrength = trailOnCell.strength;
                         bestTrail = { x: nx, y: ny, strength: trailOnCell.strength };
@@ -210,14 +240,14 @@ export class AntBehavior extends InsectBehavior {
     
     private handleCollectFood(insect: Insect, food: Corpse | Egg | Cocoon | Flower, context: InsectBehaviorContext) {
         let itemType: 'corpse' | 'egg' | 'cocoon' | 'pollen' | null = null;
-        let itemValue = 0;
+        let totalHarvestedValue = 0;
     
         if (food.type === 'corpse') {
             const corpse = food as Corpse;
             const amountToHarvest = Math.min(ANT_CARRY_CAPACITY, corpse.foodValue);
             if (amountToHarvest > 0) {
                 itemType = 'corpse';
-                itemValue = amountToHarvest;
+                totalHarvestedValue = amountToHarvest;
                 corpse.foodValue -= amountToHarvest;
                 if (corpse.foodValue <= 0) {
                     context.nextActorState.delete(corpse.id);
@@ -226,34 +256,44 @@ export class AntBehavior extends InsectBehavior {
             }
         } else if (food.type === 'egg') {
             itemType = 'egg';
-            itemValue = FOOD_VALUE_EGG;
+            totalHarvestedValue = FOOD_VALUE_EGG;
             context.nextActorState.delete(food.id);
         } else if (food.type === 'cocoon') {
             itemType = 'cocoon';
-            itemValue = FOOD_VALUE_COCOON;
+            totalHarvestedValue = FOOD_VALUE_COCOON;
             context.nextActorState.delete(food.id);
         } else if (food.type === 'flower') {
             const score = scoreFlower(insect, food);
             const pollenValue = Math.max(0, score) > 0 ? FOOD_VALUE_POLLEN : 0;
             if (pollenValue > 0) {
                 itemType = 'pollen';
-                itemValue = pollenValue;
+                totalHarvestedValue = pollenValue;
             }
         }
     
-        if (itemType && itemValue > 0) {
-            insect.carriedItem = { type: itemType as 'corpse' | 'egg' | 'cocoon' | 'pollen', value: itemValue };
+        if (itemType && totalHarvestedValue > 0) {
+            const amountToEat = Math.min(ANT_EAT_AMOUNT, totalHarvestedValue);
+            insect.health = Math.min(insect.maxHealth, insect.health + amountToEat);
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + amountToEat);
+            
+            const amountToCarry = totalHarvestedValue - amountToEat;
+    
+            if (amountToCarry > 0) {
+                insect.carriedItem = { type: itemType as 'corpse' | 'egg' | 'cocoon' | 'pollen', value: amountToCarry };
+            }
             insect.behaviorState = 'returning_to_colony';
         }
     }
     
     private handleDepositFood(insect: Insect, colony: AntColony, context: InsectBehaviorContext) {
         if (insect.carriedItem) {
+            insect.stamina = insect.maxStamina;
             colony.foodReserves += insect.carriedItem.value;
             context.events.push({ message: `🐜 An ant delivered ${insect.carriedItem.type} to its colony.`, type: 'info', importance: 'low' });
             insect.carriedItem = undefined;
         }
         insect.behaviorState = 'seeking_food';
+        insect.lastPheromonePosition = null; // Reset memory after successful deposit
     }
 
     private findColony(insect: Insect, context: InsectBehaviorContext): AntColony | undefined {
@@ -288,14 +328,17 @@ export class AntBehavior extends InsectBehavior {
                 }
             }
         } else {
-            // Create a new trail
             const trailId = context.getNextId('pheromone', insect.x, insect.y);
             const newTrail: PheromoneTrail = {
                 id: trailId, type: 'pheromoneTrail', x: insect.x, y: insect.y,
                 colonyId: insect.colonyId!, lifespan: context.params.pheromoneLifespan,
                 strength: strength
             };
-            context.newActorQueue.push(newTrail);
+            context.nextActorState.set(trailId, newTrail);
+            context.qtree.insert({ x: insect.x, y: insect.y, data: newTrail });
+            insect.lastPheromonePosition = { x: insect.x, y: insect.y };
+        }
+    }
         }
     }
 }
