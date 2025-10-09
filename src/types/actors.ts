@@ -95,6 +95,7 @@ export interface Insect extends Actor {
         type: 'corpse' | 'egg' | 'cocoon' | 'pollen';
         value: number;
     };
+    lastPheromonePosition?: { x: number, y: number } | null; // For ant pathfinding memory
     isReturningToHive?: boolean; // For honeybees
     behaviorState?: InsectBehaviorState;
     // Spider-specific

@@ -138,12 +138,12 @@ describe('HoneybeeBehavior', () => {
         const context = setupContext();
         behavior.update(bee, context);
         
-        expect(context.newActorQueue.length).toBe(1);
-        const mark = context.newActorQueue[0] as TerritoryMark;
-        expect(mark.type).toBe('territoryMark');
-        expect(mark.x).toBe(bee.x);
-        expect(mark.y).toBe(bee.y);
-        expect(mark.hiveId).toBe(bee.hiveId);
+        const mark = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'territoryMark') as TerritoryMark | undefined;
+        expect(mark).toBeDefined();
+        expect(mark!.type).toBe('territoryMark');
+        expect(mark!.x).toBe(bee.x);
+        expect(mark!.y).toBe(bee.y);
+        expect(mark!.hiveId).toBe(bee.hiveId);
     });
 
     it('should switch to hunting when an UNDER_ATTACK signal is on its territory mark', () => {
