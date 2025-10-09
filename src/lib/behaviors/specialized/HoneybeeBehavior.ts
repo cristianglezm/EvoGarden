@@ -226,19 +226,23 @@ export class HoneybeeBehavior extends InsectBehavior {
         const markOnCell = this.getMarkOnCell(insect.x, insect.y, context);
         if (markOnCell) {
             if (markOnCell.hiveId !== insect.hiveId) {
+                // Overwrite enemy mark
                 markOnCell.hiveId = insect.hiveId!;
                 markOnCell.lifespan = context.params.territoryMarkLifespan;
                 markOnCell.signal = undefined;
             } else {
+                // Refresh friendly mark
                 markOnCell.lifespan = context.params.territoryMarkLifespan;
             }
         } else {
+            // Create a new mark
             const markId = context.getNextId('mark', insect.x, insect.y);
             const newMark: TerritoryMark = {
                 id: markId, type: 'territoryMark', x: insect.x, y: insect.y,
                 hiveId: insect.hiveId!, lifespan: context.params.territoryMarkLifespan,
             };
-            context.newActorQueue.push(newMark);
+            context.nextActorState.set(markId, newMark);
+            context.qtree.insert({ x: insect.x, y: insect.y, data: newMark });
         }
     }
 
