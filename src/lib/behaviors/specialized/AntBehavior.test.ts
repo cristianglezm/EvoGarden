@@ -167,4 +167,72 @@ describe('AntBehavior', () => {
         expect(ant.x).toBe(11);
         expect(ant.y).toBe(11);
     });
+
+    describe('AntBehavior - Warfare', () => {
+        it('should switch to hunting and create a signal upon encountering an enemy', () => {
+            const enemyAnt: Insect = {
+                id: 'enemyAnt1', type: 'insect', x: 10, y: 10, emoji: '🐜', pollen: null,
+                genome: [], health: 100, maxHealth: 100, stamina: 100, maxStamina: 100,
+                colonyId: '2', // Different colony
+            };
+            nextActorState.set(enemyAnt.id, enemyAnt);
+            const context = setupContext();
+            context.qtree.insert({ x: enemyAnt.x, y: enemyAnt.y, data: enemyAnt });
+    
+            behavior.update(ant, context);
+    
+            expect(ant.behaviorState).toBe('hunting');
+            
+            // Check that a signal was created. The modified createSignal will create a trail if needed.
+            const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail' && a.x === ant.x && a.y === ant.y) as PheromoneTrail | undefined;
+            
+            expect(trail).toBeDefined();
+            expect(trail!.signal).toBeDefined();
+            expect(trail!.signal!.type).toBe('UNDER_ATTACK');
+            expect(trail!.colonyId).toBe(ant.colonyId);
+        });
+    
+        it('should leave an UNDER_ATTACK signal when moving while hunting', () => {
+            const enemyAnt: Insect = {
+                id: 'enemyAnt1', type: 'insect', x: 13, y: 13, emoji: '🐜', pollen: null,
+                genome: [], health: 100, maxHealth: 100, stamina: 100, maxStamina: 100,
+                colonyId: '2',
+            };
+            nextActorState.set(enemyAnt.id, enemyAnt);
+            qtree.insert({ x: enemyAnt.x, y: enemyAnt.y, data: enemyAnt });
+    
+            ant.behaviorState = 'hunting'; // Start in hunting state
+            const context = setupContext();
+    
+            behavior.update(ant, context);
+    
+            // Ant should move from (10,10) to (11,11)
+            expect(ant.x).toBe(11);
+            expect(ant.y).toBe(11);
+    
+            // A new trail with a signal should exist at the new location
+            const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail' && a.x === ant.x && a.y === ant.y) as PheromoneTrail | undefined;
+            
+            expect(trail).toBeDefined();
+            expect(trail!.signal).toBeDefined();
+            expect(trail!.signal!.type).toBe('UNDER_ATTACK');
+        });
+    
+        it('should read a signal and switch to hunting, without consuming the signal', () => {
+            const trailWithSignal: PheromoneTrail = {
+                id: 'trail1', type: 'pheromoneTrail', x: 10, y: 10,
+                colonyId: '1', lifespan: 10, strength: 1,
+                signal: { type: 'UNDER_ATTACK', origin: { x: 12, y: 12 }, ttl: 5 }
+            };
+            nextActorState.set(trailWithSignal.id, trailWithSignal);
+            const context = setupContext();
+            context.qtree.insert({ x: trailWithSignal.x, y: trailWithSignal.y, data: trailWithSignal });
+    
+            behavior.update(ant, context);
+            
+            expect(ant.behaviorState).toBe('hunting');
+            const updatedTrail = nextActorState.get(trailWithSignal.id) as PheromoneTrail;
+            expect(updatedTrail.signal).toBeDefined(); // Signal should still be there
+        });
+    });
 });

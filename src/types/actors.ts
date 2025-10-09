@@ -90,7 +90,9 @@ export interface Insect extends Actor {
     isHunting?: boolean; // For ladybugs, scorpions
     targetId?: string; // For hunters
     hiveId?: string; // For honeybees
+    hivePosition?: Coord; // For honeybees
     colonyId?: string; // For ants
+    colonyPosition?: Coord; // For ants
     carriedItem?: {
         type: 'corpse' | 'egg' | 'cocoon' | 'pollen';
         value: number;
