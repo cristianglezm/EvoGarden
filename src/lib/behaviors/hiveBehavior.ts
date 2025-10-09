@@ -31,6 +31,7 @@ function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params:
         emoji: '🐝',
         pollen: null,
         hiveId: hive.hiveId,
+        hivePosition: { x: hive.x, y: hive.y },
         health: baseStats.maxHealth,
         maxHealth: baseStats.maxHealth,
         stamina: baseStats.maxStamina,

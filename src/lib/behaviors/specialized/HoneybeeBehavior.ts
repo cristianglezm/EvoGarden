@@ -169,7 +169,13 @@ export class HoneybeeBehavior extends InsectBehavior {
     }
 
     private findHive(insect: Insect, context: InsectBehaviorContext): Hive | undefined {
-        // This is still O(N), but hives are few. A better optimization would be a dedicated map.
+        // Optimization: Use stored position if available
+        if (insect.hivePosition) {
+            const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.hivePosition.x, insect.hivePosition.y);
+            const hive = actorsOnCell.find(a => a.type === 'hive' && (a as Hive).hiveId === insect.hiveId) as Hive | undefined;
+            if (hive) return hive;
+        }
+        // Fallback for old saves or if hive moved (it doesn't, but good practice)
         return Array.from(context.nextActorState.values()).find(a => a.type === 'hive' && (a as Hive).hiveId === insect.hiveId) as Hive | undefined;
     }
     
