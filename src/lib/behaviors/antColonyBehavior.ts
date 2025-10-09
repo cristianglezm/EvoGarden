@@ -31,6 +31,7 @@ function createAntFromColony(colony: AntColony, position: {x: number, y: number}
         emoji: '🐜',
         pollen: null,
         colonyId: colony.colonyId,
+        colonyPosition: { x: colony.x, y: colony.y },
         health: baseStats.maxHealth,
         maxHealth: baseStats.maxHealth,
         stamina: baseStats.maxStamina,
