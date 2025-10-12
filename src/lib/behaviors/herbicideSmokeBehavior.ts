@@ -1,21 +1,24 @@
 import type { HerbicideSmoke, CellContent, Grid, SimulationParams, Flower, FlowerSeed } from '../../types';
-import { neighborVectors } from '../simulationUtils';
+import { getActorsOnCell, neighborVectors } from '../simulationUtils';
 import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
+import type { Quadtree } from '../Quadtree';
 
 export interface HerbicideSmokeContext {
     grid: Grid;
     params: SimulationParams;
     nextActorState: Map<string, CellContent>;
     asyncFlowerFactory: AsyncFlowerFactory;
+    qtree: Quadtree<CellContent>;
 }
 
 export const processHerbicideSmokeTick = (smoke: HerbicideSmoke, context: HerbicideSmokeContext) => {
-    const { nextActorState, params, asyncFlowerFactory } = context;
+    const { nextActorState, params, asyncFlowerFactory, qtree } = context;
     const { gridWidth, gridHeight, herbicideDamage, herbicideSmokeLifespan } = params;
 
     // 1. Apply damage to flowers and seeds in the same cell
-    const vulnerableInCell = Array.from(nextActorState.values())
-        .filter(a => a.x === smoke.x && a.y === smoke.y && (a.type === 'flower' || a.type === 'flowerSeed')) as (Flower | FlowerSeed)[];
+    const actorsOnCell = getActorsOnCell(qtree, nextActorState, smoke.x, smoke.y);
+    const vulnerableInCell = actorsOnCell
+        .filter(a => a.type === 'flower' || a.type === 'flowerSeed') as (Flower | FlowerSeed)[];
     
     for (const target of vulnerableInCell) {
         target.health = Math.max(0, target.health - herbicideDamage);

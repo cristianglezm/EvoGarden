@@ -99,6 +99,7 @@ describe('birdBehavior', () => {
         const targetInsect = createMockInsect('insect-target', 8, 8);
         grid[8][8].push(targetInsect);
         nextActorState.set(targetInsect.id, targetInsect);
+        qtree.insert({ x: 8, y: 8, data: targetInsect });
 
         bird.target = { x: 8, y: 8 };
         processBirdTick(bird, setupContext());
@@ -122,6 +123,7 @@ describe('birdBehavior', () => {
         
         grid[6][6].push(targetInsect);
         nextActorState.set(targetInsect.id, targetInsect);
+        qtree.insert({ x: 6, y: 6, data: targetInsect });
 
         processBirdTick(bird, setupContext());
 
@@ -149,6 +151,7 @@ describe('birdBehavior', () => {
         
         grid[6][6].push(targetEgg);
         nextActorState.set(targetEgg.id, targetEgg);
+        qtree.insert({ x: 6, y: 6, data: targetEgg });
 
         processBirdTick(bird, setupContext());
 
@@ -186,6 +189,7 @@ describe('birdBehavior', () => {
         
         grid[6][6].push(targetCocoon);
         nextActorState.set(targetCocoon.id, targetCocoon);
+        qtree.insert({ x: 6, y: 6, data: targetCocoon });
 
         processBirdTick(bird, setupContext());
 

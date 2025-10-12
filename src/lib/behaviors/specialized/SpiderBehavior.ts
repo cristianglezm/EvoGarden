@@ -7,7 +7,7 @@ import {
     FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { Rectangle } from '../../Quadtree';
 import { SPIDER_HEAL_FROM_PREY, INSECT_DATA } from '../../../constants';
 import { neighborVectors, scoreFlower, getActorsOnCell } from '../../simulationUtils';
@@ -196,7 +196,7 @@ export class SpiderBehavior extends InsectBehavior {
     }
 
     private findWebExpansionSpot(spider: Insect, context: InsectBehaviorContext): { x: number; y: number } | null {
-        const { params, flowerQtree, qtree, nextActorState } = context;
+        const { params, flowerQtree, qtree, nextActorState, claimedCellsThisTick } = context;
         const searchRadius = 3;
         
         const possibleSpots: { x: number; y: number }[] = [];
@@ -218,6 +218,11 @@ export class SpiderBehavior extends InsectBehavior {
 
         // Evaluate all possible spots (current + neighbors)
         for (const spot of possibleSpots) {
+            const claimKey = `spiderweb-${spot.x}-${spot.y}`;
+            if (claimedCellsThisTick.has(claimKey)) {
+                continue; // Skip already claimed spots
+            }
+
             const actorsOnCell = getActorsOnCell(qtree, nextActorState, spot.x, spot.y);
             // A spot is valid if it doesn't have a web or another colony-like structure.
             if (actorsOnCell.some(a => a.type === 'spiderweb' || a.type === 'hive' || a.type === 'antColony')) {
@@ -248,13 +253,20 @@ export class SpiderBehavior extends InsectBehavior {
 
     private buildWeb(spider: Insect, context: InsectBehaviorContext): boolean {
         if (spider.webStamina! >= context.params.spiderWebBuildCost) {
-            const webId = context.getNextId('web', spider.x, spider.y);
+            const claimKey = `spiderweb-${spider.x}-${spider.y}`;
+            if (context.claimedCellsThisTick.has(claimKey)) {
+                spider.behaviorState = 'ambushing';
+                return false; // Cell was claimed by another actor this tick, abort.
+            }
+
+            const webId = context.getNextId('spiderweb', spider.x, spider.y);
             const newWeb: SpiderWeb = {
                 id: webId, type: 'spiderweb', x: spider.x, y: spider.y,
                 ownerId: spider.id, strength: context.params.spiderWebStrength,
                 trappedActorId: null, lifespan: context.params.spiderWebLifespan,
             };
             context.newActorQueue.push(newWeb);
+            context.claimedCellsThisTick.add(claimKey); // Claim the cell for this tick
             spider.webs!.push(webId);
             spider.webStamina! -= context.params.spiderWebBuildCost;
             context.events.push({ message: `🕷️ A spider built a web.`, type: 'info', importance: 'low' });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { processInsectTick } from './insectBehavior';
 import type { Insect, Cockroach, CellContent } from '../../types';
-import type { InsectBehaviorContext } from './insectBehavior';
+import type { InsectBehaviorContext } from '../../types';
 
 // Mock the specialized behavior modules
 vi.mock('./specialized/DefaultInsectBehavior', () => {

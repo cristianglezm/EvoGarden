@@ -8,8 +8,7 @@ import {
 } from '../../../constants';
 import { neighborVectors, scoreFlower } from '../../simulationUtils';
 import { Rectangle } from '../../Quadtree';
-import type { InsectBehaviorContext } from '../insectBehavior';
-
+import type { InsectBehaviorContext } from '../../../types';
 const INSECT_VISION_RANGE = 5;
 
 /**

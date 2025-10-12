@@ -1,6 +1,4 @@
-import type { Insect, SimulationParams, Grid, CellContent, AppEvent, Cockroach } from '../../types';
-import { Quadtree } from '../Quadtree';
-import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
+import type { Insect, Cockroach, InsectBehaviorContext } from '../../types';
 import { InsectBehavior } from './base/InsectBehavior';
 import { CockroachBehavior } from './specialized/CockroachBehavior';
 import { CaterpillarBehavior } from './specialized/CaterpillarBehavior';
@@ -12,21 +10,6 @@ import { ScorpionBehavior } from './specialized/ScorpionBehavior';
 import { HoneybeeBehavior } from './specialized/HoneybeeBehavior';
 import { AntBehavior } from './specialized/AntBehavior';
 import { SpiderBehavior } from './specialized/SpiderBehavior';
-
-// The context object passed to each behavior's update method
-export interface InsectBehaviorContext {
-    params: SimulationParams;
-    grid: Grid; // The original grid from the start of the tick
-    nextActorState: Map<string, CellContent>;
-    asyncFlowerFactory: AsyncFlowerFactory;
-    qtree: Quadtree<CellContent>;
-    flowerQtree: Quadtree<CellContent>;
-    events: AppEvent[];
-    incrementInsectsDiedOfOldAge: () => void;
-    currentTemperature: number;
-    newActorQueue: CellContent[];
-    getNextId: (type: string, x: number, y: number) => string;
-}
 
 // Map insect emojis to their specific behavior handlers
 const behaviorMap: Map<string, InsectBehavior> = new Map<string, InsectBehavior>([

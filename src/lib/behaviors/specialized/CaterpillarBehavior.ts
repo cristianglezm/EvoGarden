@@ -10,7 +10,7 @@ import {
     INSECT_DAMAGE_FROM_TOXIC_FLOWER,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { getActorsOnCell } from '../../simulationUtils';
 
 /**

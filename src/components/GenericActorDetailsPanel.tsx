@@ -111,7 +111,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 stats: {
                     'Hive ID': hive.hiveId,
                     'Honey Reserves': (Number(hive.honey) || 0).toFixed(2),
-                    'Stored Pollen': (Number(hive.pollen) || 0).toFixed(2),
+                    'Stored Nectar': (Number(hive.pollen) || 0).toFixed(2),
                 },
                 genome: hive.genome
             };
