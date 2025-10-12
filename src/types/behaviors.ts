@@ -19,4 +19,5 @@ export interface InsectBehaviorContext {
     currentTemperature: number;
     newActorQueue: CellContent[];
     getNextId: (type: string, x: number, y: number) => string;
+    claimedCellsThisTick: Set<string>;
 }

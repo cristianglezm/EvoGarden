@@ -1,10 +1,13 @@
 import type { SpiderWeb, Insect, SimulationParams, CellContent, AppEvent } from '../../types';
 import { INSECT_DATA } from '../../constants';
+import { getActorsOnCell } from '../simulationUtils';
+import type { Quadtree } from '../Quadtree';
 
 interface SpiderWebContext {
     nextActorState: Map<string, CellContent>;
     events: AppEvent[];
     params: SimulationParams;
+    qtree: Quadtree<CellContent>;
 }
 
 const FLYING_INSECTS = ['🦋', '🐞', '🐝'];
@@ -54,7 +57,7 @@ export const processSpiderWebTick = (web: SpiderWeb, context: SpiderWebContext) 
         }
     } else {
         // Try to trap a new insect
-        const actorsOnCell = Array.from(nextActorState.values()).filter(a => a.x === web.x && a.y === web.y);
+        const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, web.x, web.y);
         const potentialPrey = actorsOnCell.find(a => 
             (a.type === 'insect' && !FLYING_INSECTS.includes((a as Insect).emoji) && a.id !== web.ownerId) || 
             a.type === 'cockroach'

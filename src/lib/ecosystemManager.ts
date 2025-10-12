@@ -1,7 +1,7 @@
 import type { Grid, SimulationParams, CellContent, AppEvent, Insect, Nutrient, Flower, Egg, TerritoryMark } from '../types';
 import { Quadtree, Rectangle } from './Quadtree';
 import { FLOWER_NUTRIENT_HEAL, MUTATION_CHANCE, MUTATION_AMOUNT, INSECT_DATA, INSECT_REPRODUCTION_COOLDOWN } from '../constants';
-import { findCellForStationaryActor, neighborVectors } from './simulationUtils';
+import { findCellForStationaryActor, neighborVectors, getActorsOnCell } from './simulationUtils';
 
 export const processNutrientHealing = (nextActorState: Map<string, CellContent>, qtree: Quadtree<CellContent>): void => {
     const nutrientsToProcess = Array.from(nextActorState.values()).filter(a => a.type === 'nutrient') as Nutrient[];
@@ -23,7 +23,7 @@ export const processNutrientHealing = (nextActorState: Map<string, CellContent>,
     }
 };
 
-export const propagateSignal = (startMark: TerritoryMark, nextActorState: Map<string, CellContent>, params: SimulationParams) => {
+export const propagateSignal = (startMark: TerritoryMark, qtree: Quadtree<CellContent>, nextActorState: Map<string, CellContent>, params: SimulationParams) => {
     if (!startMark.signal || startMark.signal.ttl <= 0) return;
 
     const queue: { mark: TerritoryMark; ttl: number }[] = [{ mark: startMark, ttl: startMark.signal.ttl }];
@@ -46,14 +46,40 @@ export const propagateSignal = (startMark: TerritoryMark, nextActorState: Map<st
                 const ny = mark.y + dy;
 
                 if (nx >= 0 && nx < params.gridWidth && ny >= 0 && ny < params.gridHeight) {
-                    const neighborActors = Array.from(nextActorState.values()).filter(a => a.x === nx && a.y === ny);
+                    const neighborActors = getActorsOnCell(qtree, nextActorState, nx, ny);
                     for (const actor of neighborActors) {
                         if (actor.type === 'territoryMark' && (actor as TerritoryMark).hiveId === startMark.hiveId && !visited.has(actor.id)) {
                             const neighborMark = actor as TerritoryMark;
-                            // Check if the neighbor already has this signal or a stronger one
-                            if (!neighborMark.signal || (neighborMark.signal.type === startMark.signal.type && neighborMark.signal.ttl < ttl - 1)) {
+                            const newSignalTTL = ttl - 1;
+                            const existingSignal = neighborMark.signal;
+                            const newSignalType = startMark.signal!.type;
+                            
+                            let shouldPropagate = false;
+
+                            if (!existingSignal) {
+                                shouldPropagate = true;
+                            } else {
+                                if (newSignalType === 'UNDER_ATTACK') {
+                                    // Overwrite anything except a fresher UNDER_ATTACK
+                                    if (existingSignal.type !== 'UNDER_ATTACK' || newSignalTTL > existingSignal.ttl) {
+                                        shouldPropagate = true;
+                                    }
+                                } else if (newSignalType === 'ALL_CLEAR') {
+                                    // Only overwrite if fresher
+                                    if (newSignalTTL > existingSignal.ttl) {
+                                        shouldPropagate = true;
+                                    }
+                                } else { // e.g. HIGH_VALUE_FLOWER_FOUND
+                                    // Only overwrite if fresher or different type
+                                    if (newSignalType !== existingSignal.type || newSignalTTL > existingSignal.ttl) {
+                                        shouldPropagate = true;
+                                    }
+                                }
+                            }
+
+                            if (shouldPropagate) {
                                 visited.add(neighborMark.id);
-                                queue.push({ mark: neighborMark, ttl: ttl - 1 });
+                                queue.push({ mark: neighborMark, ttl: newSignalTTL });
                             }
                         }
                     }

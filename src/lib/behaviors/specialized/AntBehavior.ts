@@ -13,7 +13,7 @@ import {
     FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { Rectangle } from '../../Quadtree';
 import { scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { neighborVectors } from '../../simulationUtils';
@@ -359,16 +359,21 @@ export class AntBehavior extends InsectBehavior {
     }
     
     private getPheromoneOnCell(x: number, y: number, context: InsectBehaviorContext): PheromoneTrail | undefined {
-        return getActorsOnCell(context.qtree, context.nextActorState, x, y)
-            .find((a: any) => a.type === 'pheromoneTrail') as PheromoneTrail | undefined;
+        const trailId = context.getNextId('pheromoneTrail', x, y);
+        const trail = context.nextActorState.get(trailId);
+        if (trail && trail.type === 'pheromoneTrail') {
+            return trail as PheromoneTrail;
+        }
+        return undefined;
     }
     
     private leavePheromoneTrail(insect: Insect, context: InsectBehaviorContext) {
         const strength = insect.carriedItem?.value || 1;
-        
-        const trailOnCell = this.getPheromoneOnCell(insect.x, insect.y, context);
+        const trailId = context.getNextId('pheromoneTrail', insect.x, insect.y);
+        let trailOnCell = context.nextActorState.get(trailId) as PheromoneTrail | undefined;
 
         if (trailOnCell) {
+            // A trail already exists, either from this tick or a previous one.
             if (trailOnCell.colonyId === insect.colonyId) {
                 trailOnCell.strength = Math.max(trailOnCell.strength, strength);
                 trailOnCell.lifespan = context.params.pheromoneLifespan;
@@ -378,45 +383,38 @@ export class AntBehavior extends InsectBehavior {
                     trailOnCell.colonyId = insect.colonyId!;
                     trailOnCell.strength = strength;
                     trailOnCell.lifespan = context.params.pheromoneLifespan;
-                    // Signal that we are taking over territory
                     this.createSignal(insect, 'UNDER_ATTACK', context);
                 }
             }
         } else {
-            const trailId = context.getNextId('pheromone', insect.x, insect.y);
+            // No trail exists, create a new one.
             const newTrail: PheromoneTrail = {
                 id: trailId, type: 'pheromoneTrail', x: insect.x, y: insect.y,
                 colonyId: insect.colonyId!, lifespan: context.params.pheromoneLifespan,
                 strength: strength
             };
             context.nextActorState.set(trailId, newTrail);
-            context.qtree.insert({ x: insect.x, y: insect.y, data: newTrail });
+            // This actor is new this tick, so it won't be in the original qtree.
+            // We don't need to add it to the qtree because other actors in this same tick
+            // will find it by checking nextActorState.
             insect.lastPheromonePosition = { x: insect.x, y: insect.y };
         }
     }
 
     private createSignal(insect: Insect, type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND', context: InsectBehaviorContext, origin?: { x: number, y: number }) {
-        let trail = this.getPheromoneOnCell(insect.x, insect.y, context);
-        // If no friendly trail, create one. Overwrite enemy trail if present.
+        const trailId = context.getNextId('pheromoneTrail', insect.x, insect.y);
+        let trail = context.nextActorState.get(trailId) as PheromoneTrail | undefined;
+
         if (!trail || trail.colonyId !== insect.colonyId) {
-            const trailId = context.getNextId('pheromone', insect.x, insect.y);
             const newTrail: PheromoneTrail = {
                 id: trailId, type: 'pheromoneTrail', x: insect.x, y: insect.y,
                 colonyId: insect.colonyId!, 
-                lifespan: context.params.signalTTL + 5, // Lifespan should be at least as long as signal
-                strength: 1 // Minimal strength just to exist
+                lifespan: context.params.signalTTL + 5,
+                strength: 1,
+                signal: { type, origin: origin || { x: insect.x, y: insect.y }, ttl: context.params.signalTTL }
             };
-            // If there was an enemy trail, remove it before adding our own.
-            if (trail && trail.colonyId !== insect.colonyId) {
-                context.nextActorState.delete(trail.id);
-            }
             context.nextActorState.set(trailId, newTrail);
-            // Important: also add to qtree so it can be found by getPheromoneOnCell in the same tick if needed.
-            context.qtree.insert({ x: insect.x, y: insect.y, data: newTrail });
-            trail = newTrail;
-        }
-    
-        if (trail.colonyId === insect.colonyId) {
+        } else {
             trail.signal = { type, origin: origin || { x: insect.x, y: insect.y }, ttl: context.params.signalTTL };
         }
     }

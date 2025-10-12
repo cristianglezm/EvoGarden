@@ -13,7 +13,7 @@ import {
 } from '../../../constants';
 import { Rectangle, type Point } from '../../Quadtree';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { getActorsOnCell } from '../../simulationUtils';
 
 export class CockroachBehavior extends InsectBehavior {

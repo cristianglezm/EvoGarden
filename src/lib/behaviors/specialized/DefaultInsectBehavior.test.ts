@@ -72,6 +72,7 @@ describe('DefaultInsectBehavior', () => {
         currentTemperature: DEFAULT_SIM_PARAMS.temperature,
         newActorQueue,
         getNextId,
+        claimedCellsThisTick: new Set<string>(),
     });
 
     it('should lose health and not move or attack if stamina is too low', () => {

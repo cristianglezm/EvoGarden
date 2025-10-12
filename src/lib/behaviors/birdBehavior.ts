@@ -1,7 +1,7 @@
 import type { Bird, Insect, Egg, Nutrient, CellContent, Grid, SimulationParams, AppEvent, Flower, Cocoon } from '../../types';
 import { Quadtree, Rectangle } from '../Quadtree';
 import { BIRD_DROP_NUTRIENT_CHANCE, NUTRIENT_LIFESPAN } from '../../constants';
-import { findCellForStationaryActor } from '../simulationUtils';
+import { findCellForStationaryActor, getActorsOnCell } from '../simulationUtils';
 
 const BIRD_VISION_RANGE = 7;
 
@@ -92,8 +92,7 @@ export const processBirdTick = (bird: Bird, context: BirdContext) => {
     
     // 2. Move towards prey target and attack
     if (bird.target) {
-        // Use original grid to find target, but check `nextActorState` for existence
-        const targetCellContent = grid[bird.target.y]?.[bird.target.x] ?? [];
+        const targetCellContent = getActorsOnCell(qtree, nextActorState, bird.target.x, bird.target.y);
         const targetActor = targetCellContent.find(c => (c.type === 'insect' || c.type === 'egg' || c.type === 'cocoon')) as Insect | Egg | Cocoon | undefined;
         
         if (targetActor && nextActorState.has(targetActor.id)) {

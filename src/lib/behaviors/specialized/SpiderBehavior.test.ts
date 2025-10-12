@@ -65,6 +65,7 @@ describe('SpiderBehavior', () => {
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
         getNextId,
+        claimedCellsThisTick: new Set<string>(),
     });
 
     it('should wander when ambushing with no webs and no good build spots', () => {
