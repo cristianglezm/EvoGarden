@@ -1,7 +1,8 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import { spawn } from 'child_process';
 import type { Plugin } from 'vite';
 
@@ -98,7 +99,47 @@ export default defineConfig({
   plugins: [
     react(), 
     autoReactDevtools(),
-    tailwindcss()
+    tailwindcss(),
+    VitePWA({
+        registerType: 'autoUpdate',
+        workbox: {
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+            maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        },
+        manifest: {
+            name: 'EvoGarden: A Predator-Prey Simulation',
+            short_name: 'EvoGarden',
+            description: packageJson.description,
+            theme_color: '#008000',
+            background_color: '#004d00',
+            display: 'standalone',
+            scope: '/',
+            start_url: '/',
+            icons: [
+              {
+                src: 'favicon.ico',
+                sizes: '128x128 64x64 32x32 24x24 16x16',
+                type: 'image/x-icon',
+              },
+              {
+                src: 'EvoGarden-icon.png',
+                type: 'image/png',
+                sizes: '192x192',
+              },
+              {
+                src: 'EvoGarden-icon.png',
+                type: 'image/png',
+                sizes: '512x512',
+              },
+              {
+                src: 'EvoGarden-icon.png',
+                type: 'image/png',
+                sizes: '512x512',
+                purpose: 'any maskable',
+              },
+            ],
+        },
+    }),
   ],
   base: process.env.BASE_URL || '/',
   test: {
