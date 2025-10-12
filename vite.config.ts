@@ -5,6 +5,14 @@ import tailwindcss from '@tailwindcss/vite'
 import { spawn } from 'child_process';
 import type { Plugin } from 'vite';
 
+import fs from 'fs';
+import path from 'path';
+
+// Read version from package.json
+const packageJson = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')
+);
+
 /**
  * Custom Vite plugin to automatically start react-devtools and inject its script.
  * This provides a zero-config developer experience for debugging.
@@ -84,6 +92,9 @@ const renderChunks = (id: string) => {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version),
+  },
   plugins: [
     react(), 
     autoReactDevtools(),
