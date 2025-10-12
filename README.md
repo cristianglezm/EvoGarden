@@ -1,4 +1,6 @@
-# EvoGarden: A Predator-Prey Simulation
+![EvoGardenLogo](public/EvoGarden-logo.png "EvoGarden logo")
+
+## A Predator-Prey Simulation
 
 [![CI](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/cristianglezm/EvoGarden/actions/workflows/ci.yml) [![CD](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml/badge.svg)](https://github.com/cristianglezm/EvoGarden/actions/workflows/cd.yml)
 
