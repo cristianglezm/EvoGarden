@@ -27,9 +27,9 @@ describe('simulationUtils', () => {
     describe('findCellForFlowerSpawn', () => {
         it('should find a cell with only an egg', () => {
             const grid: Grid = [
-                [[{id:'f1'} as CellContent], [{id:'f2'} as CellContent], [{id:'f3'} as CellContent]],
-                [[{id:'f4'} as CellContent], [{id:'f5'} as CellContent], [{id:'egg1', type:'egg'} as CellContent]],
-                [[{id:'f6'} as CellContent], [{id:'f7'} as CellContent], [{id:'f8'} as CellContent]],
+                [[{id:'f1', type:'flower'} as CellContent], [{id:'f2', type:'flower'} as CellContent], [{id:'f3', type:'flower'} as CellContent]],
+                [[{id:'f4', type:'flower'} as CellContent], [{id:'f5', type:'flower'} as CellContent], [{id:'egg1', type:'egg'} as CellContent]],
+                [[{id:'f6', type:'flower'} as CellContent], [{id:'f7', type:'flower'} as CellContent], [{id:'f8', type:'flower'} as CellContent]],
             ];
             const result = findCellForFlowerSpawn(grid, params, { x: 1, y: 1 });
             expect(result).toEqual({ x: 2, y: 1 });

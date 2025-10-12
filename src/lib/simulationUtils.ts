@@ -10,15 +10,20 @@ export const neighborVectors = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],
 
 export const getActorsOnCell = (qtree: Quadtree<CellContent>, nextActorState: Map<string, CellContent>, x: number, y: number): CellContent[] => {
     const range = new Rectangle(x + 0.5, y + 0.5, 0.5, 0.5); // Center on cell
-    // The qtree is from the start of the tick. We must filter by nextActorState to get the current view.
-    return qtree.query(range)
-        .map(p => p.data)
-        .filter(actor => {
-            if (!actor || !nextActorState.has(actor.id)) return false;
-            // The query can be imprecise, so double-check coordinates.
-            const currentActor = nextActorState.get(actor.id)!;
-            return currentActor.x === x && currentActor.y === y;
-        });
+    const foundActors: CellContent[] = [];
+    const points = qtree.query(range);
+
+    for (const p of points) {
+        if (p.data) {
+            const actor = nextActorState.get(p.data.id);
+            // The qtree can contain actors that have been removed in the current tick.
+            // Also, the query can be imprecise, so double-check coordinates.
+            if (actor && actor.x === x && actor.y === y) {
+                foundActors.push(actor);
+            }
+        }
+    }
+    return foundActors;
 };
 
 
@@ -46,15 +51,15 @@ export const findEmptyCell = (grid: Grid, params: SimulationParams, origin?: Coo
 
 export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, origin?: Coord, claimedCells?: Set<string>): Coord | null => {
     const isSuitable = (cell: CellContent[], x: number, y: number) => 
-        (!claimedCells || !claimedCells.has(`${x},${y}`)) &&
-        (cell.length === 0 || cell.every(c => c.type === 'egg' || c.type === 'nutrient'));
+        (!claimedCells || !claimedCells.has(`flower-${x}-${y}`)) &&
+        !cell.some(c => c.type === 'flower' || c.type === 'flowerSeed');
 
     if(origin) {
         const suitableNeighbors = neighborVectors
             .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
-            .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && isSuitable(grid[p.y][p.x], p.x, p.y))
-            .sort(() => 0.5 - Math.random());
-        if (suitableNeighbors.length > 0) return suitableNeighbors[0];
+            .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && isSuitable(grid[p.y][p.x], p.x, p.y));
+            
+        if (suitableNeighbors.length > 0) return suitableNeighbors[Math.floor(Math.random() * suitableNeighbors.length)];
     }
     
     const suitableCells: Coord[] = [];
@@ -72,7 +77,7 @@ export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, ori
 
 export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle' | 'cockroach', origin?: Coord, claimedCells?: Set<string>): Coord | null => {
     const isSuitable = (cell: CellContent[], x: number, y: number) =>
-        (!claimedCells || !claimedCells.has(`${x},${y}`)) &&
+        (!claimedCells || !claimedCells.has(`${type}-${x}-${y}`)) &&
         !cell.some(c => c.type === type);
 
     if (origin) {

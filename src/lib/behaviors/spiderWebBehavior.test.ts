@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processSpiderWebTick } from './spiderWebBehavior';
 import type { SpiderWeb, Insect, CellContent, SimulationParams, AppEvent } from '../../types';
 import { INSECT_DATA, DEFAULT_SIM_PARAMS } from '../../constants';
+import { Quadtree, Rectangle } from '../Quadtree';
 
 describe('SpiderWebBehavior', () => {
     let web: SpiderWeb;
     let nextActorState: Map<string, CellContent>;
     let events: AppEvent[];
+    let qtree: Quadtree<CellContent>;
     const params: SimulationParams = { 
         ...DEFAULT_SIM_PARAMS, 
         spiderWebStrength: 20,
@@ -22,12 +24,17 @@ describe('SpiderWebBehavior', () => {
         nextActorState = new Map();
         nextActorState.set(web.id, web);
         events = [];
+        
+        const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
+        qtree = new Quadtree(boundary, 4);
+        qtree.insert({ x: web.x, y: web.y, data: web });
     });
     
     const setupContext = (): any => ({
         params,
         nextActorState,
         events,
+        qtree,
     });
     
     it('should decrement its lifespan', () => {
@@ -50,6 +57,7 @@ describe('SpiderWebBehavior', () => {
             isTrapped: false,
         } as Insect;
         nextActorState.set(beetle.id, beetle);
+        qtree.insert({ x: beetle.x, y: beetle.y, data: beetle });
         
         processSpiderWebTick(web, setupContext());
 
@@ -63,6 +71,7 @@ describe('SpiderWebBehavior', () => {
             id: 'bfly1', type: 'insect', x: 5, y: 5, emoji: '🦋',
         } as Insect;
         nextActorState.set(butterfly.id, butterfly);
+        qtree.insert({ x: butterfly.x, y: butterfly.y, data: butterfly });
         
         processSpiderWebTick(web, setupContext());
 

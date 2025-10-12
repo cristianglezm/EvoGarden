@@ -7,7 +7,7 @@ import {
     SLIME_TRAIL_LIFESPAN,
 } from '../../../constants';
 import { DefaultInsectBehavior } from './DefaultInsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 
 /**
  * Implements the behavior for Snails. They are very slow, leave a slime trail,

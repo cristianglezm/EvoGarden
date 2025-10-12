@@ -10,8 +10,9 @@ import {
     FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { Rectangle } from '../../Quadtree';
+import { getActorsOnCell } from '../../simulationUtils';
 
 const SCORPION_VISION_RANGE = 6;
 const PREY_PRIORITY = ['🪲', '🐌', '🪳', '🐞']; // Beetle, Snail, Cockroach, Ladybug
@@ -43,8 +44,8 @@ export class ScorpionBehavior extends InsectBehavior {
     }
 
     private handleInteraction(insect: Insect, context: InsectBehaviorContext): boolean {
-        const targetOnCell = Array.from(context.nextActorState.values())
-            .find(a => a.x === insect.x && a.y === insect.y && a.id === insect.targetId) as Insect | undefined;
+        const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
+        const targetOnCell = actorsOnCell.find(a => a.id === insect.targetId) as Insect | undefined;
 
         if (targetOnCell && insect.stamina >= INSECT_ATTACK_COST) {
             const baseStats = INSECT_DATA.get(insect.emoji)!;

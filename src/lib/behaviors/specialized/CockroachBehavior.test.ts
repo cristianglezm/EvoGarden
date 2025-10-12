@@ -59,6 +59,7 @@ describe('CockroachBehavior', () => {
         currentTemperature: params.temperature,
         newActorQueue: [] as CellContent[],
         getNextId,
+        claimedCellsThisTick: new Set<string>(),
     });
 
     it('should search for and move towards the nearest corpse', () => {

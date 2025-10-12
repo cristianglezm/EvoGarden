@@ -49,7 +49,12 @@ describe('AntBehavior', () => {
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
         qtree = new Quadtree(boundary, 4);
         newActorQueue = [];
-        getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
+        getNextId.mockClear().mockImplementation((type: string, x: number, y: number) => {
+            if (['pheromoneTrail'].includes(type)) {
+                return `${type}-${x}-${y}`;
+            }
+            return `${type}-${x}-${y}-${Math.random()}`;
+        });
     });
     
     const setupContext = (): any => ({
@@ -152,8 +157,10 @@ describe('AntBehavior', () => {
     });
 
     it('should follow a stronger pheromone trail', () => {
-        const strongTrail: PheromoneTrail = { id: 't1', type: 'pheromoneTrail', x: 11, y: 11, colonyId: '1', strength: 10, lifespan: 10 };
-        const weakTrail: PheromoneTrail = { id: 't2', type: 'pheromoneTrail', x: 9, y: 9, colonyId: '1', strength: 5, lifespan: 10 };
+        const strongTrailId = getNextId('pheromoneTrail', 11, 11);
+        const weakTrailId = getNextId('pheromoneTrail', 9, 9);
+        const strongTrail: PheromoneTrail = { id: strongTrailId, type: 'pheromoneTrail', x: 11, y: 11, colonyId: '1', strength: 10, lifespan: 10 };
+        const weakTrail: PheromoneTrail = { id: weakTrailId, type: 'pheromoneTrail', x: 9, y: 9, colonyId: '1', strength: 5, lifespan: 10 };
         nextActorState.set(strongTrail.id, strongTrail);
         nextActorState.set(weakTrail.id, weakTrail);
         ant.behaviorState = 'seeking_food'; // When seeking, it should follow trails
@@ -219,8 +226,9 @@ describe('AntBehavior', () => {
         });
     
         it('should read a signal and switch to hunting, without consuming the signal', () => {
+            const trailId = getNextId('pheromoneTrail', 10, 10);
             const trailWithSignal: PheromoneTrail = {
-                id: 'trail1', type: 'pheromoneTrail', x: 10, y: 10,
+                id: trailId, type: 'pheromoneTrail', x: 10, y: 10,
                 colonyId: '1', lifespan: 10, strength: 1,
                 signal: { type: 'UNDER_ATTACK', origin: { x: 12, y: 12 }, ttl: 5 }
             };
@@ -233,6 +241,7 @@ describe('AntBehavior', () => {
             expect(ant.behaviorState).toBe('hunting');
             const updatedTrail = nextActorState.get(trailWithSignal.id) as PheromoneTrail;
             expect(updatedTrail.signal).toBeDefined(); // Signal should still be there
+            expect(updatedTrail.signal?.type).toBe('UNDER_ATTACK');
         });
     });
 });

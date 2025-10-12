@@ -162,7 +162,18 @@ export class SimulationEngine {
     }
     
     private getNextId(type: string, x: number, y: number): string {
-        return `${type}-${x}-${y}-${this.tick}-${Math.random()}`;
+        switch (type) {
+            case 'flower':
+            case 'flowerSeed':
+            case 'territoryMark':
+            case 'pheromoneTrail':
+            case 'spiderweb':
+                // Deterministic ID for singleton-per-cell actors
+                return `${type}-${x}-${y}`;
+            default:
+                // Unique ID for actors that can stack or are transient
+                return `${type}-${x}-${y}-${this.tick}-${Math.random()}`;
+        }
     }
 
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
@@ -250,7 +261,7 @@ export class SimulationEngine {
                     processHerbicidePlaneTick(actor as HerbicidePlane, { grid: this.grid, params: this.params, nextActorState, getNextId: this.getNextId.bind(this) });
                     break;
                 case 'herbicideSmoke':
-                    processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory });
+                    processHerbicideSmokeTick(actor as HerbicideSmoke, { grid: this.grid, params: this.params, nextActorState, asyncFlowerFactory: this.asyncFlowerFactory, qtree });
                     break;
                 case 'insect':
                 case 'cockroach':
@@ -290,7 +301,7 @@ export class SimulationEngine {
                     processPheromoneTrailTick(actor as PheromoneTrail, { nextActorState, params: this.params });
                     break;
                 case 'spiderweb':
-                    processSpiderWebTick(actor as SpiderWeb, { nextActorState, events, params: this.params });
+                    processSpiderWebTick(actor as SpiderWeb, { nextActorState, events, params: this.params, qtree });
                     break;
             }
         }
@@ -478,29 +489,6 @@ export class SimulationEngine {
         
         return deltas;
     }
-    
-    private _resolveFlowerAndSeedConflicts(nextActorState: Map<string, CellContent>): void {
-        const occupiedCells = new Set<string>(); // Stores "x,y" coordinates
-        const actorIds = [...nextActorState.keys()]; // Use a copy of keys for safe iteration
-
-        for (const actorId of actorIds) {
-            const actor = nextActorState.get(actorId);
-            if (actor && (actor.type === 'flower' || actor.type === 'flowerSeed')) {
-                const coordKey = `${actor.x},${actor.y}`;
-                if (occupiedCells.has(coordKey)) {
-                    // This cell is already claimed by another flower or seed this tick.
-                    // The first one encountered wins, this one is removed.
-                    nextActorState.delete(actorId);
-                    if(actor.type === 'flowerSeed') {
-                        this.asyncFlowerFactory.cancelFlowerRequest(actor.id);
-                    }
-                } else {
-                    // This is the first flower/seed in this cell, claim it.
-                    occupiedCells.add(coordKey);
-                }
-            }
-        }
-    }
 
     private _updateEnvironment(events: AppEvent[]): Season {
         const previousSeason = this.environmentState.season;
@@ -633,30 +621,12 @@ export class SimulationEngine {
         await this._checkDeceasedChampions(initialActors, nextActorState, events);
 
         this.populationManager.totalBirdsHunted += this.birdsHuntedThisTick;
-
-        // --- Safeguard for Queued Actors ---
-        const newActorQueueOccupiedCells = new Set<string>();
-        const finalNewActorQueue = newActorQueue.filter(actor => {
-            const coordKey = `${actor.x},${actor.y}`;
-            if (newActorQueueOccupiedCells.has(coordKey) || claimedCellsThisTick.has(coordKey)) {
-                // If a cell is already claimed by another new actor, discard this one and cancel its request.
-                if(actor.type === 'flowerSeed') {
-                    this.asyncFlowerFactory.cancelFlowerRequest(actor.id);
-                }
-                return false;
-            }
-            newActorQueueOccupiedCells.add(coordKey);
-            return true;
-        });
         
-        for (const actor of finalNewActorQueue) {
+        for (const actor of newActorQueue) {
             nextActorState.set(actor.id, actor);
         }
 
         this.eggsLaidThisTick += ecosystemManager.handleInsectReproduction(nextActorState, this.params, events, this.getNextId.bind(this));
-        
-        // Enforce one flower/seed per cell rule before summarizing and creating deltas
-        this._resolveFlowerAndSeedConflicts(nextActorState);
         
         const tickEndTime = performance.now();
         const tickTimeMs = tickEndTime - tickStartTime;
