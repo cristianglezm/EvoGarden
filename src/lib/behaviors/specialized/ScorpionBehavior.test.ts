@@ -87,7 +87,10 @@ describe('ScorpionBehavior', () => {
         const initialBeetleHealth = beetle.health;
         const initialScorpionStamina = scorpion.stamina;
 
-        behavior.update(scorpion, setupContext());
+        const context = setupContext();
+        context.qtree.insert({ x: beetle.x, y: beetle.y, data: beetle });
+        
+        behavior.update(scorpion, context);
 
         expect(nextActorState.has(beetle.id)).toBe(true);
         const updatedBeetle = nextActorState.get(beetle.id) as Insect;
@@ -110,6 +113,7 @@ describe('ScorpionBehavior', () => {
         scorpion.targetId = beetle.id;
 
         const context = setupContext();
+        context.qtree.insert({ x: beetle.x, y: beetle.y, data: beetle });
         behavior.update(scorpion, context);
 
         expect(nextActorState.has(beetle.id)).toBe(false);

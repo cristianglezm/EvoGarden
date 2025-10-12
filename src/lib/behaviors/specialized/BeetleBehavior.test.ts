@@ -22,6 +22,7 @@ describe('BeetleBehavior', () => {
     let behavior: BeetleBehavior;
     let beetle: Insect;
     let nextActorState: Map<string, CellContent>;
+    let qtree: Quadtree<CellContent>;
     let flowerQtree: Quadtree<CellContent>;
     let events: AppEvent[];
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
@@ -47,17 +48,18 @@ describe('BeetleBehavior', () => {
         nextActorState = new Map();
         nextActorState.set(beetle.id, beetle);
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
+        qtree = new Quadtree(boundary, 4);
         flowerQtree = new Quadtree(boundary, 4);
         events = [];
     });
     
     const setupContext = (): any => ({
         params,
+        qtree,
         flowerQtree,
         nextActorState,
         events,
         grid: Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => [])),
-        qtree: new Quadtree(new Rectangle(10, 10, 10, 10), 4),
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
@@ -81,9 +83,11 @@ describe('BeetleBehavior', () => {
     it('should collect nutrients upon reaching a healthy flower', () => {
         const healthyFlower = createMockFlower('hf1', 10, 10, 90, 100);
         nextActorState.set(healthyFlower.id, healthyFlower);
-        flowerQtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
+        const context = setupContext();
+        context.flowerQtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
+        context.qtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
         
-        behavior.update(beetle, setupContext());
+        behavior.update(beetle, context);
 
         expect(beetle.isCarryingNutrient).toBe(true);
         expect(beetle.stamina).toBe(BEETLE_DATA.maxStamina - BEETLE_COLLECT_STAMINA_COST);
@@ -109,10 +113,13 @@ describe('BeetleBehavior', () => {
         beetle.isCarryingNutrient = true;
         const weakFlower = createMockFlower('wf1', 10, 10, 40, 100);
         nextActorState.set(weakFlower.id, weakFlower);
-        flowerQtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
         const initialFlowerHealth = weakFlower.health;
         
-        behavior.update(beetle, setupContext());
+        const context = setupContext();
+        context.flowerQtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
+        context.qtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
+
+        behavior.update(beetle, context);
 
         const updatedFlower = nextActorState.get('wf1') as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth + BEETLE_HEAL_AMOUNT);

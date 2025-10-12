@@ -25,7 +25,7 @@ export const processFlowerTick = (
     context: FlowerContext,
     newActorQueue: CellContent[]
 ) => {
-    const { params, grid, asyncFlowerFactory, currentTemperature, nextActorState, claimedCellsThisTick } = context;
+    const { params, grid, asyncFlowerFactory, currentTemperature, nextActorState, claimedCellsThisTick, getNextId } = context;
     const { gridWidth, gridHeight, windDirection, windStrength } = params;
 
     flower.age++;
@@ -61,10 +61,10 @@ export const processFlowerTick = (
             const spawnSpot = findCellForFlowerSpawn(grid, params, { x: flower.x, y: flower.y }, claimedCellsThisTick);
 
             if (spawnSpot) {
-                const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, undefined, context.getNextId);
+                const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, undefined, getNextId);
                 if (seed) {
                     newActorQueue.push(seed);
-                    claimedCellsThisTick.add(`${spawnSpot.x},${spawnSpot.y}`);
+                    claimedCellsThisTick.add(`flower-${spawnSpot.x}-${spawnSpot.y}`);
                     hasReproducedThisTick = true;
                 }
             }
@@ -81,10 +81,10 @@ export const processFlowerTick = (
                 const partner = matureNeighbors[0];
                 const spawnSpot = findCellForFlowerSpawn(grid, params, { x: partner.x, y: partner.y }, claimedCellsThisTick);
                 if (spawnSpot) {
-                    const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, partner.genome, context.getNextId);
+                    const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, partner.genome, getNextId);
                     if (seed) {
                         newActorQueue.push(seed);
-                        claimedCellsThisTick.add(`${spawnSpot.x},${spawnSpot.y}`);
+                        claimedCellsThisTick.add(`flower-${spawnSpot.x}-${spawnSpot.y}`);
                         hasReproducedThisTick = true;
                     }
                 }
@@ -103,10 +103,10 @@ export const processFlowerTick = (
                 if (targetFlower?.isMature) {
                     const spawnSpot = findCellForFlowerSpawn(grid, params, {x: targetX, y: targetY}, claimedCellsThisTick);
                     if (spawnSpot) {
-                         const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome, context.getNextId);
+                         const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome, getNextId);
                          if(seed) {
                             newActorQueue.push(seed);
-                            claimedCellsThisTick.add(`${spawnSpot.x},${spawnSpot.y}`);
+                            claimedCellsThisTick.add(`flower-${spawnSpot.x}-${spawnSpot.y}`);
                          }
                     }
                     break; // Stop after first potential pollination

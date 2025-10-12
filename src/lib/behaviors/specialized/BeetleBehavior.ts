@@ -10,8 +10,9 @@ import {
     BEETLE_DEPOSIT_STAMINA_COST
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { Rectangle } from '../../Quadtree';
+import { getActorsOnCell } from '../../simulationUtils';
 
 export class BeetleBehavior extends InsectBehavior {
     public update(insect: Insect, context: InsectBehaviorContext): void {
@@ -106,8 +107,9 @@ export class BeetleBehavior extends InsectBehavior {
     }
 
     private findFlowerOnCell(x: number, y: number, type: 'healthy' | 'weak', context: InsectBehaviorContext): Flower | undefined {
-        const flower = Array.from(context.nextActorState.values()).find(
-            (actor) => actor.x === x && actor.y === y && actor.type === 'flower'
+        const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, x, y);
+        const flower = actorsOnCell.find(
+            (actor) => actor.type === 'flower'
         ) as Flower | undefined;
         
         if (!flower) return undefined;

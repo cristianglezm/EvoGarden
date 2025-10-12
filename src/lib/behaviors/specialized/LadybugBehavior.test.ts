@@ -102,8 +102,10 @@ describe('LadybugBehavior', () => {
         nextActorState.set(caterpillar.id, caterpillar);
         ladybug.health = 50;
         ladybug.stamina = 20;
+        const context = setupContext();
+        context.qtree.insert({ x: caterpillar.x, y: caterpillar.y, data: caterpillar });
 
-        behavior.update(ladybug, setupContext());
+        behavior.update(ladybug, context);
         
         expect(nextActorState.has(caterpillar.id)).toBe(false);
         // Health: 50 (start) - 0.2 (decay) + 20 (heal) = 69.8

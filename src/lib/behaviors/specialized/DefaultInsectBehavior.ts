@@ -12,7 +12,7 @@ import {
 } from '../../../constants';
 import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 
 /**
  * Implements the default behavior for most insects like butterflies, beetles, etc.

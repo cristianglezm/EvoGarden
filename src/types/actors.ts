@@ -106,9 +106,10 @@ export interface Insect extends Actor {
     webStamina?: number;
     decisionCooldown?: number; // For AI optimization
     targetPosition?: { x: number, y: number }; // For AI targeting
+    signalToSend?: { type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND' | 'ALL_CLEAR', origin?: { x: number, y: number } };
 }
 
-export type SignalType = 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND';
+export type SignalType = 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND' | 'ALL_CLEAR';
 
 export interface Signal {
     type: SignalType;

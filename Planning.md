@@ -129,7 +129,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   **Responsibilities**:
         -   `processNutrientHealing`: Scans for all nutrients and applies their healing effect to nearby flowers.
         -   `handleInsectReproduction`: Scans for pairs of insects of the same species on the same cell, initiating reproduction. It handles the creation of a new `Egg` with a `genome` created by crossing over the parents' genomes with a chance of mutation, then puts the parents on a `reproductionCooldown`.
-        -   `propagateSignal`: Handles the propagation of a signal through adjacent, friendly `TerritoryMark` actors.
+        -   `propagateSignal`: Handles the propagation of a signal through adjacent, friendly `TerritoryMark` actors, allowing for a hive-wide communication system for honeybees.
 
 -   **Behavior System (`lib/behaviors/`)**: This is a modular pattern for separating actor logic. The engine calls a dedicated function for each actor type, passing the actor's state and a `context` object with necessary global information. Crucially, behaviors no longer create UI notifications directly; they now push structured `AppEvent` objects into the context's `events` array.
 
@@ -150,8 +150,13 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
             -   **Trapping**: Webs have a chance to trap any non-flying insect that moves onto their cell. Stronger insects have a higher chance to break free, damaging the web in the process.
             -   **Ambush & Consumption**: The spider waits on its web network. When an insect is trapped, the spider moves to the location, consumes the prey to restore its own health and stamina, and resets the trap.
         -   **`CockroachBehavior`**: Manages scavenger AI for Cockroaches (`🪳`). They consume `Corpse` actors and will attack weak flowers if no corpses are found.
-        -   **`HoneybeeBehavior`**: A state-driven AI for social bees. Manages states like `seeking_food`, `returning_to_hive`, and `hunting`. Bees interact with their assigned `Hive` to deposit pollen. They leave `TerritoryMark` actors as they move, which can be used to detect rival bees or propagate signals.
-        -   **`AntBehavior`**: A state-driven AI for social ants. Manages states like `seeking_food` and `returning_to_colony`. Ants search for food (prioritizing corpses), carry it back, and leave pheromone trails.
+        -   **`HoneybeeBehavior`**: A state-driven AI for social bees. Manages states like `seeking_food`, `returning_to_hive`, and `hunting`. Bees interact with their assigned `Hive` to deposit pollen. They leave `TerritoryMark` actors as they move. These marks are crucial for the colony's social behavior:
+            -   **Territorial Control**: If a bee overwrites a mark from a rival hive, it triggers a `hunting` state and creates an `UNDER_ATTACK` signal.
+            -   **Warfare**: Bees in a `hunting` state will attack rival bees. A direct encounter with a rival also triggers this state.
+            -   **Communication**: The `UNDER_ATTACK` signal propagates through adjacent friendly marks, alerting nearby bees to the threat and calling them to action.
+        -   **`AntBehavior`**: A state-driven AI for social ants. Manages states like `seeking_food`, `returning_to_colony`, and `hunting`. Ants search for food (prioritizing corpses), carry it back, and leave pheromone trails that other ants can follow.
+            -   **Warfare**: When an ant encounters a rival from another colony, it enters a `hunting` state and attacks.
+            -   **Signaling**: While hunting, an ant can leave an `UNDER_ATTACK` signal on its pheromone trail. This serves as a localized warning to other ants from the same colony that follow the trail.
 
     -   `birdBehavior`: Governs predator AI and connects the food chain.
         -   **AI**: Uses the main `qtree` to find prey. The prey priority is: unprotected insects, then defenseless cocoons, and finally stationary eggs. When not actively hunting, it implements a **patrolling AI**, selecting a random flower as a temporary destination.

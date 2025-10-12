@@ -87,7 +87,7 @@ describe('flowerBehavior', () => {
         expect(newActorQueue.length).toBe(1);
         
         const createdSeed = newActorQueue[0] as FlowerSeed;
-        expect(claimedCellsThisTick.has(`${createdSeed.x},${createdSeed.y}`)).toBe(true);
+        expect(claimedCellsThisTick.has(`flower-${createdSeed.x}-${createdSeed.y}`)).toBe(true);
         vi.spyOn(Math, 'random').mockRestore();
     });
 
@@ -107,29 +107,27 @@ describe('flowerBehavior', () => {
         }
         expect(newActorQueue.length).toBe(1);
         const createdSeed = newActorQueue[0] as FlowerSeed;
-        expect(claimedCellsThisTick.has(`${createdSeed.x},${createdSeed.y}`)).toBe(true);
+        expect(claimedCellsThisTick.has(`flower-${createdSeed.x}-${createdSeed.y}`)).toBe(true);
 
         vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('should not attempt to expand into a cell that is already claimed', () => {
-        // Fill the entire grid with blockers to ensure that the global fallback search in 
-        // findCellForFlowerSpawn will not find any alternative spots.
+        // Fill the entire grid with blocker flowers
         for (let y = 0; y < grid.length; y++) {
             for (let x = 0; x < grid[y].length; x++) {
-                // Don't put a blocker where the flower itself is located
                 if (x !== flower.x || y !== flower.y) {
-                    grid[y][x].push({ id: `blocker-${x}-${y}` } as CellContent);
+                    grid[y][x].push({ id: `blocker-${x}-${y}`, type: 'flower' } as CellContent);
                 }
             }
         }
         
-        // Explicitly unblock one neighboring spot, making it the only empty cell on the grid.
+        // Unblock one neighboring spot, making it the only valid cell on the grid.
         const emptySpot = { x: 4, y: 5 };
         grid[emptySpot.y][emptySpot.x] = [];
 
-        // Now, claim that single available spot for the current tick.
-        claimedCellsThisTick.add(`${emptySpot.x},${emptySpot.y}`);
+        // Claim that single available spot for the current tick.
+        claimedCellsThisTick.add(`flower-${emptySpot.x}-${emptySpot.y}`);
 
         // Force an expansion attempt.
         vi.spyOn(Math, 'random').mockReturnValue(FLOWER_EXPANSION_CHANCE / 2); 

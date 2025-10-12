@@ -3,6 +3,7 @@ import { processHerbicideSmokeTick } from './herbicideSmokeBehavior';
 import type { HerbicideSmoke, Flower, CellContent, Grid, SimulationParams, FlowerSeed } from '../../types';
 import { DEFAULT_SIM_PARAMS } from '../../constants';
 import { AsyncFlowerFactory } from '../asyncFlowerFactory';
+import { Quadtree, Rectangle } from '../Quadtree';
 
 vi.mock('../asyncFlowerFactory');
 
@@ -11,6 +12,7 @@ describe('herbicideSmokeBehavior', () => {
     let flower: Flower;
     let nextActorState: Map<string, CellContent>;
     let grid: Grid;
+    let qtree: Quadtree<CellContent>;
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 5, gridHeight: 5, herbicideDamage: 25 };
     let mockAsyncFlowerFactory: AsyncFlowerFactory;
     let cancelFlowerRequest: Mock;
@@ -37,6 +39,11 @@ describe('herbicideSmokeBehavior', () => {
         nextActorState.set(smoke.id, smoke);
         nextActorState.set(flower.id, flower);
         
+        const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
+        qtree = new Quadtree(boundary, 4);
+        qtree.insert({ x: smoke.x, y: smoke.y, data: smoke });
+        qtree.insert({ x: flower.x, y: flower.y, data: flower });
+        
         cancelFlowerRequest = vi.fn();
         mockAsyncFlowerFactory = new (AsyncFlowerFactory as any)();
         mockAsyncFlowerFactory.cancelFlowerRequest = cancelFlowerRequest;
@@ -47,6 +54,7 @@ describe('herbicideSmokeBehavior', () => {
         params,
         nextActorState,
         asyncFlowerFactory: mockAsyncFlowerFactory,
+        qtree,
     });
 
     it('should apply damage to flowers in the same cell', () => {
@@ -94,6 +102,7 @@ describe('herbicideSmokeBehavior', () => {
         };
         nextActorState.set(seed.id, seed);
         grid[2][2].push(seed);
+        qtree.insert({ x: seed.x, y: seed.y, data: seed });
 
         processHerbicideSmokeTick(smoke, setupContext());
 

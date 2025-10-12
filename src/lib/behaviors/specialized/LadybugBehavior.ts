@@ -7,8 +7,9 @@ import {
     INSECT_ATTACK_COST,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 import { Rectangle } from '../../Quadtree';
+import { getActorsOnCell } from '../../simulationUtils';
 
 const LADYBUG_VISION_RANGE = 7;
 
@@ -39,9 +40,10 @@ export class LadybugBehavior extends InsectBehavior {
     }
 
     private handleInteraction(insect: Insect, context: InsectBehaviorContext): boolean {
+        const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
         // Priority 1: Eat caterpillar
-        const caterpillarOnCell = Array.from(context.nextActorState.values())
-            .find(a => a.x === insect.x && a.y === insect.y && a.type === 'insect' && (a as Insect).emoji === '🐛') as Insect | undefined;
+        const caterpillarOnCell = actorsOnCell
+            .find(a => a.type === 'insect' && (a as Insect).emoji === '🐛') as Insect | undefined;
 
         if (caterpillarOnCell && insect.stamina >= INSECT_ATTACK_COST) {
             context.nextActorState.delete(caterpillarOnCell.id);
@@ -54,8 +56,8 @@ export class LadybugBehavior extends InsectBehavior {
         }
 
         // Priority 2: Eat egg or cocoon (not its own)
-        const preyOnCell = Array.from(context.nextActorState.values())
-            .find(a => a.x === insect.x && a.y === insect.y && (a.type === 'egg' || a.type === 'cocoon')) as Egg | Cocoon | undefined;
+        const preyOnCell = actorsOnCell
+            .find(a => a.type === 'egg' || a.type === 'cocoon') as Egg | Cocoon | undefined;
 
         if (preyOnCell && insect.stamina >= INSECT_ATTACK_COST) {
             if (preyOnCell.type === 'egg' && preyOnCell.insectEmoji === '🐞') {

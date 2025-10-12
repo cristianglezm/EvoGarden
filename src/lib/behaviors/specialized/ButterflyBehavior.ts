@@ -11,7 +11,7 @@ import {
 } from '../../../constants';
 import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
-import type { InsectBehaviorContext } from '../insectBehavior';
+import type { InsectBehaviorContext } from '../../../types';
 
 /**
  * Implements the behavior for Butterflies. They are pure pollinators and
