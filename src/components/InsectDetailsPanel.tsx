@@ -92,8 +92,8 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
                         <div className="grid grid-cols-2 gap-x-4">
                             <p><strong>Attack:</strong> {baseStats.attack}</p>
                             <p><strong>Speed:</strong> {baseStats.speed}</p>
-                            <p><strong>Hatch Time:</strong> {baseStats.eggHatchTime} ticks</p>
-                            <p><strong>Repro. Cost:</strong> {baseStats.reproductionCost} sta.</p>
+                            {baseStats.eggHatchTime > 0 && <p><strong>Hatch Time:</strong> {baseStats.eggHatchTime} ticks</p>}
+                            {baseStats.reproductionCost > 0 && <p><strong>Repro. Cost:</strong> {baseStats.reproductionCost} sta.</p>}
                         </div>
                     </div>
                 )}
@@ -102,13 +102,25 @@ export const InsectDetailsPanel: React.FC<InsectDetailsPanelProps> = ({ insect, 
 
                  <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Status</h3>
-                    {insect.type === 'insect' && (insect as Insect).pollen && (
-                        <p><strong>Carrying Pollen:</strong> Yes (from #{getShortId((insect as Insect).pollen!.sourceFlowerId)})</p>
+                    {insect.type === 'insect' && 'pollen' in insect && (
+                        <p>
+                            <strong>Carrying Pollen:</strong> 
+                            {(insect as Insect).pollen ? (
+                                <>
+                                    <span> Yes (from </span>
+                                    <button 
+                                        onClick={() => onTrackActor((insect as Insect).pollen!.sourceFlowerId)}
+                                        className="font-mono text-accent-yellow hover:underline"
+                                        title={`Track flower #${getShortId((insect as Insect).pollen!.sourceFlowerId)}`}
+                                    >
+                                        #{getShortId((insect as Insect).pollen!.sourceFlowerId)}
+                                    </button>
+                                    <span>)</span>
+                                </>
+                            ) : ' No'}
+                        </p>
                     )}
-                    {insect.type === 'insect' && !(insect as Insect).pollen && (
-                        <p><strong>Carrying Pollen:</strong> No</p>
-                    )}
-                    <p><strong>Reproduction Cooldown:</strong> {insect.reproductionCooldown || 0} ticks</p>
+                    {baseStats && baseStats.reproductionCost > 0 && <p><strong>Reproduction Cooldown:</strong> {insect.reproductionCooldown || 0} ticks</p>}
                     {(isHoneybee || isAnt) && (
                         <>
                             {isHoneybee && <p><strong>Hive ID:</strong> {(insect as Insect).hiveId || 'N/A'}</p>}
