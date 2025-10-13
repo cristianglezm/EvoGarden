@@ -6,6 +6,8 @@ export class InsectDetailsPanelController {
 
     constructor(page: Page) {
         this.page = page;
+        // This selector is robust because all insect/cockroach panels will contain this
+        // specific, unique text within the GenomeVisualizer component.
         this.panel = page.locator('aside').filter({ hasText: 'Flower Preferences (Genome)' });
     }
 
@@ -23,5 +25,6 @@ export class InsectDetailsPanelController {
 
     async closePanel() {
         await this.panel.getByLabel('Close details panel').click();
+        await expect(this.panel).not.toBeVisible();
     }
 }
