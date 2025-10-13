@@ -36,15 +36,19 @@ export class BeetleBehavior extends InsectBehavior {
         // --- Interaction Phase ---
         if (insect.isCarryingNutrient) {
             // Trying to deposit
-            const flowerOnCell = this.findFlowerOnCell(insect.x, insect.y, 'weak', context);
+            const flowerOnCell = this.findTypedFlowerOnCell(insect.x, insect.y, 'weak', context);
             if (flowerOnCell) {
+                this.handlePollination(insect, flowerOnCell, context);
+                insect.pollen = { genome: flowerOnCell.genome, sourceFlowerId: flowerOnCell.id, score: 0 };
                 this.handleDeposit(insect, flowerOnCell, context);
                 hasInteracted = true;
             }
         } else {
             // Trying to collect
-            const flowerOnCell = this.findFlowerOnCell(insect.x, insect.y, 'healthy', context);
+            const flowerOnCell = this.findTypedFlowerOnCell(insect.x, insect.y, 'healthy', context);
             if (flowerOnCell) {
+                this.handlePollination(insect, flowerOnCell, context);
+                insect.pollen = { genome: flowerOnCell.genome, sourceFlowerId: flowerOnCell.id, score: 0 };
                 this.handleCollect(insect, context);
                 hasInteracted = true;
             }
@@ -106,7 +110,7 @@ export class BeetleBehavior extends InsectBehavior {
         return false;
     }
 
-    private findFlowerOnCell(x: number, y: number, type: 'healthy' | 'weak', context: InsectBehaviorContext): Flower | undefined {
+    private findTypedFlowerOnCell(x: number, y: number, type: 'healthy' | 'weak', context: InsectBehaviorContext): Flower | undefined {
         const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, x, y);
         const flower = actorsOnCell.find(
             (actor) => actor.type === 'flower'
