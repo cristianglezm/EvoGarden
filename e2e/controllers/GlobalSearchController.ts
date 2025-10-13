@@ -25,6 +25,8 @@ export class GlobalSearchController {
     
     async clickTrackButton() {
         await expect(this.trackButton).toBeEnabled();
-        await this.trackButton.click();
+        // Use dispatchEvent to bypass some of Playwright's checks that might fail
+        // in a race condition where the button immediately disappears upon being clicked.
+        await this.trackButton.dispatchEvent('click');
     }
 }
