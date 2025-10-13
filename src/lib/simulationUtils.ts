@@ -1,5 +1,5 @@
 import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect, Bird, PopulationTrend, Flower, Cockroach } from '../types';
-import { POPULATION_TREND_WINDOW, FLOWER_STAT_INDICES } from '../constants';
+import { POPULATION_TREND_WINDOW, FLOWER_STAT_INDICES, FLOWER_SPAWN_SEARCH_RADIUS } from '../constants';
 import { Quadtree, Rectangle } from './Quadtree';
 
 export const windVectors: Record<WindDirection, {dx: number, dy: number}> = {
@@ -50,29 +50,56 @@ export const findEmptyCell = (grid: Grid, params: SimulationParams, origin?: Coo
 };
 
 export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, origin?: Coord, claimedCells?: Set<string>): Coord | null => {
-    const isSuitable = (cell: CellContent[], x: number, y: number) => 
-        (!claimedCells || !claimedCells.has(`flower-${x}-${y}`)) &&
-        !cell.some(c => c.type === 'flower' || c.type === 'flowerSeed');
-
-    if(origin) {
-        const suitableNeighbors = neighborVectors
-            .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
-            .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && isSuitable(grid[p.y][p.x], p.x, p.y));
-            
-        if (suitableNeighbors.length > 0) return suitableNeighbors[Math.floor(Math.random() * suitableNeighbors.length)];
+    if (!origin) {
+        // Cannot perform a local search without an origin. Abort to prevent full grid scan.
+        return null;
     }
-    
-    const suitableCells: Coord[] = [];
-    for (let y = 0; y < params.gridHeight; y++) {
-        for (let x = 0; x < params.gridWidth; x++) {
-            if (isSuitable(grid[y][x], x, y)) {
-                suitableCells.push({ x, y });
-            }
+
+    const isSuitable = (x: number, y: number): boolean => {
+        // Boundary check
+        if (x < 0 || x >= params.gridWidth || y < 0 || y >= params.gridHeight) {
+            return false;
+        }
+        // Claimed check
+        const claimKey = `flower-${x}-${y}`;
+        if (claimedCells && claimedCells.has(claimKey)) {
+            return false;
+        }
+        // Occupancy check
+        const cell = grid[y][x];
+        return !cell.some(c => c.type === 'flower' || c.type === 'flowerSeed');
+    };
+
+    // Create a list of all potential coordinates within the radius in an expanding box pattern.
+    const potentialCoords: Coord[] = [];
+    for (let r = 1; r <= FLOWER_SPAWN_SEARCH_RADIUS; r++) {
+        // Top and bottom edges
+        for (let dx = -r; dx <= r; dx++) {
+            potentialCoords.push({ x: origin.x + dx, y: origin.y - r });
+            potentialCoords.push({ x: origin.x + dx, y: origin.y + r });
+        }
+        // Left and right edges (excluding corners)
+        for (let dy = -r + 1; dy < r; dy++) {
+            potentialCoords.push({ x: origin.x - r, y: origin.y + dy });
+            potentialCoords.push({ x: origin.x + r, y: origin.y + dy });
         }
     }
 
-    if (suitableCells.length === 0) return null;
-    return suitableCells[Math.floor(Math.random() * suitableCells.length)];
+    // Shuffle for randomness to prevent directional bias
+    for (let i = potentialCoords.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [potentialCoords[i], potentialCoords[j]] = [potentialCoords[j], potentialCoords[i]];
+    }
+    
+    // Find the first suitable spot in the shuffled list
+    for (const coord of potentialCoords) {
+        if (isSuitable(coord.x, coord.y)) {
+            return coord;
+        }
+    }
+    
+    // No suitable spot found within the radius.
+    return null;
 };
 
 export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle' | 'cockroach', origin?: Coord, claimedCells?: Set<string>): Coord | null => {
