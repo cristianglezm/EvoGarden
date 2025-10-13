@@ -450,6 +450,7 @@ export default function App(): React.ReactNode {
             case 'antColony':
             case 'pheromoneTrail':
             case 'spiderweb':
+            case 'slimeTrail':
                 return <GenericActorDetailsPanel 
                             actor={selectedActor} 
                             onClose={() => handleActorSelection(null)}
@@ -457,10 +458,13 @@ export default function App(): React.ReactNode {
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
                         />;
-            default:
-                // Fallback for any unhandled type
-                handleActorSelection(null);
+            default: {
+                // Fallback for any unhandled type. We just won't render a panel.
+                // The user can click elsewhere to clear the selection.
+                // Calling a state setter here is a side-effect and can cause bugs.
+                console.warn(`No details panel configured for actor type: ${(selectedActor as any).type}`);
                 return null;
+            }
         }
     }
     return null;

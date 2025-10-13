@@ -1,10 +1,39 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, Locator } from '@playwright/test';
 import { ControlPanelController } from './controllers/ControlPanelController';
 import { FlowerPanelController } from './controllers/FlowerPanelController';
 import { DataPanelController } from './controllers/DataPanelController';
 import { EventLogPanelController } from './controllers/EventLogPanelController';
 import { GlobalSearchController } from './controllers/GlobalSearchController';
 import { InsectDetailsPanelController } from './controllers/InsectDetailsPanelController';
+
+// Helper controller for generic actor panels since we can't create new files.
+class GenericActorPanelController {
+    readonly page: Page;
+    readonly panel: Locator;
+
+    constructor(page: Page, panelText: string | RegExp) {
+        this.page = page;
+        this.panel = page.locator('aside').filter({ hasText: panelText });
+    }
+
+    async waitForPanel() {
+        await expect(this.panel).toBeVisible();
+    }
+
+    async getActorId(): Promise<string> {
+        // Find the mono-spaced ID, which is common across all panels
+        const idLocator = this.panel.locator('p.font-mono');
+        await expect(idLocator.first()).toBeVisible();
+        const id = await idLocator.first().textContent();
+        if (!id) throw new Error(`Could not find actor ID in panel`);
+        return id.trim();
+    }
+
+    async closePanel() {
+        await this.panel.getByLabel('Close details panel').click();
+        await expect(this.panel).not.toBeVisible();
+    }
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -129,7 +158,7 @@ test.describe('Canvas and Flower Details Panel', () => {
   test('should select a flower and show the details panel', async ({ page }) => {
     const flowers = new FlowerPanelController(page);
     expect(await flowers.selectFlower()).toBe(true);
-    await flowers.waitForDetails();
+    await flowers.waitForPanel();
     await flowers.waitForFlowerData();
     await expect(flowers.getGenomeTextarea()).toBeVisible();
   });
@@ -138,7 +167,7 @@ test.describe('Canvas and Flower Details Panel', () => {
     const flowers = new FlowerPanelController(page);
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     expect(await flowers.selectFlower()).toBe(true);
-    await flowers.waitForDetails();
+    await flowers.waitForPanel();
     const genomeValue = await flowers.getGenomeTextarea().inputValue();
     await flowers.copyGenome();
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
@@ -149,15 +178,15 @@ test.describe('Canvas and Flower Details Panel', () => {
   test('should open the 3D viewer from the details panel', async ({ page }) => {
     const flowers = new FlowerPanelController(page);
     expect(await flowers.selectFlower()).toBe(true);
-    await flowers.waitForDetails();
+    await flowers.waitForPanel();
     await flowers.view3DFlower();
   });
 
   test('should close the flower panel after viewing', async ({ page }) => {
     const flowers = new FlowerPanelController(page);
     expect(await flowers.selectFlower()).toBe(true);
-    await flowers.waitForDetails();
-    await flowers.closeDetails();
+    await flowers.waitForPanel();
+    await flowers.closePanel();
   });
 
   test('should resume simulation when deselecting a flower', async ({ page }) => {
@@ -172,7 +201,7 @@ test.describe('Canvas and Flower Details Panel', () => {
 
     // Select a flower, which should pause it
     expect(await flowers.selectFlower()).toBe(true);
-    await flowers.waitForDetails();
+    await flowers.waitForPanel();
 
     // Verify it is paused by waiting for the canvas to become static.
     // The waitCanvasStable helper is more robust than a manual check because it retries.
@@ -180,7 +209,7 @@ test.describe('Canvas and Flower Details Panel', () => {
     const pausedCanvasScreenshot = await canvas.screenshot();
     
     // Deselect the flower by clicking an empty area
-    await flowers.closeDetails();
+    await flowers.closePanel();
 
     // Wait for the simulation to resume
     await page.waitForTimeout(500); 
@@ -192,56 +221,83 @@ test.describe('Canvas and Flower Details Panel', () => {
 });
 
 test.describe('Global Search', () => {
-    test('should find, highlight, and then track an actor by its ID', async ({ page }) => {
+    test('should find, highlight, and track an actor by its ID', async ({ page }) => {
         const controls = new ControlPanelController(page);
-        const actors = new FlowerPanelController(page); // Generic actor selector
+        const actorSelector = new FlowerPanelController(page);
         const search = new GlobalSearchController(page);
-        const insects = new InsectDetailsPanelController(page);
 
-        // 1. Run simulation to ensure there are insects
-        await controls.runSimulation(3);
+        // Run sim for a few seconds to generate a variety of actors
+        await controls.open();
+        await controls.getApplyAndReset().click();
+        await controls.runSimulation(5);
 
-        // 2. Select an insect to get its ID
-        const selected = await actors.selectActor('insect');
-        expect(selected).toBe(true);
+        const actorTypesToTry: ('insect' | 'flower' | 'hive' | 'antColony')[] = [
+            'insect', 'flower', 'hive', 'antColony'
+        ];
         
-        await insects.waitForPanel();
-        const insectId = await insects.getActorId();
-        const partialId = insectId.substring(0, 10);
-        
-        // 3. Close the details panel to start fresh
-        await insects.closePanel();
-        await expect(insects.panel).not.toBeVisible();
+        let actorWasFoundAndTested = false;
 
-        // 4. Search for the insect using its partial ID
-        await search.searchFor(partialId);
+        for (const actorType of actorTypesToTry) {
+            const selected = await actorSelector.selectActor(actorType);
+            
+            if (selected) {
+                let panelController: any;
 
-        // 5. Select the suggestion, which should highlight it and open the panel
-        await search.selectSuggestion(insectId);
-
-        // 6. Verify that the details panel is now visible (highlighted)
-        await insects.waitForPanel();
-        const highlightedId = await insects.getActorId();
-        expect(highlightedId).toBe(insectId);
-
-        // 7. Click the track button to start tracking
-        await search.clickTrackButton();
-
-        // 8. Verify it's in tracking mode
-        const getShortId = (id: string): string => {
-            const parts = id.split('-');
-            if (parts.length > 2) {
-                const dataParts = parts.slice(1, parts.length - 1);
-                const timestamp = parts[parts.length - 1];
-                if (!isNaN(parseInt(timestamp, 10))) {
-                    return `${dataParts.join('-')}-${timestamp.slice(-2)}`;
+                // Dynamically select the correct controller for the actor type we found
+                switch (actorType) {
+                    case 'insect':
+                        panelController = new InsectDetailsPanelController(page);
+                        break;
+                    case 'flower':
+                        panelController = new FlowerPanelController(page);
+                        break;
+                    case 'hive':
+                        panelController = new GenericActorPanelController(page, /Honeybee Hive/);
+                        break;
+                    case 'antColony':
+                        panelController = new GenericActorPanelController(page, /Ant Colony Details/);
+                        break;
                 }
+
+                await panelController.waitForPanel();
+                const actorId = await panelController.getActorId();
+                const partialId = actorId.substring(0, 10);
+                
+                await panelController.closePanel();
+                await expect(panelController.panel).not.toBeVisible();
+
+                // Test search and highlight
+                await search.searchFor(partialId);
+                await search.selectSuggestion(actorId);
+
+                await panelController.waitForPanel();
+                const highlightedId = await panelController.getActorId();
+                expect(highlightedId).toBe(actorId);
+
+                // Test tracking
+                await search.clickTrackButton();
+
+                const getShortId = (id: string): string => {
+                    const parts = id.split('-');
+                    if (parts.length > 2) {
+                        const dataParts = parts.slice(1, parts.length - 1);
+                        const timestamp = parts[parts.length - 1];
+                        if (!isNaN(parseInt(timestamp, 10))) {
+                            return `${dataParts.join('-')}-${timestamp.slice(-2)}`;
+                        }
+                    }
+                    return id.slice(-5);
+                };
+                const trackingInput = page.getByLabel('Currently tracking actor');
+                await expect(trackingInput).toBeVisible();
+                await expect(trackingInput).toHaveValue(`Tracking: ${getShortId(actorId)}`);
+                
+                actorWasFoundAndTested = true;
+                break; // Exit loop after first successful test
             }
-            return id.slice(-5);
-        };
-        const trackingInput = page.getByLabel('Currently tracking actor');
-        await expect(trackingInput).toBeVisible();
-        await expect(trackingInput).toHaveValue(`Tracking: ${getShortId(insectId)}`);
+        }
+
+        expect(actorWasFoundAndTested, 'Could not find any actor on the grid to test Global Search.').toBe(true);
     });
 });
 
