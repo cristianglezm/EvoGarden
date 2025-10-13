@@ -23,13 +23,10 @@ class EventService {
         const params = this.getParams();
         const { notificationMode } = params;
 
-        // All events go to the log unless mode is 'toasts' and importance is low
-        const shouldLog = !(notificationMode === 'toasts' && event.importance === 'low');
-        if (shouldLog) {
-            useEventLogStore.getState().addEntry({ ...event, timestamp: Date.now() });
-        }
+        // All events should always be added to the event log.
+        useEventLogStore.getState().addEntry({ ...event, timestamp: Date.now() });
         
-        // Decide whether to show a toast
+        // Decide whether to show a toast based on notification mode.
         const shouldToast = 
             (notificationMode === 'both') ||
             (notificationMode === 'toasts' && event.importance === 'high');
