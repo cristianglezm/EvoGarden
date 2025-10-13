@@ -2,7 +2,7 @@ import React from 'react';
 import type { CellContent, Bird, Eagle, Nutrient, Corpse, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail, SpiderWeb } from '../types';
 import { XIcon, SearchIcon } from './icons';
 import { GenomeVisualizer } from './GenomeVisualizer';
-import { getShortId } from '../utils';
+import { getShortId, ACTOR_NAMES } from '../utils';
 
 interface GenericActorDetailsPanelProps {
     actor: CellContent | null;
@@ -191,6 +191,7 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
 
     const { emoji, title, stats, genome } = getActorDisplayInfo(actor);
     const isTrackingThisActor = trackedActorId && trackedActorId === actor.id;
+    const actorName = ACTOR_NAMES[emoji] || actor.type.replace(/([A-Z])/g, ' $1');
 
     return (
         <div className="bg-surface border-2 border-tertiary rounded-lg shadow-lg h-full flex flex-col">
@@ -223,7 +224,7 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
                     <span className="text-5xl">{emoji}</span>
                      {actor.type === 'corpse' && <span className="absolute top-1/2 left-[24px] -translate-x-1/2 -translate-y-1/2 text-2xl text-black/80">💀</span>}
                     <div className="min-w-0">
-                        <h3 className="text-xl font-bold text-primary-light capitalize">{actor.type.replace(/([A-Z])/g, ' $1')}</h3>
+                        <h3 className="text-xl font-bold text-primary-light capitalize">{actorName}</h3>
                          <div className="flex items-center gap-2">
                             <p className="text-xs text-secondary font-mono truncate">{actor.id}</p>
                             {!isTrackingThisActor && (
