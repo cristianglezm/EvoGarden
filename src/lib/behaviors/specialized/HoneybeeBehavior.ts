@@ -271,13 +271,13 @@ export class HoneybeeBehavior extends InsectBehavior {
         return Array.from(context.nextActorState.values()).find((a: any) => a.type === 'hive' && (a as Hive).hiveId === insect.hiveId) as Hive | undefined;
     }
     
-    private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
+    protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
            (actor) => actor.type === 'flower'
        ) as Flower | undefined;
    }
 
-    private handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
+    protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const { pollen } = insect;
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y }, context.claimedCellsThisTick);

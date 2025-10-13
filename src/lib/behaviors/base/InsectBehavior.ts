@@ -1,14 +1,15 @@
-import type { Insect, Cockroach, Flower } from '../../../types';
+import type { Insect, Cockroach, Flower, InsectBehaviorContext } from '../../../types';
 import { 
     INSECT_HEALTH_DECAY_PER_TICK,
     INSECT_DATA,
     CORPSE_DECAY_TIME,
     SLIME_TRAIL_SLOW_FACTOR,
     FOOD_VALUE_CORPSE,
+    INSECT_POLLINATION_CHANCE,
 } from '../../../constants';
-import { neighborVectors, scoreFlower } from '../../simulationUtils';
+import { neighborVectors, scoreFlower, findCellForFlowerSpawn, getActorsOnCell } from '../../simulationUtils';
 import { Rectangle } from '../../Quadtree';
-import type { InsectBehaviorContext } from '../../../types';
+
 const INSECT_VISION_RANGE = 5;
 
 /**
@@ -47,6 +48,12 @@ export abstract class InsectBehavior {
         }
         return false;
     }
+
+    protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
+         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
+            (actor) => actor.type === 'flower'
+        ) as Flower | undefined;
+   }
 
     /**
      * Finds the best flower target for an insect based on its genome.
@@ -126,5 +133,19 @@ export abstract class InsectBehavior {
             }
         }
         return false;
+    }
+
+    protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
+        const { pollen } = insect;
+        if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
+            const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y }, context.claimedCellsThisTick);
+            if (spawnSpot) {
+                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
+                if (seed) {
+                    context.newActorQueue.push(seed);
+                    context.claimedCellsThisTick.add(`flower-${spawnSpot.x}-${spawnSpot.y}`);
+                }
+            }
+        }
     }
 }
