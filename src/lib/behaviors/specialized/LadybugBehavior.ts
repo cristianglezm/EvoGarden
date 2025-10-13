@@ -16,7 +16,6 @@ const LADYBUG_VISION_RANGE = 7;
 export class LadybugBehavior extends InsectBehavior {
     public update(insect: Insect, context: InsectBehaviorContext): void {
         if (this.handleHealthAndDeath(insect, context)) return;
-
         if (context.currentTemperature < INSECT_DORMANCY_TEMP) return;
 
         // Reset target if it's gone
@@ -25,21 +24,35 @@ export class LadybugBehavior extends InsectBehavior {
             insect.isHunting = false;
         }
 
-        const hasInteracted = this.handleInteraction(insect, context);
-        if (hasInteracted) {
-             // Don't move after eating, just regen stamina
-             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
-             return;
+        const interactionType = this.handleInteraction(insect, context);
+        
+        let hasMoved = false;
+        if (interactionType === 'prey') {
+            // Ate prey, stay put and recover stamina.
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+            return; // Exit early as per original logic
+        } else if (interactionType === 'flower') {
+            // Pollinated, so wander away to a new spot.
+            if (insect.stamina >= INSECT_MOVE_COST) {
+                if(this.wander(insect, context)) {
+                   insect.stamina -= INSECT_MOVE_COST;
+                   hasMoved = true;
+                }
+            }
+        } else {
+            // No interaction, perform standard movement logic to find a target.
+            hasMoved = this.handleMovement(insect, context);
         }
         
-        const hasMoved = this.handleMovement(insect, context);
-        
-        if (!hasInteracted && !hasMoved) {
+        // Final stamina check for idle states.
+        if (!interactionType && !hasMoved) { // Did not interact and did not move (e.g., couldn't find a target)
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+        } else if (interactionType === 'flower' && !hasMoved) { // Pollinated but couldn't move away (e.g., low stamina)
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
 
-    private handleInteraction(insect: Insect, context: InsectBehaviorContext): boolean {
+    private handleInteraction(insect: Insect, context: InsectBehaviorContext): 'prey' | 'flower' | null {
         const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
         // Priority 1: Eat caterpillar
         const caterpillarOnCell = actorsOnCell
@@ -52,7 +65,7 @@ export class LadybugBehavior extends InsectBehavior {
             insect.targetId = undefined;
             insect.isHunting = false;
             context.events.push({ message: '🐞 A ladybug ate a caterpillar!', type: 'info', importance: 'low' });
-            return true;
+            return 'prey';
         }
 
         // Priority 2: Eat egg or cocoon (not its own)
@@ -70,10 +83,19 @@ export class LadybugBehavior extends InsectBehavior {
                 insect.targetId = undefined;
                 insect.isHunting = false;
                 context.events.push({ message: `🐞 A ladybug ate a ${preyOnCell.type}!`, type: 'info', importance: 'low' });
-                return true;
+                return 'prey';
             }
         }
-        return false;
+        
+        // Priority 3: Pollinate a flower if not hunting
+        const flowerOnCell = this.findFlowerOnCell(insect.x, insect.y, context);
+        if (flowerOnCell && !insect.isHunting) {
+            this.handlePollination(insect, flowerOnCell, context);
+            insect.pollen = { genome: flowerOnCell.genome, sourceFlowerId: flowerOnCell.id, score: 0 };
+            return 'flower';
+        }
+
+        return null;
     }
 
     private handleMovement(insect: Insect, context: InsectBehaviorContext): boolean {
@@ -97,6 +119,15 @@ export class LadybugBehavior extends InsectBehavior {
         
         const target = insect.targetId ? context.nextActorState.get(insect.targetId) : null;
         if (target) {
+            // Handle arrival at target
+            if (insect.x === target.x && insect.y === target.y) {
+                // If it arrived at a flower, it will interact next tick. Clear target to re-evaluate.
+                // If it arrived at prey, it will also interact next tick.
+                insect.targetId = undefined;
+                insect.isHunting = false;
+                return false; // Did not move this tick because it arrived.
+            }
+            // Move towards target
             if (this.moveTowards(insect, target, context)) {
                 insect.stamina -= INSECT_MOVE_COST;
                 return true;

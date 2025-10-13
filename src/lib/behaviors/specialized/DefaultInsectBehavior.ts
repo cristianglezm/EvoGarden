@@ -1,6 +1,5 @@
 import type { Insect, Flower } from '../../../types';
 import { 
-    INSECT_POLLINATION_CHANCE, 
     INSECT_DORMANCY_TEMP, 
     INSECT_HEAL_FROM_HEALING_FLOWER, 
     INSECT_STAMINA_REGEN_PER_TICK,
@@ -10,7 +9,7 @@ import {
     INSECT_STAMINA_GAIN_FROM_EATING,
     INSECT_DAMAGE_FROM_TOXIC_FLOWER
 } from '../../../constants';
-import { findCellForFlowerSpawn, scoreFlower, getActorsOnCell } from '../../simulationUtils';
+import { scoreFlower } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../../../types';
 
@@ -53,12 +52,6 @@ export class DefaultInsectBehavior extends InsectBehavior {
         }
     }
     
-    protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
-            (actor) => actor.type === 'flower'
-        ) as Flower | undefined;
-   }
-    
     protected handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get(insect.emoji)!;
         
@@ -85,19 +78,6 @@ export class DefaultInsectBehavior extends InsectBehavior {
         // Always pick up pollen from the interacted flower
         const pollenScore = scoreFlower(insect, flower);
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
-    }
-    
-    protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
-        const { pollen } = insect;
-        if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
-            const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });
-            if (spawnSpot) {
-                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
-                if (seed) {
-                    context.newActorQueue.push(seed);
-                }
-            }
-        }
     }
     
     protected handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext): boolean {
