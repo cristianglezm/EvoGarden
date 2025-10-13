@@ -68,6 +68,7 @@ export const DEFAULT_SIM_PARAMS: SimulationParams = {
 };
 
 // --- FLOWER CONSTANTS ---
+export const FLOWER_SPAWN_SEARCH_RADIUS = 3;
 export const FLOWER_TICK_COST_MULTIPLIER = 0.08;
 export const FLOWER_STAMINA_COST_PER_TICK = 1;
 export const FLOWER_HEALTH_COST_PER_TICK = 2; // when stamina is 0
@@ -151,7 +152,7 @@ export const INSECT_GENOME_LENGTH = Object.keys(FLOWER_STAT_INDICES).length;
 // Defines the base stats for each insect type
 export const INSECT_DATA: ReadonlyMap<string, InsectStats> = new Map([
     // Butterfly is a pure pollinator with no attack
-    ['🦋', { role: 'pollinator', attack: 0, maxHealth: 100, maxStamina: 40, speed: 2, eggHatchTime: 15, reproductionCost: 5 }],
+    ['🦋', { role: 'pollinator', attack: 0, maxHealth: 100, maxStamina: 40, speed: 2, eggHatchTime: 8, reproductionCost: 5 }],
     // Caterpillar is a voracious attacker
     ['🐛', { role: 'attacker', attack: 8, maxHealth: 150, maxStamina: 30, speed: 1, eggHatchTime: 20, reproductionCost: 0 }], // Caterpillars don't reproduce
     // Tank is slow and sturdy, low damage
