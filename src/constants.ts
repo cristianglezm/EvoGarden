@@ -90,7 +90,7 @@ export const CORPSE_DECAY_TIME = 25; // ticks
 export const BIRD_DROP_NUTRIENT_CHANCE = 0.05;
 
 // --- INSECT CONSTANTS ---
-export const INSECT_POLLINATION_CHANCE = 0.75;
+export const INSECT_POLLINATION_CHANCE = 0.5;
 export const TOXIC_FLOWER_THRESHOLD = 0.1;
 export const INSECT_DAMAGE_FROM_TOXIC_FLOWER = 5;
 export const INSECT_HEAL_FROM_HEALING_FLOWER = 5;

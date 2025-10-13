@@ -52,7 +52,7 @@ export class ButterflyBehavior extends InsectBehavior {
         }
     }
     
-    private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
+    protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
          return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
             (actor) => actor.type === 'flower'
         ) as Flower | undefined;
@@ -78,7 +78,7 @@ export class ButterflyBehavior extends InsectBehavior {
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
     }
     
-    private handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
+    protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const { pollen } = insect;
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });

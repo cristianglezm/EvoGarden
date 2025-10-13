@@ -54,7 +54,7 @@ export class CaterpillarBehavior extends InsectBehavior {
         }
     }
     
-    private findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
+    protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
          return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
             (actor) => actor.type === 'flower'
         ) as Flower | undefined;
