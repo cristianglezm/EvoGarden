@@ -6,7 +6,7 @@ export class ControlPanelController {
 
   constructor(page: Page) {
     this.page = page;
-    this.panel = page.locator('aside:has-text("Controls")');
+    this.panel = page.locator('aside:has(h2:has-text("Controls"))');
   }
 
   async open() {
@@ -145,7 +145,8 @@ export class ControlPanelController {
 
   async runSimulation(seconds: number) {
     await this.open();
-    await this.getStart().click();
+    await this.getStart().click(); // This automatically closes the panel
+    await expect(this.panel).not.toBeInViewport();
     await this.page.waitForTimeout(seconds * 1000);
     await this.open();
     await this.getPause().click();

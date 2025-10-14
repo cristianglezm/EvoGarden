@@ -53,7 +53,7 @@ export const ACTOR_NAMES: Record<string, string> = {
   '💀': 'Corpse',
   '⚪️': 'Cocoon',
   '🛖': 'Hive',
-  '🐜 Colony': 'Ant Colony',
+  '⛰️': 'Ant Colony',
   '💧': 'Slime Trail',
   '📍': 'Territory Mark',
   'Pheromone Trail': 'Pheromone Trail',

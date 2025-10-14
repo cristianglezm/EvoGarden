@@ -187,5 +187,26 @@ self.onmessage = async (e: MessageEvent) => {
              self.postMessage({ type: 'load-complete', payload: engine.getGridState() });
              isLoadingState = false;
             break;
+
+        case 'trigger-weather':
+            if (engine) {
+                engine.triggerWeatherEvent(payload.eventType);
+            }
+            break;
+        case 'introduce-species':
+            if (engine) {
+                engine.introduceSpecies(payload.emoji, payload.count);
+            }
+            break;
+        case 'introduce-stationary':
+            if (engine) {
+                engine.introduceStationary(payload.actorType, payload.count);
+            }
+            break;
+        case 'plant-champion-seed':
+            if (engine) {
+                engine.plantChampionSeed(payload.genome, payload.sex, payload.position);
+            }
+            break;
     }
 };

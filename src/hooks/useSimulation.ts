@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { SimulationParams, AppEvent, CellContent, ActorDelta, TickSummary } from '../types';
+import type { SimulationParams, AppEvent, CellContent, ActorDelta, TickSummary, Coord } from '../types';
 import { useChallengeStore } from '../stores/challengeStore';
 import { eventService } from '../services/eventService';
 
@@ -127,5 +127,21 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         }
     };
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary };
+    const triggerWeatherEvent = useCallback((eventType: 'heatwave' | 'coldsnap' | 'heavyrain' | 'drought') => {
+        workerRef.current?.postMessage({ type: 'trigger-weather', payload: { eventType } });
+    }, []);
+
+    const introduceSpecies = useCallback((emoji: string, count: number) => {
+        workerRef.current?.postMessage({ type: 'introduce-species', payload: { emoji, count } });
+    }, []);
+
+    const introduceStationary = useCallback((actorType: 'hive' | 'antColony', count: number) => {
+        workerRef.current?.postMessage({ type: 'introduce-stationary', payload: { actorType, count } });
+    }, []);
+    
+    const plantChampionSeed = useCallback((genome: string, sex: 'male' | 'female' | 'both', position: Coord) => {
+        workerRef.current?.postMessage({ type: 'plant-champion-seed', payload: { genome, sex, position } });
+    }, []);
+
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed };
 };

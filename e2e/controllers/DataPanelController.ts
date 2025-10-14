@@ -46,7 +46,7 @@ export class DataPanelController {
 
   async goToSeedBankTab() {
     await this.getSeedBankTab().click();
-    // Check for some static text to confirm the tab is loaded.
-    await expect(this.page.getByText('The Seed Bank is empty.')).toBeVisible();
+    // Check for either the empty message or a champion card title to confirm the tab is loaded.
+    await expect(this.panel.getByText(/Longest Lived|The Seed Bank is empty/)).toBeVisible();
   }
 }

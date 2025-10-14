@@ -2,9 +2,9 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { SimulationView } from './components/SimulationView';
 import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
-import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach } from './types';
+import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach, Coord } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
-import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon } from './components/icons';
+import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
 import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
@@ -21,6 +21,7 @@ import { EggDetailsPanel } from './components/EggDetailsPanel';
 import { GenericActorDetailsPanel } from './components/GenericActorDetailsPanel';
 import { StatusPanel } from './components/StatusPanel';
 import { Logo } from './components/Logo';
+import { ToolsPanel } from './components/ToolsPanel';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -71,6 +72,7 @@ export default function App(): React.ReactNode {
   const [selectedActor, setSelectedActor] = useState<CellContent | null>(null);
   const [actorsInSelectedCell, setActorsInSelectedCell] = useState<CellContent[]>([]);
   const [isControlsOpen, setIsControlsOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
   const [isFullLogOpen, setIsFullLogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +81,7 @@ export default function App(): React.ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [hasSavedState, setHasSavedState] = useState(false);
   const [isServiceInitialized, setIsServiceInitialized] = useState(false);
+  const [plantingInfo, setPlantingInfo] = useState<{ genome: string; sex: 'male' | 'female' | 'both' } | null>(null);
   const wasRunningBeforeSelectionRef = useRef(false);
   const wasRunningBeforeLogRef = useRef(false);
 
@@ -86,6 +89,8 @@ export default function App(): React.ReactNode {
   const detailsPanelRef = useRef<HTMLDivElement>(null);
   const controlsButtonRef = useRef<HTMLButtonElement>(null);
   const controlsPanelRef = useRef<HTMLDivElement>(null);
+  const toolsButtonRef = useRef<HTMLButtonElement>(null);
+  const toolsPanelRef = useRef<HTMLDivElement>(null);
   const simulationViewRef = useRef<HTMLDivElement>(null);
   const paramsRef = useRef(params);
 
@@ -94,8 +99,25 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed } = useSimulation({ setIsLoading });
   const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
+
+    const handleEnterPlantingMode = (genome: string, sex: 'male' | 'female' | 'both') => {
+        setPlantingInfo({ genome, sex });
+        setIsToolsOpen(false); // Close panel to allow clicking on the grid
+    };
+
+    const handleCancelPlanting = () => {
+        setPlantingInfo(null);
+    };
+
+    const handlePlantOnCell = (coords: Coord) => {
+        if (plantingInfo) {
+            plantChampionSeed(plantingInfo.genome, plantingInfo.sex, coords);
+            setPlantingInfo(null);
+            eventService.dispatch({ type: 'success', importance: 'high', message: 'Champion seed planted!' });
+        }
+    };
 
   useEffect(() => {
     if (workerError) {
@@ -254,9 +276,11 @@ export default function App(): React.ReactNode {
         const isClickInsideDetails = detailsPanelRef.current?.contains(event.target as Node);
         const isClickInsideControlsButton = controlsButtonRef.current?.contains(event.target as Node);
         const isClickInsideControlsPanel = controlsPanelRef.current?.contains(event.target as Node);
+        const isClickInsideToolsButton = toolsButtonRef.current?.contains(event.target as Node);
+        const isClickInsideToolsPanel = toolsPanelRef.current?.contains(event.target as Node);
         const isClickInsideSimulationView = simulationViewRef.current?.contains(event.target as Node);
 
-        if (isClickInsideSimulationView || isClickInsideDetails || isClickInsideControlsButton || isClickInsideControlsPanel) {
+        if (isClickInsideSimulationView || isClickInsideDetails || isClickInsideControlsButton || isClickInsideControlsPanel || isClickInsideToolsButton || isClickInsideToolsPanel) {
             return;
         }
 
@@ -517,9 +541,20 @@ const detailsPanel = renderDetailsPanel();
             onCellClick={handleCellClick}
             selectedActorId={selectedActor?.id ?? null}
             onFrameRendered={handleFrameRendered}
+            plantingInfo={plantingInfo}
+            onPlantOnCell={handlePlantOnCell}
           />
         </div>
       </main>
+
+        {plantingInfo && (
+            <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-accent-yellow/80 text-background font-bold px-4 py-2 rounded-lg shadow-lg z-20 flex items-center gap-4">
+                <span>Planting Mode: Click an empty cell to plant your champion.</span>
+                <button onClick={handleCancelPlanting} className="p-1 hover:bg-black/20 rounded-full">
+                    <XIcon className="w-5 h-5" />
+                </button>
+            </div>
+        )}
 
        {/* UI Buttons */}
       <div className="fixed top-24 right-4 z-20 flex flex-col space-y-2">
@@ -532,7 +567,16 @@ const detailsPanel = renderDetailsPanel();
             >
                 <SettingsIcon className="w-6 h-6" />
             </button>
-             <button
+            <button
+                ref={toolsButtonRef}
+                onClick={() => setIsToolsOpen(true)}
+                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
+                aria-label="Open intervention tools panel"
+                title="Open Intervention Tools"
+            >
+                <ToolboxIcon className="w-6 h-6" />
+            </button>
+            <button
                 onClick={() => setIsDataPanelOpen(true)}
                 className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
                 aria-label="Open data panel"
@@ -549,6 +593,15 @@ const detailsPanel = renderDetailsPanel();
         setIsRunning={setIsRunning}
       />
       <FullEventLogPanel isOpen={isFullLogOpen} onClose={handleCloseFullLog} />
+      <ToolsPanel
+        isOpen={isToolsOpen}
+        onClose={() => setIsToolsOpen(false)}
+        params={params}
+        triggerWeatherEvent={triggerWeatherEvent}
+        introduceSpecies={introduceSpecies}
+        introduceStationary={introduceStationary}
+        onEnterPlantingMode={handleEnterPlantingMode}
+      />
 
       {/* Controls Panel Overlay */}
       <div 
