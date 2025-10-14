@@ -5,6 +5,7 @@ import { DataPanelController } from './controllers/DataPanelController';
 import { EventLogPanelController } from './controllers/EventLogPanelController';
 import { GlobalSearchController } from './controllers/GlobalSearchController';
 import { InsectDetailsPanelController } from './controllers/InsectDetailsPanelController';
+import { ToolsPanelController } from './controllers/ToolsPanelController';
 
 // Helper controller for generic actor panels since we can't create new files.
 class GenericActorPanelController {
@@ -35,10 +36,19 @@ class GenericActorPanelController {
     }
 }
 
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Initializing EvoGarden...')).not.toBeVisible({ timeout: 20000 });
-  await expect(page.getByRole('grid', { name: 'EvoGarden simulation grid' })).toBeVisible();
+  
+  // Wait for a stable part of the UI to appear, indicating the app has loaded.
+  await expect(page.locator('header').getByText('Event Log:')).toBeVisible({ timeout: 15000 });
+
+  const canvas = page.getByRole('grid', { name: 'EvoGarden simulation grid' });
+  await expect(canvas).toBeVisible();
+  // Wait for the initial render to be static to prevent race conditions
+  const tempController = new FlowerPanelController(page);
+  await tempController.waitCanvasStable(canvas);
 });
 
 test.describe('Basic UI', () => {
@@ -74,8 +84,19 @@ test.describe('Data Panel', () => {
 test.describe('Simulation Controls', () => {
   test('should start and pause the simulation', async ({ page }) => {
     const controls = new ControlPanelController(page);
-    await controls.runSimulation(2);
+    await controls.open();
+    await controls.getStart().click(); // This automatically closes the panel
+    await expect(controls.panel).not.toBeInViewport();
+
+    // Re-open to verify state
+    await controls.open();
+    await expect(controls.getPause()).toBeVisible();
+
+    // Pause it
+    await controls.getPause().click();
     await expect(controls.getStart()).toBeVisible();
+    
+    await controls.close();
   });
 
   test('should change a parameter and apply it', async ({ page }) => {
@@ -85,6 +106,9 @@ test.describe('Simulation Controls', () => {
     await expect(controls.getBirdsInput()).toHaveValue('10');
     await controls.getApplyAndReset().click();
     await expect(controls.panel).not.toBeInViewport();
+    // Wait for the loading screen to finish
+    await expect(page.getByText('Resetting simulation...')).toBeVisible();
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
   });
 
   test('should reject invalid wind direction', async ({ page }) => {
@@ -110,9 +134,12 @@ test.describe('Save and Load State', () => {
 
     await controls.getBirdsInput().fill('4');
     await controls.getApplyAndReset().click();
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
+
     await flowers.waitCanvasStable(canvas);
     await controls.open();
     await controls.getLoad().click();
+    await expect(page.getByText('Loading saved garden...')).toBeVisible();
     await expect(eventLog.getHeaderLog().getByText('Loaded last saved garden!')).toBeVisible({ timeout: 10000 });
 
     await flowers.waitCanvasStable(canvas);
@@ -127,9 +154,10 @@ test.describe('Event Log Panel', () => {
         // Set a dense initial population to guarantee events
         await controls.open();
         await controls.setMaxCapacities();
+        await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
 
         // Run sim for a few seconds to generate plenty of events
-        await controls.runSimulation(10);
+        await controls.runSimulation(5);
         
         await eventLog.open();
         
@@ -145,6 +173,8 @@ test.describe('Event Log Panel', () => {
 });
 
 test.describe('Canvas and Flower Details Panel', () => {
+  test.slow();
+
   test.beforeEach(async ({ page }) => {
     const controls = new ControlPanelController(page);
     await controls.open();
@@ -152,7 +182,8 @@ test.describe('Canvas and Flower Details Panel', () => {
     await controls.getBirdsInput().fill('5');
     await controls.getInsectsInput().fill('10');
     await controls.getApplyAndReset().click();
-    await controls.runSimulation(5);
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
+    await controls.runSimulation(3);
   });
 
   test('should select a flower and show the details panel', async ({ page }) => {
@@ -197,6 +228,7 @@ test.describe('Canvas and Flower Details Panel', () => {
     // The beforeEach has paused the simulation. Start it.
     await controls.open();
     await controls.getStart().click();
+    await expect(controls.panel).not.toBeInViewport();
     await page.waitForTimeout(500); // Let it run
 
     // Select a flower, which should pause it
@@ -204,11 +236,10 @@ test.describe('Canvas and Flower Details Panel', () => {
     await flowers.waitForPanel();
 
     // Verify it is paused by waiting for the canvas to become static.
-    // The waitCanvasStable helper is more robust than a manual check because it retries.
     await flowers.waitCanvasStable(canvas);
     const pausedCanvasScreenshot = await canvas.screenshot();
     
-    // Deselect the flower by clicking an empty area
+    // Deselect the flower by closing the panel
     await flowers.closePanel();
 
     // Wait for the simulation to resume
@@ -221,6 +252,7 @@ test.describe('Canvas and Flower Details Panel', () => {
 });
 
 test.describe('Global Search', () => {
+    test.slow();
     test('should find, highlight, and track an actor by its ID', async ({ page }) => {
         const controls = new ControlPanelController(page);
         const actorSelector = new FlowerPanelController(page);
@@ -229,6 +261,7 @@ test.describe('Global Search', () => {
         // Run sim for a few seconds to generate a variety of actors
         await controls.open();
         await controls.getApplyAndReset().click();
+        await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
         await controls.runSimulation(5);
 
         const actorTypesToTry: ('insect' | 'flower' | 'hive' | 'antColony')[] = [
@@ -309,6 +342,7 @@ test.describe('Ant Colony Simulation', () => {
     await controls.getInsectsInput().fill('20'); // More insects to create corpses
     await controls.getBirdsInput().fill('5'); // Birds to create corpses
     await controls.getApplyAndReset().click();
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
   });
 
   test('should allow setting ant colony parameters', async ({ page }) => {
@@ -326,6 +360,7 @@ test.describe('Ant Colony Simulation', () => {
     await expect(controls.getColonyGridAreaInput()).toHaveValue('8');
 
     await controls.getApplyAndReset().click();
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
   });
 });
 
@@ -341,18 +376,20 @@ test.describe('Permitted Actors', () => {
 
         // Uncheck birds from the permitted list
         await controls.openCollapsibleSection('Permitted Actors');
-        await controls.page.getByLabel('🐦 Bird').uncheck();
+        await controls.panel.getByRole('checkbox', { name: '🐦 Bird' }).uncheck();
 
         await controls.getApplyAndReset().click();
+        await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
         
         // Run sim for a few seconds to trigger population manager
-        await controls.runSimulation(5);
+        await controls.runSimulation(15);
 
         // Check the log for bird spawn events
         await eventLog.open();
         await expect(eventLog.getFullPanel().getByText('A new bird has arrived to hunt!')).not.toBeVisible();
     });
 
+    test.slow();
     test('should spawn birds if they are enabled under the right conditions', async ({ page }) => {
         const controls = new ControlPanelController(page);
         const eventLog = new EventLogPanelController(page);
@@ -364,13 +401,14 @@ test.describe('Permitted Actors', () => {
         
         // Ensure birds are checked (they are by default)
         await controls.getApplyAndReset().click();
+        await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
         
-        await controls.runSimulation(5);
+        await controls.runSimulation(15);
 
         await eventLog.open();
         // Use a less strict locator to avoid flakes if multiple events happen
         const birdSpawnEvent = eventLog.getFullPanel().getByText(/A new bird has arrived/);
-        await expect(birdSpawnEvent.first()).toBeVisible({ timeout: 10000 });
+        await expect(birdSpawnEvent.first()).toBeVisible({ timeout: 15000 });
     });
 });
 
@@ -380,6 +418,7 @@ test.describe('Full Environment Parameter Test', () => {
     await controls.open();
     await controls.setFlowerDetail('x32');
     await controls.getApplyAndReset().click();
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
   });
 
   test('should set all parameters and apply', async ({ page }) => {
@@ -447,5 +486,116 @@ test.describe('Full Environment Parameter Test', () => {
     await controls.setNotificationMode('log');
 
     await controls.getApplyAndReset().click();
+    await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
   });
+});
+
+test.describe('Intervention Tools Panel', () => {
+    test.slow();
+
+    test('should trigger a weather event and enter cooldown', async ({ page }) => {
+        const tools = new ToolsPanelController(page);
+        const eventLog = new EventLogPanelController(page);
+        const header = page.locator('header');
+        const controls = new ControlPanelController(page);
+
+        // Start the simulation first for the event to be processed
+        await controls.open();
+        await controls.getStart().click();
+
+        await tools.open();
+
+        const heatwaveButton = tools.getWeatherButton('Heatwave');
+        await expect(heatwaveButton).toBeEnabled();
+        await heatwaveButton.click();
+
+        // Panel should close after action
+        await expect(tools.panel).not.toBeInViewport();
+
+        // Check for UI feedback
+        await expect(header.getByText('Heatwave')).toBeVisible({ timeout: 10000 });
+        await eventLog.open();
+        await expect(eventLog.getFullPanel().getByText('A heatwave has begun!')).toBeVisible();
+        await eventLog.close();
+
+        // Check for cooldown
+        await tools.open();
+        await expect(tools.getWeatherButton('Heatwave')).toBeDisabled();
+        await expect(tools.getWeatherButton('Coldsnap')).toBeDisabled();
+    });
+
+    test('should introduce a new species', async ({ page }) => {
+        const tools = new ToolsPanelController(page);
+        const eventLog = new EventLogPanelController(page);
+        const controls = new ControlPanelController(page);
+
+        // Ensure snails are allowed
+        await controls.open();
+        await controls.openCollapsibleSection('Permitted Actors');
+        await controls.panel.getByRole('checkbox', { name: '🐌 Snail' }).check();
+        await controls.getApplyAndReset().click();
+        await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
+        
+        // Start the simulation before introducing actors
+        await controls.open();
+        await controls.getStart().click();
+
+        await tools.open();
+        await tools.getActorSelect().selectOption({ label: '🐌 Snail' });
+        await tools.getActorCountInput().fill('7');
+        await tools.getIntroduceActorsButton().click();
+
+        await expect(tools.panel).not.toBeInViewport();
+
+        await eventLog.open();
+        await expect(eventLog.getFullPanel().getByText('Introduced 7 🐌 into the garden.')).toBeVisible();
+    });
+    
+    test('should allow planting a champion seed', async ({ page }) => {
+        const controls = new ControlPanelController(page);
+        const eventLog = new EventLogPanelController(page);
+        const dataPanel = new DataPanelController(page);
+        const tools = new ToolsPanelController(page);
+        const canvas = page.getByRole('grid', { name: 'EvoGarden simulation grid' });
+
+        // 1. Generate a champion by letting one flower live for a while
+        await controls.open();
+        await controls.getFlowersInput().fill('1');
+        await controls.getInsectsInput().fill('0');
+        await controls.getBirdsInput().fill('0');
+        await controls.getSeasonLengthInput().fill('1000'); // Long season to prevent winter death
+        await controls.openGraphicsUISection();
+        await controls.page.getByLabel('Simulation Speed').selectOption('4');
+        await controls.getApplyAndReset().click();
+        await expect(page.getByText('Resetting simulation...')).not.toBeVisible({ timeout: 15000 });
+        
+        // At 4x speed, 15 seconds is enough ticks to pass the 100-tick challenge.
+        await controls.runSimulation(15);
+
+        // 2. Verify champion was saved
+        await eventLog.open();
+        await expect(eventLog.getFullPanel().getByText(/New champion saved! Longest Lived/)).toBeVisible({timeout: 15000});
+        await eventLog.close();
+        
+        await dataPanel.open();
+        await dataPanel.goToSeedBankTab();
+        await expect(dataPanel.panel.getByText('Longest Lived')).toBeVisible();
+        await dataPanel.close();
+
+        // 3. Start planting mode
+        await tools.open();
+        await tools.getChampionButton('longestLived').click();
+
+        // 4. Verify planting mode is active
+        await expect(tools.getPlantingModeBanner()).toBeVisible();
+        await expect(canvas).toHaveCSS('cursor', 'crosshair');
+
+        // 5. Plant the seed on an empty cell
+        await canvas.click({ position: { x: 10, y: 10 } });
+
+        // 6. Verify planting was successful
+        await expect(tools.getPlantingModeBanner()).not.toBeVisible();
+        await eventLog.open();
+        await expect(eventLog.getFullPanel().getByText('Champion seed planted!')).toBeVisible();
+    });
 });

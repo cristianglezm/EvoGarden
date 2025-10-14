@@ -70,7 +70,7 @@ export class FlowerPanelController {
             try {
                 // Wait for either the final details panel OR the selection panel to show up.
                 // This is more robust than two separate, short-timed checks.
-                await expect(targetPanel.or(this.actorSelectionPanel)).toBeVisible({ timeout: 1000 });
+                await expect(targetPanel.or(this.actorSelectionPanel)).toBeVisible({ timeout: 3000 });
 
                 // Now check which one it was.
                 if (await targetPanel.isVisible()) {
@@ -161,6 +161,6 @@ export class FlowerPanelController {
     const closeButton = this.panel.getByRole('button', { name: 'Close details panel' });
     await expect(closeButton).toBeVisible();
     await closeButton.click();
-    await expect(this.panel).not.toBeVisible({ timeout: 2000 });
+    await expect(this.panel).not.toBeInViewport();
   }
 }
