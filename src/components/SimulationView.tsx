@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import type { SimulationParams, CellContent } from '../types';
+import type { CellContent, SimulationParams, Coord } from '../types';
 import { RenderingEngine } from '../lib/renderingEngine';
+import { eventService } from '../services/eventService';
 
 const CELL_SIZE_PX = 64;
 
@@ -10,9 +11,11 @@ interface SimulationViewProps {
     selectedActorId: string | null;
     actors: Map<string, CellContent>;
     onFrameRendered: (renderTimeMs: number) => void;
+    plantingInfo: { genome: string; sex: 'male' | 'female' | 'both' } | null;
+    onPlantOnCell: (coords: Coord) => void;
 }
 
-export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellClick, selectedActorId, actors, onFrameRendered }) => {
+export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellClick, selectedActorId, actors, onFrameRendered, plantingInfo, onPlantOnCell }) => {
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const engineRef = useRef<RenderingEngine | null>(null);
@@ -59,6 +62,16 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
 
         const gridX = Math.floor(x / CELL_SIZE_PX);
         const gridY = Math.floor(y / CELL_SIZE_PX);
+
+        if (plantingInfo) {
+            const actorsInCell = Array.from(actors.values()).filter(actor => actor.x === gridX && actor.y === gridY);
+            if (actorsInCell.length === 0) {
+                onPlantOnCell({ x: gridX, y: gridY });
+            } else {
+                eventService.dispatch({ message: 'Cannot plant on an occupied cell.', type: 'error', importance: 'high' });
+            }
+            return;
+        }
         
         const actorsInCell: CellContent[] = [];
         for (const actor of actors.values()) {
@@ -68,7 +81,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
         }
         
         onCellClick(actorsInCell);
-    }, [actors, onCellClick]);
+    }, [actors, onCellClick, plantingInfo, onPlantOnCell]);
 
     const canvasWidth = params.gridWidth * CELL_SIZE_PX;
     const canvasHeight = params.gridHeight * CELL_SIZE_PX;
@@ -87,7 +100,7 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
                 <canvas
                     ref={fgCanvasRef}
                     onClick={handleClick}
-                    className="absolute top-0 left-0 cursor-pointer"
+                    className={`absolute top-0 left-0 ${plantingInfo ? 'cursor-crosshair' : 'cursor-pointer'}`}
                     role="grid"
                     aria-label="EvoGarden simulation grid"
                 />

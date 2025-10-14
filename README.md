@@ -14,6 +14,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 ## ✨ Features
 
 -   **Dynamic Weather & Seasons**: Experience a living environment with four distinct seasons (Spring, Summer, Autumn, Winter) that cyclically affect temperature and humidity. Be prepared for unpredictable weather events like heatwaves, cold snaps, heavy rain, and droughts that create new evolutionary pressures.
+-   **Direct Intervention Tools**: Take on the role of a gardener god. Manually trigger weather events like heatwaves or droughts, introduce new species into the ecosystem to see how they adapt, or plant champion flowers from your Seed Bank directly onto the grid.
 -   **Intelligent Insects with Genetic AI**: Insects no longer move randomly. Each insect has a unique genetic code (genome) that determines its preferences for different flower traits. They actively seek out flowers that best match their genes, creating complex and emergent behaviors.
 -   **Complex Social Insects & Warfare (Honeybees)**: Introducing Honeybees (`🐝`), Hives (`🛖`), and a dynamic territory system. Bees work together to gather pollen and produce honey. But they are also territorial; when bees from rival hives meet, they fight. They can leave `UNDER_ATTACK` signals on their territory marks, which propagate through the network to call for backup, creating emergent hive-vs-hive battles.
 -   **Intelligent Ant Colonies & Warfare (`🐜`, `⛰️`)**: Ants establish colonies and work together as efficient scavengers, leaving decaying pheromone trails for other ants to follow to food. They are also territorial and will attack ants from rival colonies on sight, leaving warning signals on their trails to alert their nestmates to danger.
@@ -141,6 +142,12 @@ The garden is a self-regulating system. A dedicated **`PopulationManager`** acti
 -   **Insect Booms**: If the insect population grows too rapidly, the manager will dynamically spawn a new **bird**.
 -   **Insect Crashes & Apex Predators**: If the insect population begins to crash, the manager intervenes by spawning an **eagle** to hunt a single bird.
 
+### User Intervention Tools
+The simulation is not just a passive experience. The **Intervention Tools** panel gives you direct control over the environment:
+-   **Weather Control**: Instantly trigger any of the four major weather events (Heatwave, Coldsnap, Heavy Rain, Drought) to test the resilience of your ecosystem. A cooldown prevents overuse.
+-   **Introduce Species**: Inject a specific number of any permitted actor—from snails to birds to entire ant colonies—into the garden at random locations.
+-   **Plant a Champion**: Select a prized flower from your Seed Bank and enter "Planting Mode." Click any empty cell on the grid to plant your champion's seed, giving its superior genetics a fresh start.
+
 ## 🧬 The Genetics Engine: `@cristianglezm/flower-evolver-wasm`
 
 The visual variety and evolutionary mechanics are powered by a custom WebAssembly module. This service is responsible for creating and manipulating the genetic code of the flowers and rendering them as SVGs or 3D models.
@@ -160,49 +167,39 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
 -   `package.json`: Defines project metadata, scripts (`dev`, `build`), and dependencies.
 -   `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`: Configuration files for the Vite build tool and the Tailwind CSS styling pipeline.
 -   `src/`: Contains all the application source code.
-    -   `src/index.tsx`: The main entry point for the React application.
-    -   `src/App.tsx`: The root React component. Manages global state and layout.
-    -   `src/hooks/useSimulation.ts`: **Simulation Manager.** A custom hook that acts as a bridge to the simulation's Web Worker, managing its lifecycle and communication.
-    -   `src/hooks/useActorTracker.ts`: **Actor Tracking.** A custom hook that contains the logic for selecting and following a specific actor in real-time.
-    -   `src/simulation.worker.ts`: **Simulation Host.** This Web Worker runs on a separate thread and acts as a message broker between the main UI thread and the simulation logic. It's primary role is to host the `SimulationEngine` to prevent the UI from freezing during heavy calculations.
-    -   `src/flower.worker.ts`: **Genetics Worker.** A dedicated worker that handles all expensive, asynchronous calls to the WASM genetics module, ensuring the simulation worker is never blocked.
-    -   `src/lib/simulationEngine.ts`: **Simulation Orchestrator.** This class acts as a high-level orchestrator for the simulation's main loop, delegating tasks to specialized managers.
-    -   `src/lib/PopulationManager.ts`: **Ecosystem Balancing.** This class encapsulates all logic related to population control. It tracks population histories, manages cooldowns, and decides when to introduce new birds, eagles, or herbicide planes.
-    -   `src/lib/AsyncFlowerFactory.ts`: **Asynchronous Genetics.** Manages all communication with the `flower.worker.ts`, handling the creation of new flowers without blocking the simulation.
-    -   `src/lib/EcosystemManager.ts`: A module that contains functions for system-wide behaviors like nutrient healing and **insect reproduction**, which includes genetic crossover and mutation logic for offspring.
-    -   `src/lib/behaviors/`: Contains individual behavior modules for each actor type (`birdBehavior`, `insectBehavior`, `slimeTrailBehavior`, etc.). These modules are called by the `SimulationEngine` to process each actor's logic for a given tick, promoting a clean separation of concerns.
-    -   `src/lib/behaviors/antColonyBehavior.ts`: The behavior for Ant Colonies.
-    -   `src/lib/behaviors/pheromoneTrailBehavior.ts`: The behavior for Pheromone Trails.
-    -   `src/lib/behaviors/spiderWebBehavior.ts`: The behavior for Spider Webs.
-    -   `src/lib/behaviors/specialized/AntBehavior.ts`: The specialized behavior for Ants.
-    -   `src/lib/behaviors/specialized/SpiderBehavior.ts`: The specialized behavior for Spiders.
-    -   `src/lib/renderingEngine.ts`: A dedicated class for managing the two-canvas rendering system, including change detection and drawing logic.
-    -   `src/lib/Quadtree.ts`: A generic Quadtree data structure for efficient 2D spatial queries.
-    -   `src/lib/Trie.ts`: A generic Trie data structure for efficient prefix-based string searching, used by the `GlobalSearch` component.
-    -   `src/components/SimulationView.tsx`: Hosts the two stacked canvas elements and orchestrates the `RenderingEngine`.
-    -   `src/components/Controls.tsx`: UI for changing simulation parameters.
-    -   `src/components/ActorSelectionPanel.tsx`: A panel that appears when a user clicks a cell containing multiple actors.
-    -   `src/components/FlowerDetailsPanel.tsx`: UI that displays the stats of the selected flower. It handles pausing the simulation when its "View in 3D" button is clicked and includes a button to initiate tracking.
-    -   `src/components/InsectDetailsPanel.tsx`: UI that displays the stats of the selected insect.
-    -   `src/components/EggDetailsPanel.tsx`: UI that displays info about a selected egg.
-    -   `src/components/GenericActorDetailsPanel.tsx`: A fallback UI for displaying info about other actors.
-    -   `src/components/Flower3DViewer.tsx`: A React-Three-Fiber component that renders the 3D flower model.
-    -   `src/components/Modal.tsx`: A generic modal component.
-    -   `src/components/DataPanel.tsx`: The main UI for the slide-out panel containing challenges, analytics, and the Seed Bank, with a tabbed interface.
-    -   `src/components/ChallengesPanel.tsx`: Renders the list of challenges and their progress.
-    -   `src/components/ChartsPanel.tsx`: The main container for the analytics tab that renders the individual chart components.
-    -   `src/components/charts/`: A directory containing individual, specialized chart components (`PopulationChart`, `EnvironmentChart`, etc.), making the analytics section more modular.
-    -   `src/components/Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
-    -   `src/components/SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
-    -   `src/components/StatusPanel.tsx`: The main container in the header for status information, including the global search widget.
-    -   `src/components/GlobalSearch.tsx`: The UI component for the global actor search and tracking widget located in the header.
-    -   `src/components/Toast.tsx`: Renders a single toast notification.
-    -   `src/components/ToastContainer.tsx`: Manages the on-screen layout and rendering of all active toasts.
-    -   `src/services/flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
-    -   `src/stores/`: Contains all Zustand global state management stores.
-    -   `src/utils.ts`: A module for shared utility functions.
-    -   `src/constants.ts`: Global simulation constants.
-    -   `src/types.ts`: Shared TypeScript types for the simulation.
+    -   **`index.tsx` & `App.tsx`**: The main entry points for the React application.
+    -   **`hooks/`**: Custom React hooks.
+        -   `useSimulation.ts`: Manages the simulation web worker and communication.
+        -   `useActorTracker.ts`: Encapsulates actor tracking logic.
+    -   **`workers/`**: Web Worker files.
+        -   `simulation.worker.ts`: Hosts the `SimulationEngine` and runs the main game loop.
+        -   `flower.worker.ts`: Handles all expensive calls to the WASM genetics module.
+    -   **`lib/`**: The core simulation logic.
+        -   `simulationEngine.ts`: The high-level orchestrator for the simulation's main loop.
+        -   `PopulationManager.ts`: Manages ecosystem balancing and dynamic actor spawning.
+        -   `AsyncFlowerFactory.ts`: Handles asynchronous communication with the `flower.worker.ts`.
+        -   `EcosystemManager.ts`: Contains functions for system-wide behaviors.
+        -   `behaviors/`: Contains individual behavior modules for each actor type.
+    -   **`components/`**: All React components.
+        -   **Main View**:
+            -   `SimulationView.tsx`: Hosts the two stacked canvas elements.
+        -   **UI Panels**:
+            -   `Controls.tsx`: UI for changing simulation parameters.
+            -   `ToolsPanel.tsx`: UI for direct user interventions (triggering weather, spawning actors).
+            -   `DataPanel.tsx`: Main UI for challenges, analytics, and the Seed Bank.
+            -   `...DetailsPanel.tsx`: A suite of panels for inspecting individual actors.
+        -   **Header UI**:
+            -   `StatusPanel.tsx`: The main container in the header for status information.
+            -   `GlobalSearch.tsx`: The global actor search and tracking widget.
+        -   **Data Visualization**:
+            -   `ChartsPanel.tsx` & `charts/`: Components for rendering analytics charts.
+            -   `SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
+    -   **`services/`**: Singleton services.
+        -   `flowerService.ts`: A TypeScript wrapper for the WASM module.
+        -   `eventService.ts`: Central hub for all UI notifications.
+        -   `db.ts`: Dexie (IndexedDB) setup for persistence.
+    -   **`stores/`**: Zustand global state management stores.
+    -   **`types/` & `constants.ts`**: Shared TypeScript types and global simulation constants.
 
 ## 🚀 Getting Started
 

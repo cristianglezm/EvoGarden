@@ -1,4 +1,4 @@
-import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail, SpiderWeb } from '../types';
+import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail, SpiderWeb, WeatherEventType } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome, ACTOR_NAMES } from '../utils';
 import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
@@ -69,6 +69,8 @@ export class SimulationEngine {
     private eggsLaidThisTick = 0;
     private insectsBornThisTick = 0;
     private birdsHuntedThisTick = 0;
+
+    private pendingActions: { type: string; payload: any }[] = [];
 
     constructor(params: SimulationParams, flowerService: FEService) {
         this.params = params;
@@ -200,6 +202,18 @@ export class SimulationEngine {
         }
     }
 
+    public triggerWeatherEvent(eventType: WeatherEventType) {
+        this.pendingActions.push({ type: 'trigger-weather', payload: { eventType } });
+    }
+    public introduceSpecies(emoji: string, count: number) {
+        this.pendingActions.push({ type: 'introduce-species', payload: { emoji, count } });
+    }
+    public introduceStationary(actorType: 'hive' | 'antColony', count: number) {
+        this.pendingActions.push({ type: 'introduce-stationary', payload: { actorType, count } });
+    }
+    public plantChampionSeed(genome: string, sex: 'male' | 'female' | 'both', position: {x: number, y: number}) {
+        this.pendingActions.push({ type: 'plant-champion-seed', payload: { genome, sex, position } });
+    }
 
     private _resetTickCounters() {
         this.insectsEatenThisTick = 0;
@@ -507,6 +521,100 @@ export class SimulationEngine {
         const initialActors = this.grid.flat(2).map(cloneActor);
         const nextActorState = new Map<string, CellContent>(initialActors.map(actor => [actor.id, cloneActor(actor)]));
         const claimedCellsThisTick = new Set<string>();
+
+        for (const action of this.pendingActions) {
+            switch (action.type) {
+                case 'trigger-weather': {
+                    const { eventType } = action.payload;
+                    if (this.environmentState.currentWeatherEvent.duration <= 0) {
+                        this.environmentState.currentWeatherEvent.type = eventType;
+                        this.environmentState.currentWeatherEvent.duration = Math.floor(Math.random() * (this.params.weatherEventMaxDuration - this.params.weatherEventMinDuration + 1)) + this.params.weatherEventMinDuration;
+                        events.push({ message: `A ${eventType} has begun!`, type: 'info', importance: 'high' });
+                    }
+                    break;
+                }
+                case 'introduce-species': {
+                    const { emoji, count } = action.payload;
+                    let successfulSpawns = 0;
+                    for (let i = 0; i < count; i++) {
+                        const pos = findEmptyCell(this.grid, this.params);
+                        if (pos) {
+                            successfulSpawns++;
+                            if (emoji === '🐦') {
+                                const birdId = this.getNextId('bird', pos.x, pos.y);
+                                const newBird: Bird = { id: birdId, type: 'bird', x: pos.x, y: pos.y, target: null, patrolTarget: null };
+                                nextActorState.set(birdId, newBird);
+                            } else { // It must be an insect
+                                const baseStats = INSECT_DATA.get(emoji);
+                                if (baseStats) {
+                                    const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
+                                    const id = this.getNextId(`insect-${typeName}`, pos.x, pos.y);
+                                    const newInsect: Insect = { 
+                                        id, type: 'insect', x: pos.x, y: pos.y, 
+                                        pollen: null, emoji, 
+                                        genome: generateRandomInsectGenome(),
+                                        health: baseStats.maxHealth,
+                                        maxHealth: baseStats.maxHealth,
+                                        stamina: baseStats.maxStamina,
+                                        maxStamina: baseStats.maxStamina
+                                    };
+                                    nextActorState.set(id, newInsect);
+                                }
+                            }
+                        }
+                    }
+                    if (successfulSpawns > 0) {
+                        events.push({ message: `Introduced ${successfulSpawns} ${emoji} into the garden.`, type: 'success', importance: 'high' });
+                    }
+                    break;
+                }
+                 case 'introduce-stationary': {
+                    const { actorType, count } = action.payload;
+                    let successfulSpawns = 0;
+                    for (let i = 0; i < count; i++) {
+                        const pos = findEmptyCell(this.grid, this.params);
+                        if (pos) {
+                            successfulSpawns++;
+                            if (actorType === 'hive') {
+                                const hiveId = `hive-tool-${this.tick}-${i}`;
+                                const newHive: Hive = {
+                                    id: hiveId, type: 'hive', x: pos.x, y: pos.y, hiveId: hiveId,
+                                    honey: this.params.hiveSpawnThreshold + (2 * this.params.hiveSpawnCost),
+                                    pollen: 0, spawnCooldown: 0,
+                                    genome: generateRandomInsectGenome(), storedBees: 0,
+                                };
+                                nextActorState.set(hiveId, newHive);
+                            } else if (actorType === 'antColony') {
+                                const colonyId = `colony-tool-${this.tick}-${i}`;
+                                const newColony: AntColony = {
+                                    id: colonyId, type: 'antColony', x: pos.x, y: pos.y, colonyId: colonyId,
+                                    foodReserves: this.params.antColonySpawnThreshold + (2 * this.params.antColonySpawnCost),
+                                    spawnCooldown: 0, genome: generateRandomInsectGenome(), storedAnts: 0,
+                                };
+                                nextActorState.set(colonyId, newColony);
+                            }
+                        }
+                    }
+                    if (successfulSpawns > 0) {
+                        events.push({ message: `Introduced ${successfulSpawns} ${actorType}(s) into the garden.`, type: 'success', importance: 'high' });
+                    }
+                    break;
+                }
+                case 'plant-champion-seed': {
+                    const { genome, position } = action.payload;
+                    const isOccupied = Array.from(nextActorState.values()).some(a => a.x === position.x && a.y === position.y);
+                    if (!isOccupied) {
+                        const seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, position.x, position.y, genome, undefined, this.getNextId.bind(this));
+                        if (seed) {
+                            nextActorState.set(seed.id, seed);
+                            claimedCellsThisTick.add(`flower-${position.x}-${position.y}`);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        this.pendingActions = [];
 
         // Spring Repopulation Logic
         if (previousSeason === 'Winter' && this.environmentState.season === 'Spring') {

@@ -100,6 +100,7 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
     -   Maintaining the master actor state (`grid`, `tick` count).
     -   Updating the environment (weather & seasons).
     -   Building Quadtrees for efficient spatial querying.
+    -   **Processing User Interventions**: Processes a queue of `pendingActions` (e.g., triggered weather events, new actor introductions from the Tools Panel) at the start of each tick.
     -   Delegating global behaviors (nutrient healing, insect reproduction) to the `EcosystemManager`.
     -   Iterating through actors and calling their individual behavior modules.
     -   Calculating a `TickSummary` of the current state.
@@ -201,7 +202,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 
 ### 5.4. UI/Worker Communication & State Management Hooks (`src/hooks/`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
-    -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset) to the simulation worker, and listens for incoming messages.
+    -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset, trigger-weather, introduce-species, introduce-stationary, plant-champion-seed) to the simulation worker, and listens for incoming messages.
     -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas to reconstruct the new grid state. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
 -   **`useActorTracker` Hook**: A reusable hook that encapsulates the logic for tracking a specific actor.
     -   **Responsibilities**: Manages the ID of the tracked actor, handles starting and stopping the tracking mode, and ensures the simulation continues to run while tracking is active. It also synchronizes the `selectedActor` state to keep the UI panel updated with the tracked actor's latest data. This hook is primarily consumed by the `GlobalSearch` component and the individual actor details panels to provide a cohesive tracking experience.
@@ -214,13 +215,15 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 ## 6. Component Architecture (`src/components/`)
 -   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` and `useActorTracker` hooks, and handles save/load logic.
 -   **`SimulationView.tsx`**: Hosts the rendering engine's canvases and forwards user clicks.
--   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
--   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
--   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower. Includes a "Track" button that utilizes the `useActorTracker` hook.
--   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect or cockroach. Includes a "Track" button that utilizes the `useActorTracker` hook.
--   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become. Includes a "Track" button that utilizes the `useActorTracker` hook.
--   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.). Includes a "Track" button that utilizes the `useActorTracker` hook.
--   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
+-   **UI Panels**:
+    -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
+    -   **`ToolsPanel.tsx`**: A slide-out panel that provides UI for direct user interventions. It allows users to trigger weather events, manually introduce new species (insects, birds, hives, colonies), and enter a "planting mode" to place champion seeds from the Seed Bank onto the grid.
+    -   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
+    -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower. Includes a "Track" button that utilizes the `useActorTracker` hook.
+    -   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect or cockroach. Includes a "Track" button that utilizes the `useActorTracker` hook.
+    -   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become. Includes a "Track" button that utilizes the `useActorTracker` hook.
+    -   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.). Includes a "Track" button that utilizes the `useActorTracker` hook.
+    -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
 -   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
 -   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
 -   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
@@ -279,6 +282,7 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
         -   **UI Panels**:
             -   `Controls.tsx`: UI for changing simulation parameters.
             -   `DataPanel.tsx`: Main UI for the slide-out panel containing challenges, analytics, and the Seed Bank.
+            -   `ToolsPanel.tsx`: The UI for direct user interventions, such as triggering weather events and spawning actors.
             -   `...DetailsPanel.tsx`: A suite of panels for inspecting individual actors.
             -   `ActorSelectionPanel.tsx`: A panel for disambiguating clicks on crowded cells.
         -   **Header UI**:
