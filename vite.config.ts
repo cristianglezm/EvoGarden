@@ -113,8 +113,8 @@ export default defineConfig({
             theme_color: '#008000',
             background_color: '#004d00',
             display: 'standalone',
-            scope: '/',
-            start_url: '/',
+            scope: './',
+            start_url: './',
             icons: [
               {
                 src: 'favicon.ico',
