@@ -23,7 +23,7 @@
     "@react-three/fiber": "^9.4.0",
     "dexie": "^4.2.1",
     "echarts": "^6.0.0",
-    "echarts-for-react": "^3.0.4",
+    "echarts-for-react": "^3.0.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.181.1",
