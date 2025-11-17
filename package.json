@@ -37,7 +37,7 @@
     "@testing-library/react": "^16.0.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
-    "@types/three": "^0.180.0",
+    "@types/three": "^0.181.0",
     "@vitejs/plugin-react": "^5.1.0",
     "@vitest/ui": "^4.0.8",
     "jsdom": "^27.1.0",
