@@ -13,7 +13,38 @@ updates:
     labels:
       - "npm"
       - "dependencies"
-
+    groups:
+      runtime:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "vite-plugin-pwa"
+          - "echarts"
+          - "echarts-for-react"
+          - "dexie"
+          - "zustand"
+          - "@cristianglezm/flower-evolver-wasm"
+      react-three-and-three:
+        patterns:
+          - "three"
+          - "@react-three/*"
+          - "@types/three"
+      types:
+        patterns:
+          - "@types/*"
+      dev-tools:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vitest"
+          - "@vitest/*"
+          - "@playwright/*"
+          - "@testing-library/*"
+          - "jsdom"
+          - "react-devtools"
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "typescript"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
