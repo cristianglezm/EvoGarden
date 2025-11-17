@@ -19,7 +19,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@cristianglezm/flower-evolver-wasm": "^3.0.0",
-    "@react-three/drei": "^10.7.6",
+    "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.0",
     "dexie": "^4.2.1",
     "echarts": "^6.0.0",
@@ -37,7 +37,7 @@
     "@testing-library/react": "^16.0.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.180.0",
+    "@types/three": "^0.181.0",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.0.9",
     "jsdom": "^27.2.0",
