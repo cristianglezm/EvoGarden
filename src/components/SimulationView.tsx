@@ -13,9 +13,10 @@ interface SimulationViewProps {
     onFrameRendered: (renderTimeMs: number) => void;
     plantingInfo: { genome: string; sex: 'male' | 'female' | 'both' } | null;
     onPlantOnCell: (coords: Coord) => void;
+    onCanvasesReady?: (bg: HTMLCanvasElement, fg: HTMLCanvasElement) => void;
 }
 
-export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellClick, selectedActorId, actors, onFrameRendered, plantingInfo, onPlantOnCell }) => {
+export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellClick, selectedActorId, actors, onFrameRendered, plantingInfo, onPlantOnCell, onCanvasesReady }) => {
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const engineRef = useRef<RenderingEngine | null>(null);
@@ -32,6 +33,13 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
             setIsEngineReady(true);
         }
     }, [params]);
+    
+    // Notify parent about available canvases
+    useEffect(() => {
+        if (isEngineReady && bgCanvasRef.current && fgCanvasRef.current) {
+            onCanvasesReady?.(bgCanvasRef.current, fgCanvasRef.current);
+        }
+    }, [isEngineReady, onCanvasesReady]);
     
     // Update engine with new params
     useEffect(() => {

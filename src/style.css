@@ -32,3 +32,22 @@
   --color-accent-green: hsl(120, 100%, 50%);
   --color-accent-red: hsl(0, 100%, 50%);
 }
+
+:root {
+  /* Widget Background - Matching --color-background */
+  --color-lc-bg: hsl(120, 100%, 15%);
+  
+  /* Accent Color - Matching --color-accent */
+  --color-lc-accent: lightgreen;
+  --color-lc-accent-hover: hsl(120, 100%, 40%);
+  
+  /* Text Colors - Matching --color-primary */
+  --color-lc-text: hsl(90, 60%, 80%);
+  --color-lc-text-muted: hsl(90, 50%, 70%);
+  
+  /* Surface Colors */
+  --color-lc-surface-highlight: hsl(120, 100%, 20%);
+  --color-lc-surface-hover: hsl(0, 0%, 25%);
+  --color-lc-input-bg: hsl(120, 100%, 10%);
+  --color-lc-input-border: lime;
+}

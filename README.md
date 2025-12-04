@@ -47,6 +47,7 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Interactive Simulation**: Control world parameters like climate and population, pause/play the world, and reset with new initial conditions.
 -   **Inspect Individuals**: Click on any cell to inspect its occupants. A selection panel appears if multiple actors are present. View detailed, real-time stats for any actor and start tracking them directly from their dedicated details panel.
 -   **Interactive 3D Flower Viewer**: Generate and view a 3D model of any flower from its genome in an interactive modal viewer.
+-   **Live AI Commentary (EcoObserver)**: Activate the AI-powered Garden Observer to receive commentary on your ecosystem. Powered by a visual large model(smolVLM, Qwen3-VL, etc), the AI analyzes the visual state of the grid and underlying population data to narrate key events, predation, and population booms. You can also chat directly with the Observer to ask specific questions about the current state of your garden.
 
 ## 🔬 Key Concepts
 
