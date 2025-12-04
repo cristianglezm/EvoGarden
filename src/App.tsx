@@ -4,7 +4,7 @@ import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
 import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach, Coord } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
-import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon } from './components/icons';
+import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon, ChatBubbleIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
 import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
@@ -22,6 +22,7 @@ import { GenericActorDetailsPanel } from './components/GenericActorDetailsPanel'
 import { StatusPanel } from './components/StatusPanel';
 import { Logo } from './components/Logo';
 import { ToolsPanel } from './components/ToolsPanel';
+import { AIChatPanel } from './components/AIChatPanel';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -75,6 +76,7 @@ export default function App(): React.ReactNode {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
   const [isFullLogOpen, setIsFullLogOpen] = useState(false);
+  const [isCommentaryOpen, setIsCommentaryOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing EvoGarden...');
   const [isSaving, setIsSaving] = useState(false);
@@ -82,6 +84,7 @@ export default function App(): React.ReactNode {
   const [hasSavedState, setHasSavedState] = useState(false);
   const [isServiceInitialized, setIsServiceInitialized] = useState(false);
   const [plantingInfo, setPlantingInfo] = useState<{ genome: string; sex: 'male' | 'female' | 'both' } | null>(null);
+  const [canvases, setCanvases] = useState<{ bg: HTMLCanvasElement; fg: HTMLCanvasElement } | null>(null);
   const wasRunningBeforeSelectionRef = useRef(false);
   const wasRunningBeforeLogRef = useRef(false);
 
@@ -118,6 +121,10 @@ export default function App(): React.ReactNode {
             eventService.dispatch({ type: 'success', importance: 'high', message: 'Champion seed planted!' });
         }
     };
+
+    const handleCanvasesReady = useCallback((bg: HTMLCanvasElement, fg: HTMLCanvasElement) => {
+        setCanvases({ bg, fg });
+    }, []);
 
   useEffect(() => {
     if (workerError) {
@@ -543,6 +550,7 @@ const detailsPanel = renderDetailsPanel();
             onFrameRendered={handleFrameRendered}
             plantingInfo={plantingInfo}
             onPlantOnCell={handlePlantOnCell}
+            onCanvasesReady={handleCanvasesReady}
           />
         </div>
       </main>
@@ -555,7 +563,6 @@ const detailsPanel = renderDetailsPanel();
                 </button>
             </div>
         )}
-
        {/* UI Buttons */}
       <div className="fixed top-24 right-4 z-20 flex flex-col space-y-2">
             <button
@@ -584,8 +591,22 @@ const detailsPanel = renderDetailsPanel();
             >
                 <TrophyIcon className="w-6 h-6" />
             </button>
+            <button
+                onClick={() => setIsCommentaryOpen(!isCommentaryOpen)}
+                className={`p-3 ${isCommentaryOpen ? 'bg-tertiary text-surface' : 'bg-tertiary/80 text-surface'} hover:bg-tertiary rounded-md shadow-lg transition-colors duration-200 cursor-pointer`}
+                aria-label="Toggle Live Commentary"
+                title="Live Commentary"
+            >
+                <ChatBubbleIcon className="w-6 h-6" />
+            </button>
       </div>
       
+      <AIChatPanel 
+        isOpen={isCommentaryOpen} 
+        canvases={canvases} 
+        onClose={() => setIsCommentaryOpen(false)}
+      />
+
       <DataPanel 
         isOpen={isDataPanelOpen} 
         onClose={() => setIsDataPanelOpen(false)}

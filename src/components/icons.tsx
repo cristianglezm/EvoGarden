@@ -232,3 +232,9 @@ export const ToolboxIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
         <path d="M14 4V2"/>
     </svg>
 );
+
+export const ChatBubbleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3.75h-6.375c-.621 0-1.125-.504-1.125-1.125V4.499c0-.621.504-1.125 1.125-1.125h16.5c.621 0 1.125.504 1.125 1.125v13.499c0 .621-.504 1.125-1.125 1.125h-4.091m-4.123 0a1.125 1.125 0 00-1.75.985v1.898c0 .621.504 1.125 1.125 1.125h1.314c.44 0 .87-.113 1.243-.326l2.473-1.415" />
+    </svg>
+);
