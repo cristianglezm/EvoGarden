@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SimulationEngine } from './simulationEngine';
+import type { EnvironmentState } from '../types';
 import { DEFAULT_SIM_PARAMS, INSECT_DATA, SEED_HEALTH } from '../constants';
 import type { FEService, Flower, Grid, CellContent, ActorUpdateDelta, ActorAddDelta, FlowerSeed } from '../types';
 
@@ -204,6 +205,123 @@ describe('SimulationEngine', () => {
 
             const { grid } = engine.getGridState();
             expect(grid[3][3].length).toBe(0);
+        });
+    });
+    describe('Seasonal Repopulation', () => {
+        it('should repopulate insects and flowers when transitioning Winter → Spring (deterministic factory queue push)', async () => {
+          const params = {
+            ...DEFAULT_SIM_PARAMS,
+            seasonLengthInTicks: 1,
+            initialFlowers: 3,
+            initialInsects: 3,
+          };
+
+          engine = new SimulationEngine(params, mockFlowerService);
+          mockFlowerWorkerPort = {
+            postMessage: vi.fn(),
+            onmessage: null as any,
+          };
+
+          engine.setFlowerWorkerPort(mockFlowerWorkerPort as any, params);
+
+          // Start in Winter so the next tick will transition to Spring
+          engine.setEnvironmentState({
+            season: 'Winter',
+            currentHumidity: 23,
+            currentTemperature: 20,
+            currentWeatherEvent: { type: 'none', duration: 0 }
+          } as EnvironmentState);
+
+          // Make the AsyncFlowerFactory appear initialized and ready
+          const asyncFactory = (engine as any).asyncFlowerFactory;
+          asyncFactory.ready = true;
+
+          // Helper to create a completed Flower object for a given requestId and position
+          const makeCompletedFlower = (requestId: string, x: number, y: number): Flower => ({
+            ...mockFlower,
+            id: `flower-${requestId}`,
+            x,
+            y,
+            genome: 'g',
+            imageData: 'img',
+            age: 0,
+          });
+
+          // Replace requestNewFlower so it:
+          //  - returns a seed synchronously (engine expects this)
+          //  - uses getNextId when provided to produce the seed id
+          //  - immediately pushes a completed Flower into asyncFlowerFactory.completedFlowersQueue
+          asyncFactory.requestNewFlower = vi.fn((
+            _nextState: any,
+            x: number,
+            y: number,
+            _genome?: string,
+            _unused?: any,
+            getNextId?: () => string
+          ) => {
+            // Use engine-provided id generator if available, otherwise fallback to random
+            const seedId = typeof getNextId === 'function' ? getNextId() : `seed-${Math.random().toString(36).slice(2,8)}`;
+            const seed: FlowerSeed = {
+              id: seedId,
+              type: 'flowerSeed',
+              x,
+              y,
+              imageData: '',
+              health: SEED_HEALTH,
+              maxHealth: SEED_HEALTH,
+              age: 0,
+            };
+            (asyncFactory as any).completedFlowersQueue = (asyncFactory as any).completedFlowersQueue || [];
+            (asyncFactory as any).completedFlowersQueue.push({
+              requestId: seedId,
+              flower: makeCompletedFlower(seedId, x, y),
+            });
+            return seed;
+          });
+          engine.initializeGridWithActors([]);
+
+          // Run multiple ticks to allow:
+          //  - season transition (tick 1)
+          //  - repopulation inserting seeds and pushing completed flowers into the queue
+          //  - engine processing completedFlowersQueue and emitting add deltas for real flowers
+          const collectedDeltas: any[] = [];
+          const maxTicks = 8;
+          for (let t = 0; t < maxTicks; t++) {
+            // Explicitly type result as any to avoid 'never' inference
+            const result: any = await engine.calculateNextTick();
+            // Normalize possible shapes: either an array of deltas or { deltas: [...] }
+            let deltas: any[] = [];
+            if (Array.isArray(result)) {
+              deltas = result;
+            } else if (result && Array.isArray(result.deltas)) {
+              deltas = result.deltas;
+            }
+            collectedDeltas.push(...deltas);
+
+            // Early exit if we've observed at least one insect and one real flower added
+            const added = collectedDeltas.filter(d => d.type === 'add') as ActorAddDelta[];
+            const addedInsects = added.filter(a => a.actor.type === 'insect');
+            const addedFlowers = added.filter(a => a.actor.type === 'flower');
+            if (addedInsects.length > 0 && addedFlowers.length > 0) break;
+          }
+
+          const allAdded = collectedDeltas.filter(d => d.type === 'add') as ActorAddDelta[];
+
+          const addedInsects = allAdded.filter(a => a.actor.type === 'insect');
+          const addedFlowers = allAdded.filter(a => a.actor.type === 'flower');
+
+          // Expect at least one insect and one flower to have been added during the Spring repopulation
+          expect(addedInsects.length).toBeGreaterThan(0);
+          expect(addedFlowers.length).toBeGreaterThan(0);
+
+          const { grid } = engine.getGridState();
+          const flat = grid.flat(2);
+
+          const gridFlowers = flat.filter(a => a.type === 'flower');
+          const gridInsects = flat.filter(a => a.type === 'insect');
+
+          expect(gridFlowers.length).toBeGreaterThan(0);
+          expect(gridInsects.length).toBeGreaterThan(0);
         });
     });
 });

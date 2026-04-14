@@ -52,7 +52,6 @@ export class SimulationEngine {
     
     // Environment state
     private environmentState: EnvironmentState;
-    
     // Managers and Factories
     private populationManager: PopulationManager;
     private asyncFlowerFactory: AsyncFlowerFactory;
@@ -80,7 +79,7 @@ export class SimulationEngine {
         this.environmentState = {
             currentTemperature: params.temperature,
             currentHumidity: params.humidity,
-            season: 'Summer',
+            season: 'Spring',
             currentWeatherEvent: { type: 'none', duration: 0 },
         };
         this.loadChampionsFromDb();
@@ -181,7 +180,9 @@ export class SimulationEngine {
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
         this.asyncFlowerFactory.setFlowerWorkerPort(port, params);
     }
-
+    public setEnvironmentState(env: EnvironmentState) {
+        this.environmentState = env;
+    }
     public setStemImage(imageData: string) {
         this.asyncFlowerFactory.setStemImage(imageData);
     }
@@ -655,7 +656,11 @@ export class SimulationEngine {
                 if (flowerCount <= this.params.initialFlowers) {
                     const seedsFromBank = await db.seedBank.toArray();
                     for (let i = 0; i < this.params.initialFlowers; i++) {
-                        const pos = findCellForFlowerSpawn(tempGridForPlacement, this.params, undefined, claimedCellsThisTick);
+                        const origin = {
+                            x: Math.floor(Math.random() * this.params.gridWidth),
+                            y: Math.floor(Math.random() * this.params.gridHeight)
+                        };
+                        const pos = findCellForFlowerSpawn(tempGridForPlacement, this.params, origin, claimedCellsThisTick);
                         if (pos) {
                             claimedCellsThisTick.add(`${pos.x},${pos.y}`);
                             let seed: FlowerSeed | null;
