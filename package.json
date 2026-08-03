@@ -41,7 +41,7 @@
     "@types/three": "^0.185.1",
     "@vitejs/plugin-react": "^6.0.4",
     "@vitest/ui": "^4.1.10",
-    "baseline-browser-mapping": "^2.11.4",
+    "baseline-browser-mapping": "^2.11.8",
     "jsdom": "^30.0.0",
     "react-devtools": "^7.0.1",
     "tailwindcss": "^4.1.17",
