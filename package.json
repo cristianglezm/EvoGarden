@@ -22,7 +22,7 @@
     "@cristianglezm/live-commentary-widget": "^1.2.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
-    "dexie": "^4.4.4",
+    "dexie": "^4.4.5",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "react": "^19.2.8",
