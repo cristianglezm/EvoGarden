@@ -79,7 +79,7 @@ class FlowerService implements FEService {
 
     async getFlowerStats(genome: string, humidity: number = 0.5, temperature: number = 20, altitude: number = 0, terrainType: number = 0): Promise<FlowerGenomeStats> {
         this.ensureInitialized();
-        const stats: FlowerGenomeStats = await this.service.getFlowerStats(genome, humidity, temperature, altitude, terrainType);
+        const stats: FlowerGenomeStats = this.service.getFlowerStats(genome, humidity, temperature, altitude, terrainType);
         return stats;
     }
 

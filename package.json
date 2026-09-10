@@ -1,6 +1,6 @@
 {
   "name": "evogarden",
-  "version": "2.33.1",
+  "version": "2.33.2",
   "description": "A dynamic garden simulation where flowers evolve under the pressure of insects and birds. Watch a Darwinian battlefield unfold as flowers, insects, and birds interact in a delicate ecosystem, with visual traits driven by NEAT Algorithm.",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
   "author": "Cristian Gonzalez <cristian.glez.m@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@cristianglezm/flower-evolver-wasm": "^3.0.0",
+    "@cristianglezm/flower-evolver-wasm": "^4.0.0",
     "@cristianglezm/live-commentary-widget": "^1.2.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
@@ -41,7 +41,6 @@
     "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/ui": "^5.0.0",
-    "baseline-browser-mapping": "^2.11.21",
     "jsdom": "^30.0.1",
     "react-devtools": "^7.0.1",
     "tailwindcss": "^4.1.17",

@@ -32,7 +32,7 @@ export const createNewFlower = async (
         const maxStamina = stats.stamina || FALLBACK_MAX_STAMINA;
         const nutrientEfficiency = 1.0 + ((stats.effects?.vitality || 0) / 100) || FALLBACK_NUTRIENT_EFFICIENCY;
         const maturationPeriod = stats.maturationPeriod || FALLBACK_MATURATION_AGE;
-        const id = flowerId || `flower-${x}-${y}-${Date.now()}`;
+        const id = flowerId || `flower-${x}-${y}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
         return {
             id, type: 'flower', x, y,
