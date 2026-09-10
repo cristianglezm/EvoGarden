@@ -22,7 +22,7 @@
       "three/addons/*": ["./node_modules/three/examples/jsm/*"]
     }
   },
-  "include": ["src", "src/three.d.ts", "src/flower-evolver-wasm.d.ts"],
+  "include": ["src", "src/three.d.ts"],
   "exclude": ["node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

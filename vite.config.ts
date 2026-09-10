@@ -11,7 +11,7 @@ import path from 'path';
 
 // Read version from package.json
 const packageJson = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')
+  fs.readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf8')
 );
 
 /**
@@ -145,6 +145,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    pool: 'vmThreads',
     setupFiles: './src/test/setup.ts',
     exclude: [
         '**/node_modules/**',
