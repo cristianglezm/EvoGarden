@@ -20,7 +20,7 @@
   "dependencies": {
     "@cristianglezm/flower-evolver-wasm": "^4.0.2",
     "@cristianglezm/live-commentary-widget": "^1.2.1",
-    "@react-three/drei": "^10.7.8",
+    "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "dexie": "^4.4.6",
     "echarts": "^6.1.0",
