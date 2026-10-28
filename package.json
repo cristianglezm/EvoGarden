@@ -18,18 +18,18 @@
   "author": "Cristian Gonzalez <cristian.glez.m@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@cristianglezm/flower-evolver-wasm": "^4.0.2",
+    "@cristianglezm/flower-evolver-wasm": "^4.1.0",
     "@cristianglezm/live-commentary-widget": "^1.2.1",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
-    "dexie": "^4.4.6",
+    "dexie": "^4.4.7",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.186.1",
     "vite-plugin-pwa": "^2.0.0",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
