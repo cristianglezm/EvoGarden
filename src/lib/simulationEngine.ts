@@ -731,10 +731,7 @@ export class SimulationEngine {
             nextActorState.delete(seedId);
         }
         for (const flower of flowersToAdd) {
-            flower.age += (nextActorState.get(flower.id) as FlowerSeed)?.age || 0;
-            if (flower.age >= flower.maturationPeriod) {
-                flower.isMature = true;
-            }
+            // the factory already gave it the age of its seed, and its maturity
             nextActorState.set(flower.id, flower);
             newFlowerCount++;
             events.push({ message: '🌱 A new flower has bloomed!', type: 'success', importance: 'low' });

@@ -189,6 +189,39 @@ describe('SimulationEngine', () => {
             expect(finalFlower.age).toBe(10);
         });
 
+        it('gives the new flower the age of its seed and nothing else, even if another actor has the id the flower will have', async () => {
+            const seed: FlowerSeed = { id: 'seed-2-2', type: 'flowerSeed', x: 2, y: 2, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 10 };
+            // flower ids are `flower-x-y`: nothing says another actor cannot carry the one the new flower arrives with
+            const same: Flower = { ...mockFlower, id: 'flower-2-2', x: 2, y: 2, age: 100, maturationPeriod: 1000 };
+            engine.initializeGridWithActors([seed, same]);
+            const completed: Flower = { ...mockFlower, id: 'flower-2-2', x: 2, y: 2, genome: 'completed-genome', age: 0, maturationPeriod: 1000, isMature: false };
+            ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-2-2', flower: completed });
+
+            await engine.calculateNextTick();
+
+            const { grid } = engine.getGridState();
+            const flower = grid[2][2].find(a => a.id === 'flower-2-2') as Flower;
+            expect(flower.genome).toBe('completed-genome');
+            // 10 of the seed, plus the tick it was added in: not the 100 of the other one
+            expect(flower.age).toBeLessThan(20);
+        });
+
+        it.each([
+            ['is mature when the seed was old enough to bring it to its maturation age exactly', 30, 30, true],
+            ['is mature when the seed was older than that', 40, 30, true],
+            ['is not mature when the seed was younger than that', 29, 30, false],
+        ])('a flower that arrives %s', async (_name, seedAge, maturationPeriod, mature) => {
+            const seed: FlowerSeed = { id: 'seed-6-6', type: 'flowerSeed', x: 6, y: 6, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: seedAge - 10 };
+            engine.initializeGridWithActors([seed]);
+            const completed: Flower = { ...mockFlower, id: 'flower-6-6', x: 6, y: 6, age: 10, maturationPeriod, isMature: false };
+            ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-6-6', flower: completed });
+            await engine.calculateNextTick();
+            const flower = engine.getGridState().grid[6][6].find(a => a.id === 'flower-6-6') as Flower;
+            // the tick it arrives in adds one more
+            expect(flower.age).toBeGreaterThanOrEqual(seedAge);
+            expect(flower.isMature).toBe(mature);
+        });
+
         it('should correctly handle failed flower creation by removing the seed', async () => {
             const seed: FlowerSeed = { id: 'seed-to-remove', type: 'flowerSeed', x: 3, y: 3, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 5 };
             engine.initializeGridWithActors([seed]);
