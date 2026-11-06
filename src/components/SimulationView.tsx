@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import type { CellContent, SimulationParams, Coord } from '../types';
 import { RenderingEngine } from '../lib/renderingEngine';
 import { eventService } from '../services/eventService';
+import { hasPlantAt } from '../lib/simulationUtils';
 
 const CELL_SIZE_PX = 64;
 
@@ -72,11 +73,12 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
         const gridY = Math.floor(y / CELL_SIZE_PX);
 
         if (plantingInfo) {
-            const actorsInCell = Array.from(actors.values()).filter(actor => actor.x === gridX && actor.y === gridY);
-            if (actorsInCell.length === 0) {
-                onPlantOnCell({ x: gridX, y: gridY });
+            // The engine decides in the end (the cell may change before it hears of this click); this is the quick answer, and it
+            // leaves the player planting.
+            if (hasPlantAt(actors.values(), gridX, gridY)) {
+                eventService.dispatch({ message: "Can't plant there: a flower or a seed is already in that cell.", type: 'error', importance: 'high' });
             } else {
-                eventService.dispatch({ message: 'Cannot plant on an occupied cell.', type: 'error', importance: 'high' });
+                onPlantOnCell({ x: gridX, y: gridY });
             }
             return;
         }

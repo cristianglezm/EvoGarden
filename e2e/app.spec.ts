@@ -595,8 +595,11 @@ test.describe('Intervention Tools Panel', () => {
 
         // 5. Plant the seed on an empty cell
         await canvas.click({ position: { x: 10, y: 10 } });
-
-        // 6. Verify planting was successful
+        
+        // 6. Run for full confirmation
+        await controls.runSimulation(2);
+        
+        // 7. Verify planting was successful
         await expect(tools.getPlantingModeBanner()).not.toBeVisible();
         await eventLog.open();
         await expect(eventLog.getFullPanel().getByText('Champion seed planted!')).toBeVisible();

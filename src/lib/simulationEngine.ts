@@ -1,6 +1,6 @@
 import type { Grid, SimulationParams, CellContent, Flower, Bird, Insect, Egg, Nutrient, FEService, AppEvent, TickSummary, Eagle, HerbicidePlane, HerbicideSmoke, ActorDelta, FlowerSeed, EnvironmentState, Season, Corpse, Cockroach, Cocoon, SlimeTrail, Hive, TerritoryMark, AntColony, PheromoneTrail, SpiderWeb, WeatherEventType } from '../types';
 import { getInsectEmoji, generateRandomInsectGenome, ACTOR_NAMES } from '../utils';
-import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn } from './simulationUtils';
+import { buildQuadtrees, cloneActor, findEmptyCell, findCellForFlowerSpawn, hasPlantAt } from './simulationUtils';
 import { processBirdTick } from './behaviors/birdBehavior';
 import { processEggTick } from './behaviors/eggBehavior';
 import { processFlowerTick, processFlowerSeedTick } from './behaviors/flowerBehavior';
@@ -614,14 +614,19 @@ export class SimulationEngine {
                 }
                 case 'plant-champion-seed': {
                     const { genome, position } = action.payload;
-                    const isOccupied = Array.from(nextActorState.values()).some(a => a.x === position.x && a.y === position.y);
-                    if (!isOccupied) {
-                        const seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, position.x, position.y, genome, undefined, this.getNextId.bind(this));
-                        if (seed) {
-                            nextActorState.set(seed.id, seed);
-                            claimedCellsThisTick.add(`flower-${position.x}-${position.y}`);
-                        }
+                    // Only another plant is in the way (`hasPlantAt`): insects, trails and the rest share a cell with it.
+                    if (hasPlantAt(nextActorState.values(), position.x, position.y)) {
+                        events.push({ message: "Can't plant there: a flower or a seed is already in that cell.", type: 'error', importance: 'high' });
+                        break;
                     }
+                    const seed = this.asyncFlowerFactory.requestNewFlower(nextActorState, position.x, position.y, genome, undefined, this.getNextId.bind(this));
+                    if (!seed) {
+                        events.push({ message: 'The garden is not ready to grow a seed yet. Try again in a moment.', type: 'error', importance: 'high' });
+                        break;
+                    }
+                    nextActorState.set(seed.id, seed);
+                    claimedCellsThisTick.add(`flower-${position.x}-${position.y}`);
+                    events.push({ message: 'Champion seed planted!', type: 'success', importance: 'high' });
                     break;
                 }
             }

@@ -128,7 +128,6 @@ export default function App(): React.ReactNode {
         if (plantingInfo) {
             plantChampionSeed(plantingInfo.genome, plantingInfo.sex, coords);
             setPlantingInfo(null);
-            eventService.dispatch({ type: 'success', importance: 'high', message: 'Champion seed planted!' });
         }
     };
 
