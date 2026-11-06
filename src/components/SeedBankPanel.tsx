@@ -1,29 +1,31 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../services/db';
 import type { SeedBankEntry } from '../types';
-import { LoaderIcon, Trash2Icon } from './icons';
-import { Modal } from './Modal';
-import { Flower3DViewer } from './Flower3DViewer';
-import { flowerService } from '../services/flowerService';
+import { LoaderIcon, SeedlingIcon, Trash2Icon } from './icons';
 import { ConfirmationModal } from './ConfirmationModal';
 import { SeedBankCard } from './SeedBankCard';
+import { useFlower3DView } from '../hooks/useFlower3DView';
+import { defaultSpeciesSource } from '../services/defaultSpeciesSource';
+import type { SpeciesSource } from '../services/speciesSource';
 
 interface SeedBankPanelProps {
     isRunning: boolean;
     setIsRunning: (running: boolean) => void;
+    /** Where the species of the champions come from. */
+    source?: SpeciesSource;
+    /** Opens the field guide, at a species ("x,y") or at none; without it the panel has no way to the guide. */
+    onOpenGuide?: (cell: string | null) => void;
 }
 
-export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRunning }) => {
+export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRunning, source = defaultSpeciesSource, onOpenGuide }) => {
     const [champions, setChampions] = useState<SeedBankEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     
-    // State for 3D Viewer
-    const [is3DViewerOpen, setIs3DViewerOpen] = useState(false);
-    const [gltfString, setGltfString] = useState<string | null>(null);
-    const [isLoading3D, setIsLoading3D] = useState(false);
-    const [modalTitle, setModalTitle] = useState('');
-    const wasRunningRef = useRef(false);
+    const { view: handleView3D, modal: viewer3D } = useFlower3DView({ isRunning, setIsRunning });
+
+    // The species each champion belongs to
+    const [championSpecies, setChampionSpecies] = useState<Record<string, { key: string; name: string } | null>>({});
 
     const fetchChampions = useCallback(async () => {
         setIsLoading(true);
@@ -40,6 +42,15 @@ export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRu
     useEffect(() => {
         fetchChampions();
     }, [fetchChampions]);
+
+    // Which species each champion belongs to; nothing to show while the classifier or the collection is not there.
+    useEffect(() => {
+        let current = true;
+        Promise.all(champions.map(async c => [c.category, await source.speciesOf(c.genome)] as const))
+            .then(found => { if (current) setChampionSpecies(Object.fromEntries(found)); })
+            .catch(() => { if (current) setChampionSpecies({}); });
+        return () => { current = false; };
+    }, [champions, source]);
 
     const handleClearBank = async () => {
         try {
@@ -59,38 +70,20 @@ export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRu
         link.click();
     }, []);
 
-    const handleView3D = async (genome: string, sex: 'male'|'female'|'both') => {
-        wasRunningRef.current = isRunning;
-        setIsRunning(false);
-
-        setIsLoading3D(true);
-        setGltfString(null);
-        setIs3DViewerOpen(true);
-        setModalTitle('Generating 3D Model...');
-        
-        try {
-            const gltf = await flowerService.draw3DFlower(genome, sex);
-            setGltfString(gltf);
-            setModalTitle('Champion Flower 3D Model');
-        } catch (error) {
-            console.error("Failed to generate 3D model:", error);
-            setIs3DViewerOpen(false);
-            setIsRunning(wasRunningRef.current);
-        } finally {
-            setIsLoading3D(false);
-        }
-    };
-    
-    const handleClose3DViewer = () => {
-        setIs3DViewerOpen(false);
-        setIsRunning(wasRunningRef.current);
-    };
-
-
     return (
         <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-secondary">Champions are saved here to repopulate the garden after a collapse.</p>
+                {onOpenGuide && (
+                    <button
+                        onClick={() => onOpenGuide(null)}
+                        className="flex items-center px-3 py-1.5 bg-surface-hover hover:bg-border/20 text-primary font-semibold rounded-md transition-colors text-sm"
+                        title="Browse every species found in the garden"
+                    >
+                        <SeedlingIcon className="w-4 h-4 mr-2" />
+                        Field Guide
+                    </button>
+                )}
                 <button 
                     onClick={() => setShowConfirmModal(true)}
                     className="flex items-center px-3 py-1.5 bg-accent-red/20 hover:bg-accent-red/40 text-accent-red font-semibold rounded-md transition-colors text-sm"
@@ -112,7 +105,7 @@ export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRu
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-4">
-                    {champions.map(entry => <SeedBankCard key={entry.category} entry={entry} onDownload={handleDownloadGenome} onView3D={handleView3D} />)}
+                    {champions.map(entry => <SeedBankCard key={entry.category} entry={entry} onDownload={handleDownloadGenome} onView3D={handleView3D} species={championSpecies[entry.category]} onViewInGuide={onOpenGuide} />)}
                 </div>
             )}
 
@@ -123,19 +116,7 @@ export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRu
                 message="This will remove all saved champion flowers and cannot be undone. New flowers will be completely random until new champions are saved."
             />}
             
-            <Modal
-                isOpen={is3DViewerOpen}
-                onClose={handleClose3DViewer}
-                title={modalTitle}
-            >
-                {isLoading3D || !gltfString ? (
-                    <div className="flex items-center justify-center h-full">
-                        <LoaderIcon className="w-12 h-12 animate-spin text-tertiary" />
-                    </div>
-                ) : (
-                    <Flower3DViewer gltfString={gltfString} />
-                )}
-            </Modal>
+            {viewer3D}
         </div>
     );
 };

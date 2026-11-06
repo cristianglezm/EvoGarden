@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSimulation } from './useSimulation';
 import { DEFAULT_SIM_PARAMS } from '../constants';
@@ -19,48 +19,194 @@ vi.stubGlobal('Worker', class MockWorker {
 });
 
 // --- Mock MessageChannel Setup ---
-const mockPort1 = { postMessage: vi.fn() };
-const mockPort2 = { postMessage: vi.fn() };
+const channels: { port1: { postMessage: ReturnType<typeof vi.fn> }; port2: { postMessage: ReturnType<typeof vi.fn> } }[] = [];
 vi.stubGlobal('MessageChannel', class MockMessageChannel {
-    port1 = mockPort1;
-    port2 = mockPort2;
+    port1 = { postMessage: vi.fn() };
+    port2 = { postMessage: vi.fn() };
+    constructor() { channels.push(this); }
 });
 
 describe('useSimulation hook', () => {
     const mockSetIsLoading = vi.fn();
 
+    const cores = (n: number | undefined) => vi.spyOn(navigator, 'hardwareConcurrency', 'get').mockReturnValue(n as number);
+
     beforeEach(() => {
         vi.clearAllMocks();
         mockWorkerInstances.length = 0;
+        channels.length = 0;
         mockSetIsLoading.mockClear();
+        cores(4);
     });
 
-    it('initializes and creates two workers on mount', () => {
-        renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
-        expect(mockWorkerInstances.length).toBe(2);
+    afterEach(() => {
+        vi.restoreAllMocks();
+        window.history.replaceState({}, '', '/');
     });
 
-    it('sends init-ports message to both workers using MessageChannel', () => {
-        renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
-        expect(mockWorkerInstances.length).toBe(2);
-        const simWorkerInstance = mockWorkerInstances[0];
-        const flowerWorkerInstance = mockWorkerInstances[1];
-        
-        expect(simWorkerInstance.postMessage).toHaveBeenCalledWith(
-            { type: 'init-ports', payload: { flowerWorkerPort: mockPort1 } },
-            [mockPort1]
-        );
-        expect(flowerWorkerInstance.postMessage).toHaveBeenCalledWith(
-            { type: 'init-ports', payload: { simWorkerPort: mockPort2 } },
-            [mockPort2]
-        );
+    describe('with cores for it', () => {
+        it('creates the simulation, flower and species workers on mount', () => {
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            expect(mockWorkerInstances.length).toBe(3);
+        });
+
+        it('connects each of the other two workers to the simulation with a channel of its own', () => {
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            const [sim, flower, species] = mockWorkerInstances;
+            expect(channels).toHaveLength(2);
+            const [toFlower, toSpecies] = channels;
+
+            expect(sim.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { flowerWorkerPorts: [toFlower.port1], speciesWorkerPort: toSpecies.port1 } },
+                [toFlower.port1, toSpecies.port1],
+            );
+            expect(flower.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { simWorkerPort: toFlower.port2, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false } },
+                [toFlower.port2],
+            );
+            expect(species.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { simWorkerPort: toSpecies.port2 } },
+                [toSpecies.port2],
+            );
+        });
+
+        it('terminates the three workers on unmount', () => {
+            const { unmount } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            unmount();
+            for (const worker of mockWorkerInstances) expect(worker.terminate).toHaveBeenCalledTimes(1);
+        });
+
+        it('stops loading and says so when the species worker fails', () => {
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+            act(() => { (mockWorkerInstances[2] as unknown as { onerror: (e: unknown) => void }).onerror({ message: 'boom' }); });
+            quiet.mockRestore();
+            expect(mockSetIsLoading).toHaveBeenCalledWith(false);
+        });
     });
 
-    it('terminates both workers on unmount', () => {
-        const { unmount } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
-        unmount();
-        expect(mockWorkerInstances[0].terminate).toHaveBeenCalledTimes(1);
-        expect(mockWorkerInstances[1].terminate).toHaveBeenCalledTimes(1);
+    describe('without cores for it', () => {
+        it('has the flower worker do the species too, as before the species worker', () => {
+            cores(2);
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            const [sim, flower] = mockWorkerInstances;
+            expect(mockWorkerInstances.length).toBe(2);
+            expect(sim.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { flowerWorkerPorts: [channels[0].port1] } },
+                [channels[0].port1],
+            );
+            expect(flower.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { simWorkerPort: channels[0].port2 } },
+                [channels[0].port2],
+            );
+        });
+
+        it('terminates both workers on unmount', () => {
+            cores(2);
+            const { unmount } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            unmount();
+            for (const worker of mockWorkerInstances) expect(worker.terminate).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('with more than one worker that makes flowers', () => {
+        it('starts as many as the address asks, each with a channel of its own to the simulation', () => {
+            cores(8);
+            window.history.replaceState({}, '', '/?creationWorkers=3');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            // simulation, three that make flowers, species
+            expect(mockWorkerInstances.length).toBe(5);
+            expect(channels).toHaveLength(4);
+            const [sim, f1, f2, f3, species] = mockWorkerInstances;
+            expect(sim.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { flowerWorkerPorts: [channels[0].port1, channels[1].port1, channels[2].port1], speciesWorkerPort: channels[3].port1 } },
+                [channels[0].port1, channels[1].port1, channels[2].port1, channels[3].port1],
+            );
+            [f1, f2, f3].forEach((worker, i) => {
+                expect(worker.postMessage).toHaveBeenCalledWith(
+                    { type: 'init-ports', payload: { simWorkerPort: channels[i].port2, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false } },
+                    [channels[i].port2],
+                );
+            });
+            expect(species.postMessage).toHaveBeenCalledWith(
+                { type: 'init-ports', payload: { simWorkerPort: channels[3].port2 } },
+                [channels[3].port2],
+            );
+        });
+
+        it('leaves the species to the first of them, and only that one, when there is no species worker', () => {
+            cores(2);
+            window.history.replaceState({}, '', '/?creationWorkers=2');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            const [, f1, f2] = mockWorkerInstances;
+            expect(mockWorkerInstances.length).toBe(3);
+            expect(f1.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[0].port2 } }, [channels[0].port2]);
+            expect(f2.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[1].port2, roles: ['creation'] } }, [channels[1].port2]);
+        });
+
+        it('terminates every one of them on unmount, and stops loading when any fails', () => {
+            cores(8);
+            window.history.replaceState({}, '', '/?creationWorkers=2');
+            const { unmount } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+            act(() => { (mockWorkerInstances[2] as unknown as { onerror: (e: unknown) => void }).onerror({ message: 'boom' }); });
+            quiet.mockRestore();
+            expect(mockSetIsLoading).toHaveBeenCalledWith(false);
+            unmount();
+            expect(mockWorkerInstances).toHaveLength(4);
+            for (const worker of mockWorkerInstances) expect(worker.terminate).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('when the player chose the number of workers', () => {
+        afterEach(() => { window.localStorage.removeItem('evoGarden-workers'); });
+
+        it('starts that many: one that only classifies and the rest for flowers', () => {
+            cores(8);
+            window.localStorage.setItem('evoGarden-workers', '3');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            // simulation, two for flowers, species
+            expect(mockWorkerInstances.length).toBe(4);
+        });
+
+        it('starts one worker that does everything when the choice is one', () => {
+            cores(8);
+            window.localStorage.setItem('evoGarden-workers', '1');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            expect(mockWorkerInstances.length).toBe(2);
+        });
+
+        it('lets the address win over the choice', () => {
+            cores(8);
+            window.localStorage.setItem('evoGarden-workers', '3');
+            window.history.replaceState({}, '', '/?creationWorkers=1');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            expect(mockWorkerInstances.length).toBe(3);
+        });
+
+        it('goes on with the cores when what was saved is not a number of workers', () => {
+            cores(8);
+            window.localStorage.setItem('evoGarden-workers', 'lots');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            // simulation, three for flowers, species
+            expect(mockWorkerInstances.length).toBe(5);
+        });
+    });
+
+    describe('when the address says', () => {
+        it('goes without the species worker on a machine with cores, and all the workers make flowers', () => {
+            window.history.replaceState({}, '', '/?speciesWorker=0');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            // four cores are two workers: simulation and two for flowers
+            expect(mockWorkerInstances.length).toBe(3);
+        });
+
+        it('has the species worker on a machine without', () => {
+            cores(1);
+            window.history.replaceState({}, '', '/?speciesWorker=1');
+            renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            expect(mockWorkerInstances.length).toBe(3);
+        });
     });
 
     it('sends "start" and "pause" messages to the simulation worker', () => {

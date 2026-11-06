@@ -19,7 +19,8 @@ import { processPheromoneTrailTick } from './behaviors/pheromoneTrailBehavior';
 import { processSpiderWebTick } from './behaviors/spiderWebBehavior';
 import { db } from '../services/db';
 import { PopulationManager } from './populationManager';
-import { AsyncFlowerFactory } from './asyncFlowerFactory';
+import { AsyncFlowerFactory, type WorkerPortSpec } from './asyncFlowerFactory';
+import { SpeciesRequester } from './speciesRequester';
 import * as ecosystemManager from './ecosystemManager';
 import { DEFAULT_SIM_PARAMS, INSECT_DATA, TOXIC_FLOWER_THRESHOLD } from '../constants';
 import { Quadtree } from './Quadtree';
@@ -55,6 +56,7 @@ export class SimulationEngine {
     // Managers and Factories
     private populationManager: PopulationManager;
     private asyncFlowerFactory: AsyncFlowerFactory;
+    private speciesRequester: SpeciesRequester;
     
     private longestLivedChampion: { value: number } = { value: 0 };
     private mostToxicChampion: { value: number } = { value: 0 };
@@ -76,6 +78,9 @@ export class SimulationEngine {
         this.flowerService = flowerService;
         this.populationManager = new PopulationManager(params);
         this.asyncFlowerFactory = new AsyncFlowerFactory();
+        this.speciesRequester = new SpeciesRequester(message => this.asyncFlowerFactory.postToSpeciesWorker(message));
+        this.asyncFlowerFactory.onMessage('species-classified', result => this.speciesRequester.receive(result));
+        this.asyncFlowerFactory.onSpeciesDropped(message => this.speciesRequester.discard(message));
         this.environmentState = {
             currentTemperature: params.temperature,
             currentHumidity: params.humidity,
@@ -157,6 +162,7 @@ export class SimulationEngine {
             if (actor.type === 'flower' && !nextActorState.has(actor.id)) {
                 // This flower died this tick.
                 promises.push(this._checkAndSaveChampion(actor as Flower, events));
+                this.speciesRequester.reportDeath(actor as Flower, this.tick);
             }
         }
         await Promise.all(promises);
@@ -179,6 +185,9 @@ export class SimulationEngine {
 
     public setFlowerWorkerPort(port: MessagePort, params: SimulationParams) {
         this.asyncFlowerFactory.setFlowerWorkerPort(port, params);
+    }
+    public setWorkerPorts(specs: WorkerPortSpec[], params: SimulationParams) {
+        this.asyncFlowerFactory.setWorkerPorts(specs, params);
     }
     public setEnvironmentState(env: EnvironmentState) {
         this.environmentState = env;
@@ -444,6 +453,8 @@ export class SimulationEngine {
             season: this.environmentState.season,
             weatherEvent: this.environmentState.currentWeatherEvent.type,
             pendingFlowerRequests: this.asyncFlowerFactory.getPendingRequestCount(),
+            workers: { ...this.asyncFlowerFactory.getStats(), species: this.speciesRequester.getStats() },
+            speciesAlive: this.speciesRequester.getAliveSpecies(),
             healingFlowerCount,
             toxicFlowerCount,
         };
@@ -733,6 +744,9 @@ export class SimulationEngine {
         
         await this._checkDeceasedChampions(initialActors, nextActorState, events);
 
+        this.speciesRequester.requestMature(nextActorState.values(), this.tick);
+        events.push(...this.speciesRequester.takeEvents());
+
         this.populationManager.totalBirdsHunted += this.birdsHuntedThisTick;
         
         for (const actor of newActorQueue) {
@@ -787,6 +801,8 @@ export class SimulationEngine {
         this.tick = loadedTick; 
         this.totalInsectsEaten = loadedTotalInsectsEaten || 0;
         this.populationManager.loadState(savedPayload);
+        this.speciesRequester.reset();
+        this.asyncFlowerFactory.resetStats();
         this.grid = loadedGrid;
         this.asyncFlowerFactory.updateParams(this.params);
         
@@ -843,6 +859,7 @@ export class SimulationEngine {
             this.tick = 0;
             this.totalInsectsEaten = 0;
             this.asyncFlowerFactory.reset();
+            this.speciesRequester.reset();
             this.environmentState = {
                 currentTemperature: newParams.temperature,
                 currentHumidity: newParams.humidity,

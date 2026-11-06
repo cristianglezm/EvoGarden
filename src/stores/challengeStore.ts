@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Challenge, ChallengeState, TickSummary } from '../types';
 
-const initialChallenges: Challenge[] = [
+export const initialChallenges: Challenge[] = [
     { id: 'survival-1', title: 'Budding Survivor', description: 'Have a flower survive for 100 ticks.', goal: 100, progress: 0, completed: false, metric: 'maxFlowerAge', aggregator: 'max' },
     { id: 'survival-2', title: 'Perennial Power', description: 'Have a flower survive for 1,000 ticks.', goal: 1000, progress: 0, completed: false, metric: 'maxFlowerAge', aggregator: 'max' },
     { id: 'survival-3', title: 'Ancient Bloom', description: 'Have a flower survive for 10,000 ticks.', goal: 10000, progress: 0, completed: false, metric: 'maxFlowerAge', aggregator: 'max' },
@@ -25,6 +25,15 @@ const initialChallenges: Challenge[] = [
     { id: 'pest-1', title: 'Infestation', description: 'Reach a population of 20 cockroaches.', goal: 20, progress: 0, completed: false, metric: 'cockroachCount', aggregator: 'max' },
     { id: 'metamorphosis-1', title: 'Butterfly Effect', description: 'Evolve a thriving butterfly population of 25.', goal: 25, progress: 0, completed: false, metric: 'butterflyCount', aggregator: 'max' },
     { id: 'healing-garden', title: 'Garden of Life', description: 'Evolve a flower with a healing property of 20% or more.', goal: 0.2, progress: 0, completed: false, metric: 'maxHealingRate', aggregator: 'max' },
+    // The species collection (the field guide has 96 species): about a tenth, a quarter and a half of them
+    { id: 'species-1', title: 'Field Naturalist', description: 'Discover 10 species of flowers for the field guide.', goal: 10, progress: 0, completed: false, metric: 'speciesDiscovered', aggregator: 'max' },
+    { id: 'species-2', title: 'Taxonomist', description: 'Discover 24 species of flowers for the field guide.', goal: 24, progress: 0, completed: false, metric: 'speciesDiscovered', aggregator: 'max' },
+    { id: 'species-3', title: 'Keeper of the Garden', description: 'Discover 48 species of flowers: half of the field guide.', goal: 48, progress: 0, completed: false, metric: 'speciesDiscovered', aggregator: 'max' },
+    { id: 'atypical-1', title: 'Strange Bloom', description: 'Find an atypical flower: one that fits none of the species well.', goal: 1, progress: 0, completed: false, metric: 'atypicalFound', aggregator: 'max' },
+    // Species alive in the garden at the same time (the goals are a guess: tune them from real gardens)
+    { id: 'biodiversity-1', title: 'Mixed Meadow', description: 'Have 10 different species of flowers alive in the garden at once.', goal: 10, progress: 0, completed: false, metric: 'speciesAlive', aggregator: 'max' },
+    { id: 'biodiversity-2', title: 'Living Gallery', description: 'Have 20 different species of flowers alive in the garden at once.', goal: 20, progress: 0, completed: false, metric: 'speciesAlive', aggregator: 'max' },
+    { id: 'biodiversity-3', title: 'Botanical Paradise', description: 'Have 30 different species of flowers alive in the garden at once.', goal: 30, progress: 0, completed: false, metric: 'speciesAlive', aggregator: 'max' },
     // New challenges for specialized insects
     { id: 'specialist-ladybug', title: 'Pest Patrol', description: 'Establish a ladybug population of 20 to control pests.', goal: 20, progress: 0, completed: false, metric: 'ladybugCount', aggregator: 'max' },
     { id: 'specialist-beetle', title: 'A Helping Hand', description: 'Cultivate a beetle population of 15 to support your garden.', goal: 15, progress: 0, completed: false, metric: 'beetleCount', aggregator: 'max' },
@@ -33,45 +42,60 @@ const initialChallenges: Challenge[] = [
     { id: 'specialist-spider', title: 'Arachnophilia', description: 'Host a population of 10 spiders in your garden.', goal: 10, progress: 0, completed: false, metric: 'spiderCount', aggregator: 'max' },
 ];
 
+// Progress of the challenges for the values of the metrics (a tick of the simulation, or what the page read elsewhere).
+function applyMetrics(challenges: Challenge[], values: Partial<TickSummary>): Challenge[] | null {
+    let hasChanged = false;
+    const updated = challenges.map(challenge => {
+        if (challenge.completed) return challenge;
+
+        const metricValue = values[challenge.metric];
+        if (typeof metricValue !== 'number' || Number.isNaN(metricValue)) return challenge;
+
+        // For sums, we use the cumulative value directly
+        const newProgress = challenge.aggregator === 'max' ? Math.max(challenge.progress, metricValue) : metricValue;
+        if (newProgress === challenge.progress) return challenge;
+
+        hasChanged = true;
+        return { ...challenge, progress: newProgress, completed: newProgress >= challenge.goal };
+    });
+    return hasChanged ? updated : null;
+}
+
 export const useChallengeStore = create<ChallengeState>()(
     persist(
         (set, get) => ({
             challenges: initialChallenges,
             processTick: (summary: TickSummary) => {
-                const { challenges } = get();
-                let hasChanged = false;
-
-                const updatedChallenges = challenges.map(challenge => {
-                    if (challenge.completed) return challenge;
-
-                    let newProgress = challenge.progress;
-                    const metricValue = summary[challenge.metric];
-                    
-                    if (typeof metricValue !== 'number') return challenge;
-
-                    if (challenge.aggregator === 'max') {
-                        newProgress = Math.max(challenge.progress, metricValue);
-                    } else if (challenge.aggregator === 'sum') {
-                        // For sums, we use the cumulative value directly
-                        newProgress = metricValue;
-                    }
-                    
-                    if (newProgress !== challenge.progress) {
-                        hasChanged = true;
-                        const completed = newProgress >= challenge.goal;
-                        return { ...challenge, progress: newProgress, completed };
-                    }
-
-                    return challenge;
-                });
-
-                if (hasChanged) {
-                    set({ challenges: updatedChallenges });
-                }
+                const updated = applyMetrics(get().challenges, summary);
+                if (updated) set({ challenges: updated });
+            },
+            processMetrics: (values: Partial<TickSummary>) => {
+                const updated = applyMetrics(get().challenges, values);
+                if (updated) set({ challenges: updated });
             },
         }),
         {
             name: 'evogarden-challenge-storage',
+            // What was saved is the list of challenges as they were then: a challenge added since would never show up for a
+            // player who already has a save. The challenges are the game's, the progress is the save's.
+            version: 1,
+            migrate: persisted => persisted as ChallengeState,
+            merge: (persisted, current) => {
+                const saved = (persisted as { challenges?: Challenge[] } | undefined)?.challenges;
+                if (!Array.isArray(saved)) return current;
+                return {
+                    ...current,
+                    challenges: initialChallenges.map(challenge => {
+                        const before = saved.find(s => s?.id === challenge.id);
+                        if (!before) return challenge;
+                        return {
+                            ...challenge,
+                            progress: Number.isFinite(before.progress) ? before.progress : challenge.progress,
+                            completed: before.completed === true,
+                        };
+                    }),
+                };
+            },
         }
     )
 );

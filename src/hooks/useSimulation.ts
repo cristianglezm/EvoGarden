@@ -2,10 +2,22 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SimulationParams, AppEvent, CellContent, ActorDelta, TickSummary, Coord } from '../types';
 import { useChallengeStore } from '../stores/challengeStore';
 import { eventService } from '../services/eventService';
+import { planWorkers } from '../lib/workerPlan';
+import { readWorkerSetting } from '../lib/workerSetting';
+import { SPECIES_BATCH_HELPER } from '../lib/asyncFlowerFactory';
 
 interface UseSimulationProps {
     setIsLoading: (loading: boolean) => void;
 }
+
+// Some contexts refuse to give out localStorage at all: the player's choice is then just not read.
+const browserStorage = (): Storage | undefined => {
+    try {
+        return window.localStorage;
+    } catch {
+        return undefined;
+    }
+};
 
 export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const [actors, setActors] = useState<Map<string, CellContent>>(new Map());
@@ -14,7 +26,8 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const [workerError, setWorkerError] = useState<Error | null>(null);
     const [latestSummary, setLatestSummary] = useState<TickSummary | null>(null);
     const workerRef = useRef<Worker | null>(null);
-    const flowerWorkerRef = useRef<Worker | null>(null);
+    const flowerWorkersRef = useRef<Worker[]>([]);
+    const speciesWorkerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
     const latestSummaryRef = useRef<TickSummary | null>(null);
     
@@ -25,10 +38,9 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         });
         workerRef.current = simWorker;
 
-        const flowerWorker = new Worker(new URL('../flower.worker.ts', import.meta.url), {
-            type: 'module',
-        });
-        flowerWorkerRef.current = flowerWorker;
+        // The species work has a worker of its own when there are cores for it; without it the first worker
+        // that makes flowers does it too, a flower and then a species.
+        const { speciesWorker: wantsSpeciesWorker, creationWorkers } = planWorkers({ hardwareConcurrency: navigator.hardwareConcurrency, search: window.location.search, workers: readWorkerSetting(browserStorage()) });
 
         const errorHandler = (event: ErrorEvent) => {
             console.error("A worker encountered an error:", event.message, event);
@@ -36,11 +48,38 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
             setIsLoading(false); // Stop loading on error
         };
         simWorker.onerror = errorHandler;
-        flowerWorker.onerror = errorHandler;
 
-        const channel = new MessageChannel();
-        simWorker.postMessage({ type: 'init-ports', payload: { flowerWorkerPort: channel.port1 } }, [channel.port1]);
-        flowerWorker.postMessage({ type: 'init-ports', payload: { simWorkerPort: channel.port2 } }, [channel.port2]);
+        // Each worker has a channel of its own to the simulation worker, which keeps the one queue of requests.
+        // The URL has to be written inside `new Worker(...)`: that is the only form Vite compiles into a worker.
+        // Passed to a helper it is copied as a TypeScript file the browser cannot run (scripts/checkBuild.mjs checks it).
+        const connect = (worker: Worker) => {
+            worker.onerror = errorHandler;
+            return { worker, channel: new MessageChannel() };
+        };
+        const flowers = Array.from({ length: creationWorkers }, () =>
+            connect(new Worker(new URL('../flower.worker.ts', import.meta.url), { type: 'module' })));
+        const species = wantsSpeciesWorker
+            ? connect(new Worker(new URL('../species.worker.ts', import.meta.url), { type: 'module' }))
+            : null;
+        flowerWorkersRef.current = flowers.map(f => f.worker);
+        speciesWorkerRef.current = species?.worker ?? null;
+
+        const simPorts = [...flowers.map(f => f.channel.port1), ...(species ? [species.channel.port1] : [])];
+        simWorker.postMessage({
+            type: 'init-ports',
+            payload: { flowerWorkerPorts: flowers.map(f => f.channel.port1), ...(species && { speciesWorkerPort: species.channel.port1 }) },
+        }, simPorts);
+        flowers.forEach(({ worker, channel }, i) => {
+            // Without a species worker the first one keeps all the roles, which is what a worker does without `roles`.
+            // Next to one, every flower worker classifies when it has nothing to make, in small batches, and leaves
+            // the migration and the champions to the species worker.
+            const alone = !species && i === 0;
+            const payload = species
+                ? { simWorkerPort: channel.port2, roles: ['creation', 'species'], speciesBatch: SPECIES_BATCH_HELPER, primarySpecies: false }
+                : { simWorkerPort: channel.port2, ...(!alone && { roles: ['creation'] }) };
+            worker.postMessage({ type: 'init-ports', payload }, [channel.port2]);
+        });
+        species?.worker.postMessage({ type: 'init-ports', payload: { simWorkerPort: species.channel.port2 } }, [species.channel.port2]);
         
         setIsWorkerInitialized(true);
         
@@ -97,9 +136,11 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
 
         return () => {
             simWorker.terminate();
-            flowerWorker.terminate();
+            flowers.forEach(({ worker }) => worker.terminate());
+            species?.worker.terminate();
             workerRef.current = null;
-            flowerWorkerRef.current = null;
+            flowerWorkersRef.current = [];
+            speciesWorkerRef.current = null;
             setIsWorkerInitialized(false);
         };
     }, [setIsLoading]);

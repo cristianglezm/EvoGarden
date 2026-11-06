@@ -6,11 +6,13 @@ import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach, Co
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon, ChatBubbleIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
+import { useSpeciesChallenges } from './hooks/useSpeciesChallenges';
 import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
 import { flowerService } from './services/flowerService';
 import { eventService } from './services/eventService';
 import { DataPanel } from './components/DataPanel';
+import { FieldGuideHost } from './components/FieldGuideHost';
 import { useAnalyticsStore } from './stores/analyticsStore';
 import { db } from './services/db';
 import { useEventLogStore } from './stores/eventLogStore';
@@ -23,6 +25,7 @@ import { StatusPanel } from './components/StatusPanel';
 import { Logo } from './components/Logo';
 import { ToolsPanel } from './components/ToolsPanel';
 import { AIChatPanel } from './components/AIChatPanel';
+import { defaultSpeciesSource } from './services/defaultSpeciesSource';
 
 const META_SAVE_KEY = 'evoGarden-savedState-meta';
 const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization and loading
@@ -75,6 +78,10 @@ export default function App(): React.ReactNode {
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
+  // One field guide for the whole game: the Seed Bank, a champion card and the details of a flower open it
+  const [guide, setGuide] = useState<{ isOpen: boolean; cell: string | null }>({ isOpen: false, cell: null });
+  const openGuide = useCallback((cell: string | null) => setGuide({ isOpen: true, cell }), []);
+  const closeGuide = useCallback(() => setGuide(previous => ({ ...previous, isOpen: false })), []);
   const [isFullLogOpen, setIsFullLogOpen] = useState(false);
   const [isCommentaryOpen, setIsCommentaryOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,6 +110,8 @@ export default function App(): React.ReactNode {
 
 
   const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed } = useSimulation({ setIsLoading });
+  // the challenges about the species collection, which the simulation does not count
+  useSpeciesChallenges(latestSummary);
   const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
 
     const handleEnterPlantingMode = (genome: string, sex: 'male' | 'female' | 'both') => {
@@ -450,6 +459,8 @@ export default function App(): React.ReactNode {
                             onTrackActor={handleTrackActor}
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
+                            speciesSource={defaultSpeciesSource}
+                            onViewInGuide={openGuide}
                         />;
             case 'insect':
             case 'cockroach':
@@ -612,6 +623,19 @@ const detailsPanel = renderDetailsPanel();
         onClose={() => setIsDataPanelOpen(false)}
         isRunning={isRunning}
         setIsRunning={setIsRunning}
+        onOpenGuide={openGuide}
+      />
+      <FieldGuideHost
+        isOpen={guide.isOpen}
+        cell={guide.cell}
+        onClose={closeGuide}
+        isRunning={isRunning}
+        setIsRunning={setIsRunning}
+        waiting={latestSummary?.workers?.species.waiting}
+        onPlant={(genome, sex) => {
+          setIsDataPanelOpen(false); // to be able to click the garden
+          handleEnterPlantingMode(genome, sex);
+        }}
       />
       <FullEventLogPanel isOpen={isFullLogOpen} onClose={handleCloseFullLog} />
       <ToolsPanel
@@ -654,6 +678,7 @@ const detailsPanel = renderDetailsPanel();
                     onLoad={handleLoadSimulation}
                     hasSavedState={hasSavedState}
                     isSaving={isSaving}
+                    speciesSource={defaultSpeciesSource}
                 />
             </div>
          </div>

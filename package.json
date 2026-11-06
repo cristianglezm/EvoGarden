@@ -1,19 +1,21 @@
 {
   "name": "evogarden",
-  "version": "2.33.2",
+  "version": "2.34.0",
   "description": "A dynamic garden simulation where flowers evolve under the pressure of insects and birds. Watch a Darwinian battlefield unfold as flowers, insects, and birds interact in a delicate ecosystem, with visual traits driven by NEAT Algorithm.",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "postbuild": "node scripts/checkBuild.mjs",
     "buildGH": "tsc && vite build --base=/EvoGarden/",
+    "postbuildGH": "node scripts/checkBuild.mjs",
     "preview": "vite preview",
     "show": "npx playwright show-report",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:e2e": "playwright test e2e/app.spec.ts --update-snapshots"
+    "test:e2e": "playwright test --update-snapshots"
   },
   "author": "Cristian Gonzalez <cristian.glez.m@gmail.com>",
   "license": "Apache-2.0",
@@ -41,6 +43,7 @@
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitest/ui": "^5.0.5",
+    "fake-indexeddb": "^6.2.6",
     "jsdom": "^30.1.3",
     "react-devtools": "^8.0.0",
     "tailwindcss": "^4.1.17",

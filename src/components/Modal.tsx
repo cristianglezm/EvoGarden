@@ -6,9 +6,17 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /** `screen` for content that needs room, like the field guide: most of the screen, with a margin. */
+  size?: 'md' | 'screen';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+// `screen` is 90% of the width and height of the window, so 5% is left on each side.
+const PANELS = {
+  md: 'w-full max-w-3xl h-full max-h-[80vh]',
+  screen: 'w-[90vw] h-[90vh]',
+};
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
 
   return (
@@ -19,7 +27,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       role="dialog"
     >
       <div
-        className="bg-surface border border-border rounded-lg shadow-xl w-full max-w-3xl h-full max-h-[80vh] flex flex-col"
+        className={`bg-surface border border-border rounded-lg shadow-xl ${PANELS[size]} flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="shrink-0 flex items-center justify-between p-4 border-b border-border">

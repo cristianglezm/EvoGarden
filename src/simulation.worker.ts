@@ -3,6 +3,7 @@
 import { SimulationEngine } from './lib/simulationEngine';
 import { flowerService } from './services/flowerService';
 import { BASE_TICK_RATE_MS } from './constants';
+import { workerPortSpecs } from './lib/workerPlan';
 import type { SimulationParams, Flower } from './types';
 import { createNewFlower, createInitialMobileActors, initializeHivesAndBees, initializeAntColonies, initializeSpiders } from './lib/simulationInitializer';
 
@@ -10,7 +11,8 @@ let isRunning = false;
 let gameLoopTimeoutId: number | undefined;
 let engine: SimulationEngine | null = null;
 let isLoadingState = false;
-let flowerWorkerPort: MessagePort | null = null;
+let flowerWorkerPorts: MessagePort[] = [];
+let speciesWorkerPort: MessagePort | null = null;
 
 const INIT_TIMEOUT_MS = 15000;
 
@@ -45,7 +47,8 @@ self.onmessage = async (e: MessageEvent) => {
     const { type, payload } = e.data;
     switch (type) {
         case 'init-ports':
-            flowerWorkerPort = payload.flowerWorkerPort;
+            flowerWorkerPorts = payload.flowerWorkerPorts ?? [];
+            speciesWorkerPort = payload.speciesWorkerPort ?? null;
             // The SimulationEngine is responsible for setting the onmessage handler for this port
             // via the AsyncFlowerFactory.
             break;
@@ -70,8 +73,8 @@ self.onmessage = async (e: MessageEvent) => {
             const stem = await flowerService.makeStem();
             engine.setStemImage(stem.image);
 
-            if (flowerWorkerPort) {
-                engine.setFlowerWorkerPort(flowerWorkerPort, params);
+            if (flowerWorkerPorts.length > 0) {
+                engine.setWorkerPorts(workerPortSpecs({ flowerWorkerPorts, speciesWorkerPort }), params);
             } else {
                 console.error("Simulation worker could not set flower worker port on engine.");
             }
@@ -169,8 +172,8 @@ self.onmessage = async (e: MessageEvent) => {
                  engine = new SimulationEngine(payload.params, flowerService);
              }
              
-             if (flowerWorkerPort) {
-                engine.setFlowerWorkerPort(flowerWorkerPort, payload.params);
+             if (flowerWorkerPorts.length > 0) {
+                engine.setWorkerPorts(workerPortSpecs({ flowerWorkerPorts, speciesWorkerPort }), payload.params);
              } else {
                 console.error("Simulation worker could not set flower worker port on engine during load.");
              }

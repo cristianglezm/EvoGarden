@@ -16,6 +16,8 @@ To build a web-based predator-prey simulation in a garden environment. The core 
 -   **Styling**: Tailwind CSS with PostCSS & Autrefixer
 -   **Genetics Engine**: `@cristianglezm/flower-evolver-wasm` (WASM package)
 -   **Data Visualization**: `echarts`, `echarts-for-react`
+-   **Persistence**: Dexie (IndexedDB); `fake-indexeddb` in the tests
+-   **Tests**: Vitest + Testing Library (units, components), Playwright (`e2e/`)
 
 ### Initial Setup Steps:
 1.  Initialize a new Vite project with the React + TypeScript template.
@@ -60,6 +62,8 @@ Define the core data structures for the simulation state.
     -   `Challenge`, `ChallengeState`: Interfaces for defining user challenges and managing their persistent state in a Zustand store. Examples include survival challenges (max flower age), predation (total insects eaten), population milestones (max insect count), and genetic achievements (max toxicity).
     -   `AnalyticsDataPoint`, `AnalyticsState`: Interfaces for storing a history of `TickSummary` data for visualization, also managed in a persistent Zustand store. This now includes environmental data to power the new Environment chart.
     -   **`SeedBankEntry`**: Interface for storing champion flowers in IndexedDB, containing the `category` ('longestLived', 'mostToxic', 'mostHealing'), `genome`, achievement `value`, a rendered `imageData`, and `sex`.
+-   **Species** (`types/species.ts`): `SpeciesSample` (the metadata row of a stored flower: `id` = hash of the genome, `cell` `"x,y"` or `"none"`, `x`, `y`, `d` (distance to the species' prototype), `fp` (fingerprint of the map that placed it), `kind` `sample | atypical | unclassified`, `founder`, `records`, `sex`, `age`, `toxicity`, `tick`), `SpeciesMatch` (`{x, y, distance}`), `SpeciesStatus` (the outcome of a classification job) and `SpeciesLimits` (`cap`, `atypicalCap`, `unclassifiedCap`; 50 / 500 / 200 by default). Genomes and images live in `speciesGenomes`, the cap in `speciesMeta`.
+    -   **`TickSummary.workers`**: per flower worker (in flight, produced, failed, `avgMs`), `queued`, `species` (waiting, answered, dropped, by status, `avgMs`), flowers per second and the seed counters. **`speciesDiscovered`** and **`atypicalFound`** are optional fields that the page fills from the collection for the challenges (the simulation does not count them); **`speciesAlive`** is counted by the simulation (the different species among the living, mature, classified flowers).
 -   **Events & Notifications**:
     -   `AppEvent`: A structured object for all events within the simulation, containing a `message`, `type`, `importance`, and optionally the `tick` it occurred on and a `timestamp`.
     -   `LogEntry`: The object stored in the `eventLogStore`, extending `AppEvent` with a unique ID.
@@ -76,24 +80,21 @@ To promote flexibility and ensure saved states are perfectly reproducible, core 
 
 The application's architecture is designed to separate the computationally intensive simulation from the UI, ensuring the user experience remains fluid and responsive.
 
-### 5.1. Dual-Worker Architecture for Performance
-The simulation is split across two Web Workers to ensure the UI remains responsive and the simulation tick rate is consistent, even during heavy computation.
--   **`simulation.worker.ts` (The Simulation Host)**: This worker is the primary owner of the simulation state.
-    -   **Role**: It hosts the `SimulationEngine` and runs the main game loop (`setInterval`). Its sole responsibility is to manage the simulation's state progression, tick by tick.
-    -   **Communication**: It communicates with the UI thread via `postMessage`, sending batches of state changes (deltas), events, and tick summaries. It communicates with the `flower.worker.ts` via a dedicated `MessageChannel`.
-
--   **`flower.worker.ts` (The Genetics Worker)**: This worker is a specialized offload thread for expensive WASM operations.
-    -   **Role**: It owns the instance of the `FEService` (the WASM wrapper). Its only job is to receive requests for new flower creation (initial, mutation, or reproduction), execute the slow, asynchronous WASM functions, and send the completed flower data back.
-    -   **Benefit**: By isolating WASM calls here, the main simulation loop in the `simulation.worker.ts` is **never blocked**. It can continue ticking at a consistent rate while new flowers are being generated in the background.
+### 5.1. Multi-Worker Architecture for Performance
+The work is split across Web Workers so the UI stays responsive and the simulation tick rate is consistent, even during heavy computation. There are three kinds of worker, and one `MessageChannel` from the simulation worker to each of the others.
+-   **`simulation.worker.ts` (The Simulation Host)**: The primary owner of the simulation state.
+    -   **Role**: Hosts the `SimulationEngine` and runs the main game loop (`setInterval`). It also hosts the **scheduler** (`AsyncFlowerFactory`) and the `SpeciesRequester` (see 5.6 and 5.7).
+    -   **Communication**: With the UI thread via `postMessage` (deltas, events, tick summaries); with the other workers via their channels.
+-   **`flower.worker.ts` (Flower workers, 1 to 8)**: Each owns its own instance of the `FEService` (the WASM wrapper) and executes the slow, asynchronous WASM functions: `makeFlower()`, `mutate()`, `reproduce()`. A flower worker holds what arrives before its WASM is ready and handles it in order; if the service cannot start it reports it once (`reportFatal`). When it has nothing to make it classifies species in small batches.
+-   **`species.worker.ts` (Species worker, optional)**: Owns a WASM instance that only classifies (batches of 32), the species collection's writes, the classifier migration and the champions' records. It exists when the plan (5.7) has two or more workers.
+-   **Benefit**: By isolating WASM calls, the main simulation loop is **never blocked**; it keeps ticking while flowers are generated and species classified.
 
 -   **Asynchronous Flower Creation Pipeline**:
-    1.  When the `SimulationEngine` or a behavior module determines a new flower should be created, it calls the `AsyncFlowerFactory`.
-    2.  The factory sends a `request-flower` message to the `flower.worker.ts` via the `MessageChannel`. This message includes the necessary data (parent genomes, coordinates) and a unique `requestId`. It immediately returns a lightweight `FlowerSeed` placeholder actor.
+    1.  When the `SimulationEngine` or a behavior module determines a new flower should be created, it calls the `AsyncFlowerFactory`, which immediately returns a lightweight `FlowerSeed` placeholder and queues a request with a unique `requestId`.
+    2.  The factory keeps the queue: a flower worker holds at most two requests, the least busy one gets the next (`request-flower`), and the factory remembers which worker holds which request so a cancel (`cancel-flower-request`) goes to the right one. A cancel of a request that still waits costs nothing.
     3.  The `simulation.worker.ts` continues its tick without waiting.
-    4.  The `flower.worker.ts` receives the request, performs the expensive `reproduce()` or `makeFlower()` call, and waits for the WASM module to complete.
-    5.  Once the new flower's data (genome, stats, image) is ready, the `flower.worker.ts` sends a `flower-created` message back to the `simulation.worker.ts`, including the original `requestId`.
-    6.  The `AsyncFlowerFactory` on the simulation worker thread receives this message and places the completed flower data into its internal queue.
-    7.  At the beginning of the next tick, the `SimulationEngine` asks the factory for completed flowers. The factory processes its queue, finds the `FlowerSeed` with the matching ID, removes it, and returns the new, fully-formed `Flower`.
+    4.  The worker performs the expensive call and, when the genome, stats and image are ready, answers `flower-created` with the `requestId` and the time it took (`durationMs`) or `flower-creation-failed`.
+    5.  At the beginning of the next tick the `SimulationEngine` asks the factory for completed flowers. For each, the factory finds the `FlowerSeed` with the matching id, takes its age (and sets maturity if that is enough), removes it and returns the new `Flower`. If the seed died or was cancelled meanwhile, the finished flower is thrown away (and counted).
 
 ### 5.2. The Simulation Engine & Behavior System (`src/lib/`)
 -   **`SimulationEngine` (`simulationEngine.ts`)**: This class acts as a high-level **orchestrator** for the simulation. Its main loop (`calculateNextTick`) coordinates the different managers and systems, but contains very little logic itself. Its core responsibilities are:
@@ -118,12 +119,12 @@ The simulation is split across two Web Workers to ensure the UI remains responsi
             -   Spawns an **eagle** if the insect population is crashing (to control the bird population).
             -   Spawns a **herbicide plane** if flower density becomes too high.
         -   Manages cooldowns for all spawning events to prevent chaotic fluctuations.
--   **`AsyncFlowerFactory`**: Handles all asynchronous communication with the `flower.worker.ts`.
+-   **`AsyncFlowerFactory`**: The scheduler: it handles all communication with the flower workers and the species worker (see 5.1 and 5.7).
     -   **Role**: To completely decouple expensive, blocking WASM genetics calls from the main simulation loop.
     -   **Responsibilities**:
         -   Receives requests for new flowers from the simulation engine or behavior modules.
         -   Creates a lightweight `FlowerSeed` placeholder and returns it immediately.
-        -   Manages the communication queue with the genetics worker.
+        -   Keeps the queue of requests, hands them to the workers (two per flower worker, flowers first) and keeps their statistics; keeps the species jobs and sends them in batches.
         -   Provides a list of fully-formed `Flower` objects back to the engine once they have been computed.
 -   **`EcosystemManager`**: A module for global, system-wide behaviors.
     -   **Role**: To group functions that operate on the entire actor state rather than a single actor, cleaning up the main engine loop.
@@ -202,15 +203,38 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 
 ### 5.4. UI/Worker Communication & State Management Hooks (`src/hooks/`)
 -   **`useSimulation` Hook**: This custom hook is the sole bridge between the React UI and the simulation worker.
-    -   **Responsibilities**: Manages the lifecycle of both workers, establishes the `MessageChannel` between them, sends commands (start, pause, reset, trigger-weather, introduce-species, introduce-stationary, plant-champion-seed) to the simulation worker, and listens for incoming messages.
+    -   **Responsibilities**: Manages the lifecycle of the workers, establishes the `MessageChannel` from the simulation worker to each of the others, sends commands (start, pause, reset, trigger-weather, introduce-species, introduce-stationary, plant-champion-seed) to the simulation worker, and listens for incoming messages.
     -   **State Synchronization**: When it receives a 'tick-update' message, it efficiently processes an array of deltas to reconstruct the new grid state. It then forwards the tick summary to the analytics and challenge stores and sends all new events to the EventService.
+-   **`useSimulation` and the workers**: it starts the workers that `planWorkers` asks for (a species worker, N flower workers), gives each its channel and its roles in `init-ports` (`roles`, `speciesBatch`, `primarySpecies`) and terminates them on unmount; any worker's `error` stops the loading state.
 -   **`useActorTracker` Hook**: A reusable hook that encapsulates the logic for tracking a specific actor.
     -   **Responsibilities**: Manages the ID of the tracked actor, handles starting and stopping the tracking mode, and ensures the simulation continues to run while tracking is active. It also synchronizes the `selectedActor` state to keep the UI panel updated with the tracked actor's latest data. This hook is primarily consumed by the `GlobalSearch` component and the individual actor details panels to provide a cohesive tracking experience.
+
+-   **`useSpeciesChallenges`**: reads the species collection (when the app starts and when a species worker answered something, at most every 10 seconds, retrying while the classifier is not ready) and gives the challenge store `speciesDiscovered` and `atypicalFound`.
+-   **`useFlower3DView`**: the 3D view of a flower in a modal; pauses the garden while it is shown and only starts it again if it was running.
+-   **`useDismissOnOutsideClick`**: closes the details of an actor on an outside click. A modal is drawn in the body, so it is not inside the panel it was opened from; a click inside any `aria-modal` element is never an outside click.
 
 ### 5.5. Centralized Event & Notification System
 -   **`eventService.ts`**: A singleton service on the main thread that acts as a central hub for all notifications.
 -   **Decoupling**: The simulation engine and its behaviors simply generate and return an array of `AppEvent` objects each tick.
 -   **Routing Logic**: Based on the user's `notificationMode` setting and the event's `importance`, the service decides whether to send the event to the `eventLogStore`, the `toastStore`, or both.
+
+### 5.6. The Species System (`src/lib/species*.ts`, `src/services/species*.ts`)
+A species is a cell of the 12×8 SOM embedded in the genetics module (`FEService.getTrainedSOM()`); a flower is a 267-number vector (a 16×16 petal silhouette and 11 statistics) and lands on its nearest cell, classified under the default environment so a genome keeps its species. Everything about classifying lives behind `SpeciesClassifier` (reached through `flowerService.speciesClassifier`, which shares the thread's one WASM instance); the `FEService` interface is untouched.
+-   **Pipeline**: every tick the `SpeciesRequester` (simulation worker) asks for each mature flower not asked for yet (`classify-flower`, keyed by genome and tick, never by the flower's id: ids are `flower-x-y` and are reused). A worker answers `species-classified` with a status (`discovered`, `stored`, `unclassified`, `skipped`, `dropped`, `recorded`, `unchanged`, `failed`), the match, the classifier's fingerprint and the time per flower. A discovery becomes an `AppEvent`. When a classified flower dies the requester sends `record-flower` with its final age and toxicity, together with the species it already knows, so no worker classifies a flower twice.
+-   **The collection (Dexie versions 4 and 5)**: `speciesSamples` (metadata, about 200 bytes a row: id, `cell` as a string because `null` is not an IndexedDB key, distance, classifier fingerprint, kind, founder, records), `speciesGenomes` (the genome and, for founders and record holders, the image) and `speciesMeta` (the cap). `SpeciesRepository` applies the policy inside one transaction per offer: a per-species cap (25/50/100, `trim()` when lowered), atypical samples outside it (global cap 500; atypical means farther than mean + 2σ with at least 20 samples), unclassified samples (global cap 200), protected founders and record holders, no duplicates. Records per species are *longest lived*, *most toxic* and *most healing*; the three global champions are linked to their species through the collection.
+-   **Classifier change**: each sample carries the fingerprint of the map that placed it. `SpeciesJobs.startMigration` classifies stale samples in chunks (`classifyBatch`), going before other jobs, and the last chunk normalizes in the same transaction (`normalizeSamples`: founders, records by stored values, kinds, caps). An interrupted run ends as a single run.
+-   **Batching**: the cost of a call is mostly the classifier's JSON being parsed, so a worker that has nothing else between two jobs classifies everything that waits in one `classifyBatch`.
+-   **Bounded queue**: at most 200 classifications wait in the simulation (oldest dropped first, records never); the requester is told so what was let go is not waiting for an answer.
+-   **Reading it from the page**: `SpeciesSource` (grid, samples, genomes, champions' species, storage, cap, `speciesFor(genome)`) is what the Field Guide, the champion cards, the flower details and the species challenges read; the page never classifies in bulk and never writes the collection.
+-   **Field Guide**: `FieldGuideHost` (once, in `App`) owns the modal, the champions (read each time it opens), the genome download and the Plant button; `useSpeciesCollection` polls the collection while it is open and reads again when the champions change; `useFlower3DView` is the 3D view shared with the Seed Bank.
+-   **Export**: `collectSamples` writes the `{"Generation": [...]}` file (each entry is the inner `Flower` object of the genome) and a manifest in the same order; a contract test feeds a small export to the real `classifyBatch`.
+-   **Challenges**: `speciesDiscovered` and `atypicalFound` are read from the collection by `useSpeciesChallenges` (throttled), not counted by the simulation; `speciesAlive` is counted by the `SpeciesRequester` each tick from the species it knows for the flowers it sees (the species of a flower is known once it has been classified, so it lags the garden a little); the persisted challenge store has a version and a merge so a player's save gets challenges added later.
+
+### 5.7. Worker Plan, Setting and Info Bar
+-   **`planWorkers`** decides what starts: the player's setting (`evoGarden-workers`, 1–8, applied on reload), else `automaticWorkers(cores)` (logical processors minus four, 2 to 8; 1 on three or fewer; 2 when unknown). With two or more workers one is the species worker and the rest make flowers; with one, a lone worker does both (a flower and then a species). The address overrides `?speciesWorker=0|1` and `?creationWorkers=N` win.
+-   **Scheduler rules** (`AsyncFlowerFactory.dispatch`): flowers first, then species batches; a worker with a species batch in hand makes no flowers until it answers; a flower worker takes a batch of 8 only when it has no flower in hand and none waiting; the dedicated species worker takes 32.
+-   **Statistics** (`TickSummary.workers`): per flower worker (in flight, produced, failed, milliseconds per flower over the last 50), `queued`, the species (waiting, answered, dropped, by status, milliseconds per flower), flowers per second over 10 seconds, and the seeds cancelled or thrown away. `WorkerStatusDisplay` shows them and `workerReport` writes the text of its **Copy** button.
+-   **Build check**: `scripts/checkBuild.mjs` (`postbuild`) fails the build if a worker chunk is missing or a `.ts` was copied uncompiled: Vite only compiles a worker created as `new Worker(new URL('./x.ts', import.meta.url))` written in full.
 
 ## 6. Component Architecture (`src/components/`)
 -   **`App.tsx`**: Root component. Manages UI state, orchestrates the `useSimulation` and `useActorTracker` hooks, and handles save/load logic.
@@ -219,27 +243,30 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   **`Controls.tsx`**: The UI for all `SimulationParams`, including new sliders and inputs for configuring the dynamic weather system (season length, temperature/humidity variation, etc.).
     -   **`ToolsPanel.tsx`**: A slide-out panel that provides UI for direct user interventions. It allows users to trigger weather events, manually introduce new species (insects, birds, hives, colonies), and enter a "planting mode" to place champion seeds from the Seed Bank onto the grid.
     -   **`ActorSelectionPanel.tsx`**: A panel that appears when a user clicks a cell containing multiple actors, allowing them to choose which one to inspect.
-    -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower. Includes a "Track" button that utilizes the `useActorTracker` hook.
+    -   **`FlowerDetailsPanel.tsx`**: Displays detailed data for a selected flower, including its **species** (the stored one, or the classifier's answer marked as not kept in the collection) and a *View in field guide* button. Includes a "Track" button that utilizes the `useActorTracker` hook.
     -   **`InsectDetailsPanel.tsx`**: Displays detailed data for a selected insect or cockroach. Includes a "Track" button that utilizes the `useActorTracker` hook.
     -   **`EggDetailsPanel.tsx`**: A simple panel showing the time remaining until an egg hatches and what type of insect it will become. Includes a "Track" button that utilizes the `useActorTracker` hook.
     -   **`GenericActorDetailsPanel.tsx`**: A fallback panel that displays basic information for any other actor type (birds, nutrients, etc.). Includes a "Track" button that utilizes the `useActorTracker` hook.
     -   **`Flower3DViewer.tsx`**: Renders a flower's 3D model using `@react-three/fiber`.
 -   **`DataPanel.tsx`**: A slide-out panel with a tabbed interface for `ChallengesPanel`, `ChartsPanel`, and `SeedBankPanel`.
 -   **`ChartsPanel.tsx`**: Subscribes to `analyticsStore` and renders visualizations, including a new **Environment chart** showing the history of temperature and humidity.
--   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats and rendered image. Provides functionality to view a champion in 3D, download its genome, and clear the entire Seed Bank.
+-   **`SeedBankPanel.tsx`**: Subscribes to the IndexedDB-based Seed Bank. Displays saved champion flowers with their stats, rendered image and species. Provides functionality to view a champion in 3D, download its genome, open the Field Guide (at the champion's species, or at none) and clear the entire Seed Bank (the species collection is not touched).
+-   **`FieldGuideHost.tsx` / `FieldGuideModal.tsx` / `PrototypeCanvas.tsx`**: The Field Guide. The host lives in `App` (one instance for the Seed Bank, the champion cards and the flower details) and owns the champions, the download, the 3D view and *Plant*; the modal draws the 12×8 map (a discovered species shows its best specimen, an undiscovered one the silhouette of its prototype), the header (species found, samples, atypical, unclassified, stale), the details of a species and the **Collect samples** button.
+-   **`Controls.tsx` sections**: *Workers* (`WorkersSetting`: Automatic or 1–8, applied on reload) and *Species collection* (`SpeciesCapSetting`: Small 25 / Medium 50 / Large 100, with a confirmation before lowering).
 -   **Header Components**:
     -   `StatusPanel.tsx`: A new container component in the header that orchestrates the `EnvironmentDisplay`, `WorkerStatusDisplay`, `EventLog`, and the `GlobalSearch` widget.
     -   `GlobalSearch.tsx`: A header widget that allows users to find any actor by its ID. It uses a Trie for efficient prefix-based searching, pauses the simulation during search, and communicates with the `App` component to highlight (select) or track the chosen actor.
     -   `EnvironmentDisplay`: A new real-time display in the header showing the current season, temperature, humidity, and any active weather events.
-    -   `WorkerStatusDisplay.tsx`: A new real-time display in the status bar showing the number of pending genetics tasks in the `flower.worker.ts`.
+    -   `WorkerStatusDisplay.tsx`: The worker bar: a cell per worker with its requests in flight, the species backlog and the pending total; click for the details (numbers, how the workers were chosen) and **Copy**.
     -   `EventLog.tsx`: A non-intrusive, terminal-style log that displays a real-time feed of events.
 -   **Notification Components**:
     -   `FullEventLogPanel.tsx`: A large, slide-out side panel that displays the full, scrollable history of events.
     -   `Toast.tsx` & `ToastContainer.tsx`: Render pop-up notifications.
+-   **Modals**: `Modal.tsx` (sizes `md` and `screen`) and `ConfirmationModal.tsx` render through a portal into `document.body`, so a side panel that is moved with a CSS transform cannot trap them (a transformed element becomes the containing block of its `fixed` descendants). Both are `role="dialog"` with `aria-modal`.
 -   **Global State (Zustand Stores)**:
     -   `eventLogStore`: Manages the state for the `EventLog`.
     -   `toastStore`: Manages UI notifications for high-importance events.
-    -   `challengeStore` & `analyticsStore`: Use `persist` middleware to save progress and historical data to `localStorage`.
+    -   `challengeStore` & `analyticsStore`: Use `persist` middleware to save progress and historical data to `localStorage`. The challenge store is versioned and merged on load: the challenges, their text and goals are the game's, the progress is the save's.
 
 ## 7. Error Handling and Resilience
 -   **WASM Initialization Failure**: Both the main thread and worker instances must handle potential failures during `initialize()`, display a clear error message, and use a timeout to prevent the app from hanging.
@@ -251,7 +278,12 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
 
 ## 9. Testing & Developer Experience
 -   **Unit & Component Testing**: Use Vitest and React Testing Library. Mock dependencies like the `flowerService` and the Web Worker.
--   **E2E Testing**: Use Playwright to test full user flows.
+-   **Real library, real storage**: tests that involve the genetics module use the real WASM library (node works since fe-wasm 4.0.0), and the species collection is tested against a real IndexedDB (`fake-indexeddb`) with the same store tests on a memory store and on Dexie. Only the canvas, the 3D viewer and the media APIs are stubbed.
+-   **Workers are tested as workers**: set `globalThis.self = globalThis`, import the worker, send `init-ports` with one end of a real `MessageChannel`; a startup race needs the service held behind a gate; a worker created at module level can only be loaded once per test file.
+-   **Test helpers** (`src/test/`): `guideHarness.ts` (the real classifier, a real IndexedDB, the species source and repository, a canvas stub for the guide's tests) and `speciesStores.ts` (the same store tests run on a memory store and on Dexie).
+-   **Shared jsdom**: the suites run with `isolate: false`; a test file that imports modules with mocked dependencies resets the module registry first.
+-   **Mutation checks**: behaviour that matters was checked by mutating the code and confirming a test fails; a surviving mutation is either a missing test or code that does nothing.
+-   **E2E Testing**: Use Playwright to test full user flows (`e2e/app.spec.ts`, `e2e/species.spec.ts`, controllers per panel in `e2e/controllers/`).
 -   **Automatic React DevTools**: A custom Vite plugin automatically launches the standalone React DevTools application.
 
 ## 10. Project Structure
@@ -266,9 +298,13 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
     -   **Core Simulation Library (`lib/`)**:
         -   `simulationEngine.ts`: The high-level orchestrator for the simulation.
         -   `simulationInitializer.ts`: Functions for creating initial actors.
-        -   `PopulationManager.ts`: Manages ecosystem balancing.
-        -   `AsyncFlowerFactory.ts`: Handles asynchronous flower creation.
-        -   `EcosystemManager.ts`: Contains global behavior functions.
+        -   `populationManager.ts`: Manages ecosystem balancing.
+        -   `asyncFlowerFactory.ts`: The scheduler: queues, workers, statistics, the bounded species queue.
+        -   `workerPlan.ts`, `workerSetting.ts`, `workerReport.ts`, `workerWasm.ts`, `speciesRuntime.ts`: How many workers, the player's choice, the worker bar's text, starting a WASM instance, what both kinds of worker share.
+        -   `species.ts`, `speciesRepository.ts`, `speciesJobs.ts`, `speciesRequester.ts`, `speciesMigration.ts`, `speciesGuide.ts`, `speciesExport.ts`: The species system (5.6).
+        -   `simulationUtils.ts`: Grid helpers (empty cells, `hasPlantAt`).
+        -   `downloadFile.ts`: Saves a blob or text as a file (the genome downloads and the sample export).
+        -   `ecosystemManager.ts`: Contains global behavior functions.
         -   `environmentManager.ts`: Manages seasons and weather (inferred from imports).
         -   `renderingEngine.ts`: Manages the two-canvas rendering system.
         -   `behaviors/`: Modules for individual actor logic.
@@ -293,19 +329,25 @@ To avoid performance degradation as the number of actors grows, the `SimulationE
             -   `charts/`: Directory containing individual, specialized chart components.
             -   `Chart.tsx`: A reusable wrapper component for the `echarts-for-react` library.
             -   `SeedBankPanel.tsx`: Renders the champion flowers saved in the Seed Bank.
+        -   **Species**:
+            -   `FieldGuideHost.tsx`, `FieldGuideModal.tsx`, `PrototypeCanvas.tsx`, `useSpeciesCollection.ts`: The Field Guide.
+            -   `WorkerStatusDisplay.tsx`, `WorkersSetting.tsx`, `SpeciesCapSetting.tsx`: The worker bar and two settings of Controls.
         -   **Modals & Notifications**:
-            -   `Modal.tsx` & `ConfirmationModal.tsx`: Generic modal components.
+        -   `Modal.tsx` & `ConfirmationModal.tsx`: Generic modal components (rendered in the body through a portal).
             -   `Flower3DViewer.tsx`: React-Three-Fiber component for rendering the 3D flower model.
             -   `Toast.tsx` & `ToastContainer.tsx`: Components for pop-up notifications.
     -   **Hooks (`hooks/`)**:
-        -   `useSimulation.ts`: Manages the simulation web worker.
+        -   `useSimulation.ts`: Starts and manages the workers.
         -   `useActorTracker.ts`: Encapsulates actor tracking logic.
+        -   `useSpeciesChallenges.ts`, `useFlower3DView.tsx`, `useDismissOnOutsideClick.ts`: See 5.4.
     -   **Services (`services/`)**:
         -   `flowerService.ts`: A TypeScript singleton wrapper for the WASM module.
         -   `eventService.ts`: Central hub for all UI notifications.
-        -   `db.ts`: Dexie (IndexedDB) setup for persistence.
+        -   `db.ts`: Dexie (IndexedDB) setup for persistence (versions 4 and 5 add the species collection).
+        -   `speciesClassifier.ts`, `speciesSource.ts`, `defaultSpeciesSource.ts`, `speciesStore.ts`, `speciesSettings.ts`: The classifier over the WASM module, what the page reads of the collection, and how it is stored.
     -   **State Management (`stores/`)**:
         -   Contains all Zustand global state management stores (`analyticsStore`, `challengeStore`, etc.).
+    -   **Workers** (in `src/`): `simulation.worker.ts`, `flower.worker.ts`, `species.worker.ts`.
     -   **Core Definitions**:
         -   `types/`: Directory containing all TypeScript type definitions.
         -   `constants.ts`: Global simulation constants.

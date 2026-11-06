@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { FlowerDetailsPanel } from './FlowerDetailsPanel';
 import type { Flower } from '../types';
+import type { SpeciesSource } from '../services/speciesSource';
 import { flowerService } from '../services/flowerService';
 
 // Mock the flower service
@@ -168,5 +169,136 @@ describe('FlowerDetailsPanel', () => {
 
         // Should resume the simulation to its previous state (running)
         expect(mockSetIsRunning).toHaveBeenCalledWith(true);
+    });
+});
+
+describe('FlowerDetailsPanel: the species of the flower', () => {
+    const props = { isRunning: false, setIsRunning: vi.fn(), onClose: vi.fn(), onTrackActor: vi.fn(), onStopTracking: vi.fn(), trackedActorId: null };
+    type Answer = { key: string; name: string; stored: boolean } | null;
+    const sourceOf = (speciesFor: (genome: string) => Promise<Answer>) => ({ speciesFor }) as unknown as SpeciesSource;
+    const known: Answer = { key: '3,5', name: 'Stout Lotus', stored: true };
+
+    it('says nothing about the species when there is no source for it', () => {
+        render(<FlowerDetailsPanel {...props} flower={mockFlower} />);
+        expect(screen.queryByText(/Species/)).not.toBeInTheDocument();
+    });
+
+    it('shows the name of the species of the flower once it is known, and a mark while it is not', async () => {
+        let answer!: (value: Answer) => void;
+        const source = sourceOf(() => new Promise<Answer>(resolve => { answer = resolve; }));
+        render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
+        expect(screen.getByText('Species: …')).toBeInTheDocument();
+        await act(async () => answer(known));
+        expect(screen.getByText('Stout Lotus')).toBeInTheDocument();
+        expect(screen.queryByText('Species: …')).not.toBeInTheDocument();
+    });
+
+    it('asks for the genome of the flower', async () => {
+        const speciesFor = vi.fn().mockResolvedValue(known);
+        render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={sourceOf(speciesFor)} />);
+        await screen.findByText('Stout Lotus');
+        expect(speciesFor).toHaveBeenCalledExactlyOnceWith(mockFlower.genome);
+    });
+
+    it('says it is not in the collection when it is only the classifier\'s answer', async () => {
+        const source = sourceOf(() => Promise.resolve({ ...known, stored: false }));
+        render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
+        expect(await screen.findByText('Stout Lotus')).toHaveAttribute('title', expect.stringMatching(/not kept in the collection/i));
+    });
+
+    it('does not show the mark of the collection for a species that is stored', async () => {
+        render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={sourceOf(() => Promise.resolve(known))} />);
+        expect(await screen.findByText('Stout Lotus')).not.toHaveAttribute('title');
+    });
+
+    it('shows no species for a flower that has none, and when it cannot be told, without failing', async () => {
+        const none = sourceOf(() => Promise.resolve(null));
+        const { unmount } = render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={none} />);
+        await waitFor(() => expect(screen.queryByText('Species: …')).not.toBeInTheDocument());
+        expect(screen.queryByText(/^Species/)).not.toBeInTheDocument();
+        unmount();
+        const failing = sourceOf(() => Promise.reject(new Error('boom')));
+        render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={failing} />);
+        await waitFor(() => expect(screen.queryByText('Species: …')).not.toBeInTheDocument());
+        expect(screen.getByText('Flower Details')).toBeInTheDocument();
+    });
+
+    it('asks once for a genome while the flower goes on living, and again for another genome', async () => {
+        const speciesFor = vi.fn().mockResolvedValue(known);
+        const source = sourceOf(speciesFor);
+        const { rerender } = render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
+        await screen.findByText('Stout Lotus');
+        rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, age: 56, health: 79 }} speciesSource={source} />);
+        rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, age: 57 }} speciesSource={source} />);
+        expect(speciesFor).toHaveBeenCalledTimes(1);
+        rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, id: 'flower-2', genome: '{"other":1}' }} speciesSource={source} />);
+        await waitFor(() => expect(speciesFor).toHaveBeenCalledTimes(2));
+        expect(speciesFor).toHaveBeenLastCalledWith('{"other":1}');
+        await screen.findByText('Stout Lotus');
+    });
+
+    it('does not keep the species of the flower that was selected before', async () => {
+        const answers: Record<string, (value: Answer) => void> = {};
+        const source = sourceOf(genome => new Promise<Answer>(resolve => { answers[genome] = resolve; }));
+        const { rerender } = render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
+        rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, id: 'flower-2', genome: 'second' }} speciesSource={source} />);
+        // the first answer comes late: it is not the species of the flower that is shown
+        await act(async () => answers[mockFlower.genome]({ key: '0,0', name: 'Old Iris', stored: true }));
+        expect(screen.queryByText('Old Iris')).not.toBeInTheDocument();
+        await act(async () => answers.second({ key: '1,1', name: 'New Rose', stored: true }));
+        expect(screen.getByText('New Rose')).toBeInTheDocument();
+    });
+
+    it('does not let the failure of the flower selected before hide the species of this one', async () => {
+        const failures: Record<string, (error: Error) => void> = {};
+        const answers: Record<string, (value: Answer) => void> = {};
+        const source = sourceOf(genome => new Promise<Answer>((resolve, reject) => { answers[genome] = resolve; failures[genome] = reject; }));
+        const { rerender } = render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
+        rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, id: 'flower-2', genome: 'second' }} speciesSource={source} />);
+        await act(async () => failures[mockFlower.genome](new Error('late')));
+        expect(screen.getByText('Species: …')).toBeInTheDocument();
+        await act(async () => answers.second(known));
+        expect(screen.getByText('Stout Lotus')).toBeInTheDocument();
+    });
+
+    describe('the way to the field guide', () => {
+        it('opens the guide at the species of the flower', async () => {
+            const onViewInGuide = vi.fn();
+            render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={sourceOf(() => Promise.resolve(known))} onViewInGuide={onViewInGuide} />);
+            fireEvent.click(await screen.findByRole('button', { name: 'View in field guide' }));
+            expect(onViewInGuide).toHaveBeenCalledExactlyOnceWith('3,5');
+        });
+
+        it('is there for a species that is not in the collection too: the guide shows its cell', async () => {
+            const onViewInGuide = vi.fn();
+            render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={sourceOf(() => Promise.resolve({ ...known, stored: false }))} onViewInGuide={onViewInGuide} />);
+            fireEvent.click(await screen.findByRole('button', { name: 'View in field guide' }));
+            expect(onViewInGuide).toHaveBeenCalledExactlyOnceWith('3,5');
+        });
+
+        it('is not there when nothing can open the guide', async () => {
+            render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={sourceOf(() => Promise.resolve(known))} />);
+            await screen.findByText('Stout Lotus');
+            expect(screen.queryByRole('button', { name: 'View in field guide' })).not.toBeInTheDocument();
+        });
+
+        it('is not there while the species is not known yet, nor when the flower has none', async () => {
+            const onViewInGuide = vi.fn();
+            let answer!: (value: Answer) => void;
+            const { unmount } = render(<FlowerDetailsPanel {...props} flower={mockFlower} onViewInGuide={onViewInGuide}
+                speciesSource={sourceOf(() => new Promise<Answer>(resolve => { answer = resolve; }))} />);
+            expect(screen.queryByRole('button', { name: 'View in field guide' })).not.toBeInTheDocument();
+            await act(async () => answer(null));
+            expect(screen.queryByRole('button', { name: 'View in field guide' })).not.toBeInTheDocument();
+            unmount();
+            render(<FlowerDetailsPanel {...props} flower={mockFlower} onViewInGuide={onViewInGuide} />);
+            expect(screen.queryByRole('button', { name: 'View in field guide' })).not.toBeInTheDocument();
+        });
+    });
+
+    it('does not ask while no flower is selected', async () => {
+        const speciesFor = vi.fn().mockResolvedValue(known);
+        render(<FlowerDetailsPanel {...props} flower={null} speciesSource={sourceOf(speciesFor)} />);
+        expect(speciesFor).not.toHaveBeenCalled();
     });
 });

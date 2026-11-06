@@ -1,10 +1,12 @@
 import { FEService as FEServicePackage, FEParams as FEParamsPackage } from '@cristianglezm/flower-evolver-wasm';
-import type { FEService, FEParams, FlowerGenomeStats } from '../types';
+import type { FEService, FEParams, FlowerGenomeStats, SpeciesClassifier } from '../types';
+import { createSpeciesClassifier } from './speciesClassifier';
 
 class FlowerService implements FEService {
     private static instance: FlowerService;
     private service: FEServicePackage;
     private isInitialized = false;
+    private species?: SpeciesClassifier;
 
     private constructor() {
         // Defer service initialization to the async `initialize` method,
@@ -35,6 +37,12 @@ class FlowerService implements FEService {
         if (!this.isInitialized) {
             throw new Error("FlowerService has not been initialized. Call initialize() first.");
         }
+    }
+
+    // Not part of FEService: it shares this wasm instance but the interface stays what the tests fake.
+    get speciesClassifier(): SpeciesClassifier {
+        this.ensureInitialized();
+        return (this.species ??= createSpeciesClassifier(this.service));
     }
 
     setParams(params: FEParams): void {

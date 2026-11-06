@@ -1,8 +1,10 @@
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Controls } from './Controls';
 import { DEFAULT_SIM_PARAMS } from '../constants';
+import type { SpeciesSource } from '../services/speciesSource';
+import { DEFAULT_SPECIES_LIMITS } from '../lib/speciesRepository';
 
 describe('Controls component', () => {
     const mockOnParamsChange = vi.fn();
@@ -193,5 +195,46 @@ describe('Controls component', () => {
         expect(saveButton).toBeInTheDocument();
         expect(saveButton).toBeDisabled();
         expect(screen.getByText('Saving...')).toBeInTheDocument();
+    });
+    describe('Workers', () => {
+        it('has a section to choose how many workers to use, closed like the other advanced ones', () => {
+            render(<Controls {...defaultProps} />);
+            expect(screen.queryByRole('combobox', { name: /Workers/i })).not.toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: /^Workers/i }));
+            expect(screen.getByRole('combobox', { name: /Workers/i })).toBeInTheDocument();
+        });
+    });
+
+    describe('Species collection', () => {
+        const source = () => ({
+            limits: vi.fn().mockResolvedValue(DEFAULT_SPECIES_LIMITS),
+            setCap: vi.fn().mockResolvedValue(undefined),
+        } as unknown as SpeciesSource);
+
+        it('has no such section when the app gives no collection', () => {
+            render(<Controls {...defaultProps} />);
+            expect(screen.queryByRole('button', { name: /Species collection/i })).not.toBeInTheDocument();
+        });
+
+        const open = () => fireEvent.click(screen.getByRole('button', { name: /Species collection/i }));
+
+        it('has the section, closed like the other advanced ones, with the cap on Medium', async () => {
+            render(<Controls {...defaultProps} speciesSource={source()} />);
+            expect(screen.queryByRole('combobox', { name: /Species collection/i })).not.toBeInTheDocument();
+            open();
+            const select = await screen.findByRole('combobox', { name: /Species collection/i });
+            expect(select).toHaveValue('50');
+        });
+
+        it('changes the cap at once, without Apply & Reset and without touching the simulation', async () => {
+            const s = source();
+            render(<Controls {...defaultProps} speciesSource={s} />);
+            open();
+            fireEvent.change(await screen.findByRole('combobox', { name: /Species collection/i }), { target: { value: '100' } });
+            await waitFor(() => expect(s.setCap).toHaveBeenCalledWith(100));
+            // the setting shows the new cap once it is saved: let that finish before the test does
+            expect(await screen.findByText(/keeps up to 100 samples/)).toBeInTheDocument();
+            expect(mockOnParamsChange).not.toHaveBeenCalled();
+        });
     });
 });
