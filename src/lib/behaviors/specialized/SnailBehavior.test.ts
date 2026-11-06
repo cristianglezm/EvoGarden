@@ -88,8 +88,11 @@ describe('SnailBehavior', () => {
         flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
         const initialX = snail.x;
         const initialY = snail.y;
+        // above the wander chance, so it goes for the flower: without it one run in eight wandered somewhere else
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
 
         behavior.update(snail, setupContext());
+        randomSpy.mockRestore();
 
         // Moves 1 step (speed is 1) towards (12,12) -> (11,11)
         expect(snail.x).toBe(11);
