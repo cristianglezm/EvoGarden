@@ -495,3 +495,88 @@ describe('SimulationEngine: the counts of the workers and a game that is loaded'
         expect(after.summary.workers!.seedsDiscarded).toBe(0);
     });
 });
+
+describe('SimulationEngine: planting a champion seed', () => {
+    let engine: SimulationEngine;
+    let request: ReturnType<typeof vi.spyOn>;
+    const seedAt = (x: number, y: number, id = `seed-${x}-${y}`): FlowerSeed => ({ id, type: 'flowerSeed', x, y, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 0 });
+    const insectAt = (x: number, y: number): CellContent => {
+        const stats = INSECT_DATA.get('🦋')!;
+        return { id: `insect-${x}-${y}`, type: 'insect', x, y, emoji: '🦋', pollen: null, health: stats.maxHealth, maxHealth: stats.maxHealth, stamina: stats.maxStamina, maxStamina: stats.maxStamina, genome: [] } as CellContent;
+    };
+    const messages = (events: { message: string }[]) => events.map(e => e.message);
+    const planted = (deltas: { type: string; actor?: { id: string; type: string } }[]) => deltas.filter(d => d.type === 'add' && d.actor?.type === 'flowerSeed');
+
+    beforeEach(() => {
+        engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
+        // the flower worker is not what is tested: a request for a flower gives a seed
+        request = vi.spyOn((engine as any).asyncFlowerFactory, 'requestNewFlower').mockImplementation(((_state: unknown, x: number, y: number) => seedAt(x, y)) as never);
+    });
+
+    it('plants in an empty cell, and tells the player once it did', async () => {
+        engine.initializeGridWithActors([]);
+        engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
+        const { deltas, events } = await engine.calculateNextTick();
+        expect(request).toHaveBeenCalledWith(expect.anything(), 4, 5, 'champion-genome', undefined, expect.any(Function));
+        expect(planted(deltas)).toHaveLength(1);
+        expect(messages(events)).toContain('Champion seed planted!');
+    });
+
+    it.each([
+        ['a flower', (x: number, y: number) => ({ ...mockFlower, id: `flower-${x}-${y}`, x, y })],
+        ['a flower seed, which a player cannot see', (x: number, y: number) => seedAt(x, y, 'seed-hidden')],
+    ])('does not plant on %s, and says why instead of saying it planted', async (_name, make) => {
+        engine.initializeGridWithActors([make(4, 5) as CellContent]);
+        engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
+        const { deltas, events } = await engine.calculateNextTick();
+        expect(request).not.toHaveBeenCalled();
+        expect(planted(deltas).filter(d => d.actor!.id !== 'seed-hidden')).toHaveLength(0);
+        expect(messages(events)).not.toContain('Champion seed planted!');
+        expect(events.find(e => /Can't plant there/.test(e.message))).toMatchObject({ type: 'error', importance: 'high' });
+    });
+
+    it('plants where an insect is: only another plant is in the way', async () => {
+        engine.initializeGridWithActors([insectAt(4, 5)]);
+        engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
+        const { deltas, events } = await engine.calculateNextTick();
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(planted(deltas)).toHaveLength(1);
+        expect(messages(events)).toContain('Champion seed planted!');
+    });
+
+    it.each(['nutrient', 'corpse', 'slimeTrail', 'herbicideSmoke'])('plants where there is a %s', async type => {
+        const other = { id: `${type}-1`, type, x: 4, y: 5, age: 0, lifespan: 100, duration: 100, value: 1, health: 1, maxHealth: 1, imageData: '', timer: 100, ownerId: 'x' } as unknown as CellContent;
+        engine.initializeGridWithActors([other]);
+        engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
+        const { events } = await engine.calculateNextTick();
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(messages(events)).toContain('Champion seed planted!');
+    });
+
+    it('does not plant on a plant that is only on a cell next to it', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'flower-5-5', x: 5, y: 5 }]);
+        engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
+        await engine.calculateNextTick();
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    it('plants once when it is asked twice for the same cell in a tick: the first seed is a plant', async () => {
+        engine.initializeGridWithActors([]);
+        engine.plantChampionSeed('first', 'both', { x: 4, y: 5 });
+        engine.plantChampionSeed('second', 'both', { x: 4, y: 5 });
+        const { events } = await engine.calculateNextTick();
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(messages(events).filter(m => m === 'Champion seed planted!')).toHaveLength(1);
+        expect(messages(events).filter(m => /Can't plant there/.test(m))).toHaveLength(1);
+    });
+
+    it('says so when the flower workers cannot make a seed yet, and not that it planted', async () => {
+        request.mockImplementation((() => null) as never);
+        engine.initializeGridWithActors([]);
+        engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
+        const { deltas, events } = await engine.calculateNextTick();
+        expect(planted(deltas)).toHaveLength(0);
+        expect(messages(events)).not.toContain('Champion seed planted!');
+        expect(events.find(e => /not ready to grow a seed/.test(e.message))).toMatchObject({ type: 'error', importance: 'high' });
+    });
+});

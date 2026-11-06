@@ -224,3 +224,15 @@ export const scoreFlower = (insect: Insect | Cockroach, flower: Flower): number 
 
     return score;
 };
+
+/**
+ * Whether a plant already grows in a cell. Only another plant is in the way of planting: insects, trails, nutrients
+ * and the rest share a cell with it. A flower seed is a plant too, and the one a player cannot see: it holds the
+ * cell while the flower worker makes its flower.
+ */
+export function hasPlantAt(actors: Iterable<{ type: string; x: number; y: number }>, x: number, y: number): boolean {
+    for (const actor of actors) {
+        if (actor.x === x && actor.y === y && (actor.type === 'flower' || actor.type === 'flowerSeed')) return true;
+    }
+    return false;
+}
