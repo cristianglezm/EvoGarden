@@ -38,6 +38,9 @@ class GenericActorPanelController {
 
 
 test.beforeEach(async ({ page }) => {
+  // Playwright runs several pages at once and the game starts a thread per core of its own for each: two workers
+  // keep the ticks coming at a rate the tests that wait on the population (the birds) can count on.
+  await page.addInitScript(() => window.localStorage.setItem('evoGarden-workers', '2'));
   await page.goto('/');
   await expect(page.getByText('Initializing EvoGarden...')).not.toBeVisible({ timeout: 20000 });
   

@@ -1,14 +1,17 @@
 import React from 'react';
 import type { SeedBankEntry } from '../types';
-import { DownloadIcon, View3DIcon } from './icons';
+import { DownloadIcon, SeedlingIcon, View3DIcon } from './icons';
 
 interface SeedBankCardProps {
     entry: SeedBankEntry;
     onDownload: (genome: string, id: string) => void;
     onView3D: (genome: string, sex: 'male' | 'female' | 'both') => void;
+    /** The species of the champion, if the collection knows it. */
+    species?: { key: string; name: string } | null;
+    onViewInGuide?: (speciesKey: string) => void;
 }
 
-export const SeedBankCard: React.FC<SeedBankCardProps> = ({ entry, onDownload, onView3D }) => {
+export const SeedBankCard: React.FC<SeedBankCardProps> = ({ entry, onDownload, onView3D, species, onViewInGuide }) => {
     let title = '';
     let value = '';
 
@@ -31,7 +34,24 @@ export const SeedBankCard: React.FC<SeedBankCardProps> = ({ entry, onDownload, o
     return (
         <div className="bg-surface-hover/50 rounded-lg p-3 flex flex-col">
             <h4 className="font-semibold text-primary">{title}</h4>
-            <p className="text-sm text-accent-yellow font-bold mb-2">{value}</p>
+            <p className="text-sm text-accent-yellow font-bold">{value}</p>
+            {species && (
+                <p className="text-sm text-secondary mb-2 flex items-center gap-1">
+                    <SeedlingIcon className="w-4 h-4" />
+                    {species.name}
+                    {onViewInGuide && (
+                        <button
+                            type="button"
+                            onClick={() => onViewInGuide(species.key)}
+                            className="ml-auto text-xs underline hover:text-primary"
+                            title="Show this species in the field guide"
+                        >
+                            View in field guide
+                        </button>
+                    )}
+                </p>
+            )}
+            {!species && <div className="mb-2" />}
             <div className="bg-black/50 rounded flex items-center justify-center p-2 aspect-square">
                  <img src={entry.imageData} alt={`Champion flower for ${title}`} className="w-full h-full object-contain"/>
             </div>

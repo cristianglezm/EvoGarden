@@ -25,7 +25,9 @@ export interface ToastMessage {
 export type ChallengeId = 'survival-1' | 'survival-2' | 'survival-3' | 'predation-1' | 'predation-2' | 'predation-3' |
 'circle-of-life' | 'pest-control' | 'bountiful-harvest' | 'poison-garden' | 'peak-performer' | 'the-swarm-1' | 'the-swarm-2' | 'avian-sanctuary-1' | 'avian-sanctuary-2' | 'unchecked-growth' |
 'hive-1' | 'hive-2' | 'colony-1' | 'pest-1' | 'metamorphosis-1' | 'healing-garden' |
-'specialist-ladybug' | 'specialist-beetle' | 'specialist-snail' | 'specialist-scorpion' | 'specialist-spider';
+'specialist-ladybug' | 'specialist-beetle' | 'specialist-snail' | 'specialist-scorpion' | 'specialist-spider' |
+'species-1' | 'species-2' | 'species-3' | 'atypical-1' |
+'biodiversity-1' | 'biodiversity-2' | 'biodiversity-3';
 
 export interface Challenge {
     id: ChallengeId;
@@ -41,6 +43,8 @@ export interface Challenge {
 export interface ChallengeState {
     challenges: Challenge[];
     processTick: (summary: TickSummary) => void;
+    /** Metrics that do not come from the simulation (the species collection): the same rules as a tick. */
+    processMetrics: (values: Partial<TickSummary>) => void;
 }
 
 export interface AnalyticsDataPoint {

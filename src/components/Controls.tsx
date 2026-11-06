@@ -4,6 +4,9 @@ import { PlayIcon, PauseIcon, RefreshCwIcon, SaveIcon, UploadIcon, LoaderIcon } 
 import { CollapsibleSection } from './CollapsibleSection';
 import { INSECT_DATA } from '../constants';
 import { ACTOR_NAMES } from '../utils';
+import type { SpeciesSource } from '../services/speciesSource';
+import { SpeciesCapSetting } from './SpeciesCapSetting';
+import { WorkersSetting } from './WorkersSetting';
 
 interface ControlsProps {
     params: SimulationParams;
@@ -15,6 +18,8 @@ interface ControlsProps {
     onLoad: () => void;
     hasSavedState: boolean;
     isSaving: boolean;
+    /** Where the species collection keeps its settings; without it the section is not shown. */
+    speciesSource?: SpeciesSource;
 }
 
 const WIND_DIRECTIONS: WindDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -25,7 +30,7 @@ const LIVE_UPDATABLE_PARAMS = ['simulationSpeed', 'notificationMode'];
 const ACTOR_LIST = ['🐦', '🦅', ...Array.from(INSECT_DATA.keys())];
 
 
-export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRunning, setIsRunning, onSave, onLoad, hasSavedState, isSaving, onStart }) => {
+export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRunning, setIsRunning, onSave, onLoad, hasSavedState, isSaving, onStart, speciesSource }) => {
     const [localParams, setLocalParams] = useState<SimulationParams>(params);
 
     useEffect(() => {
@@ -384,6 +389,16 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
                         </select>
                     </label>
                 </CollapsibleSection>
+
+                <CollapsibleSection title="Workers" defaultOpen={false}>
+                    <WorkersSetting />
+                </CollapsibleSection>
+
+                {speciesSource && (
+                    <CollapsibleSection title="Species collection" defaultOpen={false}>
+                        <SpeciesCapSetting source={speciesSource} />
+                    </CollapsibleSection>
+                )}
             </div>
         </div>
     );

@@ -325,3 +325,173 @@ describe('SimulationEngine', () => {
         });
     });
 });
+
+describe('SimulationEngine species collection', () => {
+    let engine: SimulationEngine;
+    let port: { postMessage: ReturnType<typeof vi.fn>; onmessage: ((e: { data: unknown }) => void) | null };
+    const classifyRequests = () => port.postMessage.mock.calls.map(c => c[0]).filter(m => m.type === 'classify-flower');
+
+    beforeEach(() => {
+        engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
+        port = { postMessage: vi.fn(), onmessage: null };
+        engine.setFlowerWorkerPort(port as unknown as MessagePort, DEFAULT_SIM_PARAMS);
+    });
+
+    it('asks the flower worker to classify a mature flower, once', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome', imageData: 'bloom-image' }]);
+        await engine.calculateNextTick();
+        await engine.calculateNextTick();
+        expect(classifyRequests()).toHaveLength(1);
+        expect(classifyRequests()[0].payload).toMatchObject({ flowerId: 'bloom', genome: 'bloom-genome', image: 'bloom-image', sex: 'both', toxicity: 0.1 });
+    });
+
+    it('does not ask for a flower that is not mature yet', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bud', isMature: false, age: 0 }]);
+        await engine.calculateNextTick();
+        expect(classifyRequests()).toHaveLength(0);
+    });
+
+    it('reports a flower that was asked for when it dies, with its final age', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome', age: 80 }]);
+        await engine.calculateNextTick();
+        const recordsOf = () => port.postMessage.mock.calls.map(c => c[0]).filter(m => m.type === 'record-flower');
+        expect(recordsOf()).toHaveLength(0);
+
+        // out of stamina and almost out of health: it dies on the next tick
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome', age: 90, stamina: 0, health: 0.0001 }]);
+        await engine.calculateNextTick();
+        expect(recordsOf()).toHaveLength(1);
+        expect(recordsOf()[0].payload).toMatchObject({ flowerId: 'bloom', genome: 'bloom-genome', toxicity: 0.1 });
+    });
+
+    it('does not report a flower that dies before it matured', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bud', isMature: false, age: 0, stamina: 0, health: 0.0001 }]);
+        await engine.calculateNextTick();
+        expect(port.postMessage.mock.calls.map(c => c[0]).filter(m => m.type === 'record-flower')).toHaveLength(0);
+    });
+
+    it('tells the player about a discovery on the next tick', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower }]);
+        await engine.calculateNextTick();
+        port.onmessage!({ data: { type: 'species-classified', payload: { flowerId: 'flower1', status: 'discovered', species: { x: 3, y: 5, name: 'Stout Lotus' } } } });
+
+        const { events } = await engine.calculateNextTick();
+        expect(events).toContainEqual({ message: '🌸 New species discovered: Stout Lotus!', type: 'success', importance: 'high' });
+        expect((await engine.calculateNextTick()).events.some(e => e.message.includes('Stout Lotus'))).toBe(false);
+    });
+
+    it('says in the tick summary how many different species are alive, among the flowers that were classified', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower }]);
+        expect((await engine.calculateNextTick()).summary.speciesAlive).toBe(0);
+        const asked = classifyRequests()[0].payload;
+        port.onmessage!({ data: { type: 'species-classified', payload: { flowerId: asked.flowerId, tick: asked.tick, status: 'stored', match: { x: 3, y: 5, distance: 1 }, fp: 'fp' } } });
+        expect((await engine.calculateNextTick()).summary.speciesAlive).toBe(1);
+    });
+
+    it('asks again for the flowers of a new game', async () => {
+        engine.initializeGridWithActors([{ ...mockFlower }]);
+        await engine.calculateNextTick();
+        engine.setParams({ ...DEFAULT_SIM_PARAMS });
+        engine.initializeGridWithActors([{ ...mockFlower }]);
+        await engine.calculateNextTick();
+        expect(classifyRequests()).toHaveLength(2);
+    });
+});
+
+describe('SimulationEngine with a species worker', () => {
+    it('asks the species worker, not the flower worker, to classify a mature flower', async () => {
+        const engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
+        const flowerPort = { postMessage: vi.fn(), onmessage: null };
+        const speciesPort = { postMessage: vi.fn(), onmessage: null };
+        engine.setWorkerPorts([
+            { port: flowerPort as unknown as MessagePort, roles: ['creation'] },
+            { port: speciesPort as unknown as MessagePort, roles: ['species'] },
+        ], DEFAULT_SIM_PARAMS);
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome' }]);
+        await engine.calculateNextTick();
+        const types = (port: { postMessage: ReturnType<typeof vi.fn> }) => port.postMessage.mock.calls.map(c => c[0].type);
+        // the species worker is given what waits as a batch of jobs, the flower worker none of it
+        expect(types(speciesPort)).toContain('species-batch');
+        const jobs = speciesPort.postMessage.mock.calls.map((c: any) => c[0]).filter((m: any) => m.type === 'species-batch').flatMap((m: any) => m.payload.jobs);
+        expect(jobs.map((j: any) => j.type)).toContain('classify-flower');
+        expect(types(flowerPort)).not.toContain('classify-flower');
+        expect(types(flowerPort)).not.toContain('species-batch');
+    });
+});
+
+describe('SimulationEngine: a species queue that is full', () => {
+    it('does not wait for the classifications it let go, and counts them as dropped', async () => {
+        const params = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
+        // the flowers reproduce, and there is no worker that makes flowers here
+        const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const engine = new SimulationEngine(params, mockFlowerService);
+        const speciesPort = { postMessage: vi.fn(), onmessage: null as any };
+        engine.setWorkerPorts([{ port: speciesPort as unknown as MessagePort, roles: ['species'] }], params);
+        // a species worker that does not answer: 32 go to it, 200 may wait, the rest are let go
+        const flowers = Array.from({ length: 240 }, (_, i) => ({ ...mockFlower, id: `bloom-${i}`, genome: `genome-${i}`, x: i % 20, y: Math.floor(i / 20) }));
+        engine.initializeGridWithActors(flowers);
+        await engine.calculateNextTick();
+        // the queue is trimmed right after the batch goes out, so the next summary has it
+        const { summary } = await engine.calculateNextTick();
+        expect(summary.workers!.species).toMatchObject({ waiting: 232, dropped: 8, answered: 0 });
+        quiet.mockRestore();
+    });
+});
+
+describe('SimulationEngine: the workers in the tick summary', () => {
+    it('tells what each worker is doing, and counts the species work asked for and answered', async () => {
+        const engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
+        const flowerPort = { postMessage: vi.fn(), onmessage: null as any };
+        const speciesPort = { postMessage: vi.fn(), onmessage: null as any };
+        engine.setWorkerPorts([
+            { port: flowerPort as unknown as MessagePort, roles: ['creation'] },
+            { port: speciesPort as unknown as MessagePort, roles: ['species'] },
+        ], DEFAULT_SIM_PARAMS);
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome' }]);
+
+        const first = await engine.calculateNextTick();
+        expect(first.summary.workers).toMatchObject({
+            flowerWorkers: [{ name: 'Flower worker 1', inFlight: 0, produced: 0 }],
+            speciesWorker: 'Species worker',
+            species: { waiting: 1, answered: 0 },
+            produced: 0, seedsDiscarded: 0, queued: 0,
+        });
+
+        speciesPort.onmessage({ data: { type: 'species-classified', payload: { flowerId: 'bloom', status: 'stored' } } });
+        const second = await engine.calculateNextTick();
+        expect(second.summary.workers!.species).toEqual({ waiting: 0, answered: 1, dropped: 0, byStatus: { stored: 1 }, avgMs: null });
+    });
+
+    it('starts the counts again when a new game starts', async () => {
+        const engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
+        const speciesPort = { postMessage: vi.fn(), onmessage: null as any };
+        engine.setWorkerPorts([{ port: speciesPort as unknown as MessagePort, roles: ['species'] }], DEFAULT_SIM_PARAMS);
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome' }]);
+        await engine.calculateNextTick();
+        engine.setParams(DEFAULT_SIM_PARAMS, true);
+        engine.initializeGridWithActors([]);
+        const { summary } = await engine.calculateNextTick();
+        expect(summary.workers!.species.waiting).toBe(0);
+    });
+});
+
+describe('SimulationEngine: the counts of the workers and a game that is loaded', () => {
+    it('start again when a game is loaded, like when one is started', async () => {
+        const engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
+        const flowerPort = { postMessage: vi.fn(), onmessage: null as any };
+        engine.setWorkerPorts([{ port: flowerPort as unknown as MessagePort, roles: ['creation', 'species'] }], DEFAULT_SIM_PARAMS);
+        engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome' }]);
+        const before = await engine.calculateNextTick();
+        expect(before.summary.workers!.species.waiting).toBe(1);
+        // a flower arrives for a seed that is not there: it is thrown away and counted
+        flowerPort.onmessage({ data: { type: 'flower-created', payload: { requestId: 'seed-gone', flower: { ...mockFlower, id: 'flower-gone' }, durationMs: 12 } } });
+        const second = await engine.calculateNextTick();
+        expect(second.summary.workers).toMatchObject({ seedsDiscarded: 1, produced: 1 });
+
+        const grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, () => Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, () => [] as any[]));
+        await engine.loadState({ params: DEFAULT_SIM_PARAMS, grid, tick: 10 });
+        const after = await engine.calculateNextTick();
+        expect(after.summary.workers!.species).toEqual({ waiting: 0, answered: 0, dropped: 0, byStatus: {}, avgMs: null });
+        expect(after.summary.workers!.seedsDiscarded).toBe(0);
+    });
+});

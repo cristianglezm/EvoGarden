@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ConfirmationModalProps {
     onConfirm: () => void;
@@ -16,7 +17,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     message,
     confirmText = 'Confirm & Clear',
     cancelText = 'Cancel'
-}) => (
+}) => createPortal(
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onCancel}>
         <div className="bg-surface border border-border rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-primary-light">{title}</h3>
@@ -26,5 +27,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <button onClick={onConfirm} className="px-4 py-2 bg-accent-red/80 hover:bg-accent-red text-white font-semibold rounded-md transition-colors">{confirmText}</button>
             </div>
         </div>
-    </div>
+    </div>,
+    document.body,
 );

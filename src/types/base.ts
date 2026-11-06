@@ -1,4 +1,5 @@
 import type { SavedCellActor, CellContent } from './actors';
+import type { SpeciesStatus } from './species';
 
 export type WindDirection = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
 
@@ -105,8 +106,45 @@ export interface SavedStateMetadata {
 
 export type PopulationTrend = 'growing' | 'declining' | 'stable';
 
+/** What one worker that makes flowers has done since the game started or was loaded. */
+export interface FlowerWorkerStat {
+    name: string;
+    /** requests it was given and has not answered */
+    inFlight: number;
+    produced: number;
+    failed: number;
+    /** average milliseconds the worker itself took per flower (image included), over the last 50; null before the first */
+    avgMs: number | null;
+}
+
+/** What the workers are doing: for the bar the player reads and for the performance review. */
+export interface WorkersSummary {
+    flowerWorkers: FlowerWorkerStat[];
+    /** the worker that does the species work: 'Species worker', the first flower worker, or nobody */
+    speciesWorker: string | null;
+    /** `dropped`: classifications the bounded queue let go (not in `waiting`); `avgMs`: milliseconds per flower that was classified (a share of its batch), over the last 50; null before the first */
+    species: { waiting: number; answered: number; dropped: number; byStatus: Partial<Record<SpeciesStatus, number>>; avgMs: number | null };
+    produced: number;
+    failed: number;
+    /** flowers produced per second over the last 10 seconds */
+    flowersPerSecond: number;
+    /** requests that wait in the simulation for a worker with a free place (they count as pending) */
+    queued: number;
+    /** flowers made for a seed that was gone, and thrown away */
+    seedsDiscarded: number;
+    /** requests the engine cancelled because their seed died (in time or too late) */
+    seedsCancelled: number;
+    /** of the flowers thrown away, the ones whose seed had been cancelled: the flower was already made when the cancel came */
+    discardedAfterCancel: number;
+}
+
 export interface TickSummary {
     tick: number;
+    /** The species of the map that the collection has a flower of, and the atypical flowers it holds. They are read by the page from the collection, which outlives the game, not counted by the simulation. */
+    speciesDiscovered?: number;
+    atypicalFound?: number;
+    /** The different species alive in the garden now, among the flowers that were classified: the simulation does count this one. */
+    speciesAlive?: number;
     flowerCount: number;
     insectCount: number;
     birdCount: number;
@@ -162,6 +200,7 @@ export interface TickSummary {
     season: Season;
     weatherEvent: WeatherEventType;
     pendingFlowerRequests: number;
+    workers?: WorkersSummary;
     healingFlowerCount: number;
     toxicFlowerCount: number;
 }

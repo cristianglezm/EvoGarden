@@ -11,7 +11,11 @@ vi.mock('./ChartsPanel', () => ({
   ChartsPanel: () => <div data-testid="charts-panel-mock" />,
 }));
 vi.mock('./SeedBankPanel', () => ({
-  SeedBankPanel: () => <div data-testid="seed-bank-panel-mock" />,
+  SeedBankPanel: ({ onOpenGuide }: { onOpenGuide?: (cell: string | null) => void }) => (
+    <div data-testid="seed-bank-panel-mock">
+      {onOpenGuide && <button onClick={() => onOpenGuide('3,2')}>open the guide</button>}
+    </div>
+  ),
 }));
 
 describe('DataPanel', () => {
@@ -90,5 +94,18 @@ describe('DataPanel', () => {
     expect(screen.getByTestId('challenges-panel-mock')).toBeVisible();
     expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
     expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
+  });
+  it('gives the seed bank the way to the field guide, when it has one', () => {
+    const onOpenGuide = vi.fn();
+    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} onOpenGuide={onOpenGuide} />);
+    fireEvent.click(screen.getByText('Seed Bank'));
+    fireEvent.click(screen.getByText('open the guide'));
+    expect(onOpenGuide).toHaveBeenCalledExactlyOnceWith('3,2');
+  });
+
+  it('gives the seed bank no way to the guide when it has none', () => {
+    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
+    fireEvent.click(screen.getByText('Seed Bank'));
+    expect(screen.queryByText('open the guide')).not.toBeInTheDocument();
   });
 });

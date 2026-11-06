@@ -24,15 +24,17 @@ A dynamic garden simulation where flowers evolve under the pressure of insects a
 -   **Scavenger Pests (Cockroaches)**: When too many corpses pile up, cockroaches (`🪳`) emerge to clean the mess. They consume corpses and can even attack weak flowers, converting them into low-grade nutrients.
 -   **Slow & Slimy Snails**: Introducing the Snail (`🐌`), a slow but sturdy herbivore that leaves behind a trail of slime, slowing down other insects that cross its path.
 -   **High-Performance Canvas Rendering**: The entire simulation grid is rendered on a single `<canvas>` element, ensuring smooth performance even with hundreds of entities.
--   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), and genetic evolution (*Poison Garden*).
+-   **User Goals & Scenarios (Challenges)**: Engage with a set of predefined challenges that track your progress across multiple playthroughs. Challenges cover survival (e.g., *Ancient Bloom*), predation (*Apex Predator*), ecosystem balance (*Circle of Life*), population milestones (*The Swarm*), genetic evolution (*Poison Garden*), the species you discover for the field guide (*Field Naturalist*, *Taxonomist*, *Keeper of the Garden*, *Strange Bloom*) and the species alive in the garden at once (*Mixed Meadow*, *Living Gallery*, *Botanical Paradise*).
 -   **Seed Bank**: Automatically saves the genomes of "champion" flowers—the longest-lived, most toxic, and most healing—to a persistent database. These champions are then used to repopulate the garden after a collapse, ensuring genetic resilience. Users can view these champions, download their genomes, or clear the bank to start fresh.
+-   **Field Guide & Species Collection**: Every mature flower is classified into one of **96 species** (a cell of the 12×8 self-organizing map embedded in the genetics module). The Field Guide is a map of those species: the ones you have found show their best specimen, the others show a silhouette of the species' prototype. Each species keeps its own record holders (longest lived, most toxic, most healing), the champions of the Seed Bank are marked on theirs, and any flower can be downloaded, viewed in 3D or planted from the guide. It opens from the Seed Bank, from a champion's card and from the details of any flower (*View in field guide*). See [Species, the Field Guide & Collecting Samples](#-species-the-field-guide--collecting-samples).
+-   **Collect Samples**: The same collection doubles as a dataset: one button exports the flowers it holds as a `{"Generation": [...]}` file (and a manifest) that can train a better species map with the tools of [FlowerEvolver-WASM](https://github.com/cristianglezm/FlowerEvolver-WASM).
 -   **Data Visualization & Analytics**: Monitor the health and evolution of your garden over time with dynamic, real-time charts. Track population dynamics (including specialized counts for **toxic** and **healing** flowers), key ecosystem events, the average expression of genetic traits, application performance, and a new Environment chart that visualizes the history of temperature and humidity changes.
 -   **Advanced Notification System & Status Display**:
     -   **Centralized Header**: A retro, terminal-style header provides a non-intrusive feed of all simulation events, complemented by a real-time display of the current season, temperature, humidity, and any active weather events.
     -   **Detailed Event Review**: Click the header log to open a full-screen, scrollable panel with the complete event history.
     -   **Configurable Notifications**: Take control of the UI with three notification modes: log only, important toasts, or all toasts.
 -   **Real-time Actor Tracking & Global Search**: Track any actor in real-time. Use the global search in the header to find an actor by its ID, highlight it on the grid, and then track it. The search is powered by a Trie data structure for instant, prefix-based matching. Alternatively, start tracking any actor with a single click from its details panel. The header control intelligently transforms to a "Stop Tracking" button for easy access.
--   **Real-time Performance Insights**: A status indicator in the header shows the number of pending genetics tasks, giving users a live look at the simulation's computational load.
+-   **Real-time Performance Insights**: A status bar in the header shows what each genetics worker is doing and how many tasks are pending; click it for the details (flowers per second, milliseconds per flower, species backlog, how the workers were chosen) and copy them to compare setups.
 -   **Polished & Refined UI**: The interface is designed for clarity and ease of use, featuring collapsible control panels, a clean status header, and subtle visual cues like inset shadows on scrollable content to improve usability.
 -   **Dynamic Insect Lifecycle**: Insects reproduce by laying eggs, which have a gestation period to hatch. Some insects, like the butterfly, have a full metamorphosis cycle including a caterpillar and cocoon stage, creating a more complex and realistic population model.
 -   **Layered Actor System**: Actors like insects and birds can occupy the same grid cell as flowers, allowing for more realistic interactions.
@@ -70,12 +72,20 @@ EvoGarden is more than just a visual simulation; it's a complex, self-regulating
 ## 🔬 Simulation Deep Dive
 
 ### Performance & Architecture
--   **Dual-Worker Architecture**: The application uses two separate Web Workers (one for the main simulation loop, one for expensive WASM genetics calls) to achieve a completely non-blocking simulation.
--   **Asynchronous Flower Creation**: New flowers are generated in the background without pausing the simulation. This is managed by an **`AsyncFlowerFactory`** which communicates with the genetics worker. A lightweight `FlowerSeed` placeholder is used until the full flower is ready.
+-   **Multi-Worker Architecture**: The main simulation loop runs in one Web Worker; the expensive WASM genetics work (making flowers, classifying species) runs in others, so the simulation is never blocked. How many there are scales with your machine, see [Workers](#workers-how-many-and-what-they-do) below.
+-   **Asynchronous Flower Creation**: New flowers are generated in the background without pausing the simulation. This is managed by an **`AsyncFlowerFactory`**, the scheduler that keeps the queue of requests and hands them to the workers. A lightweight `FlowerSeed` placeholder is used until the full flower is ready.
 -   **Delta-Based State Updates**: The simulation worker sends only a small list of changes ("deltas") to the UI each tick, minimizing data transfer and ensuring a fluid experience.
 -   **Layered Canvas & Change Detection**: The simulation is rendered across two stacked canvas layers (a static background for flowers/grid, a dynamic foreground for mobile actors) to eliminate the bottleneck of re-drawing hundreds of complex SVGs every frame.
 -   **Multi-Quadtree Optimization**: The simulation uses multiple Quadtree data structures each tick for high-performance spatial querying, avoiding slow, full-grid scans.
 -   **Trie-based Actor Search**: A Trie data structure is used for the global actor search, providing instant, prefix-based ID matching even with hundreds of actors on the grid.
+
+### Workers: how many and what they do
+-   **Three kinds of worker**: the **simulation worker** (the game loop and the scheduler), **flower workers** (each owns a WASM instance and makes flowers) and, when there are cores for it, a **species worker** (classifies flowers into species, keeps the collection, runs the classifier migration). The page talks to each through its own `MessageChannel`.
+-   **The scheduler** (`AsyncFlowerFactory`, in the simulation worker) holds two queues: flowers waiting to be made and species jobs waiting to be classified. A flower worker holds two requests at a time and the least busy one gets the next; a cancel of a request that still waits costs nothing. Species jobs go in batches (32 to the species worker) because the cost of a call is mostly the classifier being parsed; a flower worker with nothing to make helps with a batch of 8. Flowers always go first.
+-   **How many**: Controls → **Workers** takes *Automatic* or 1 to 8 and applies when the page is loaded again. Automatic is the logical processors minus four (the page, the simulation and the browser need threads too), at least two and at most eight; on three processors or fewer a single worker does everything. With two or more, one worker only classifies the species and the rest make flowers.
+-   **Developer overrides**: `?speciesWorker=0|1` forces the species worker off or on and `?creationWorkers=N` (1–8) sets the number of flower workers; they win over the setting, so configurations can be compared on one machine.
+-   **The worker bar**: the header shows a cell per worker with its requests in flight, the species worker's backlog and the total. Click it for the setup (known from the start) and, once the workers have reported, a table (flowers produced and per second, milliseconds per flower, seeds cancelled and thrown away, species by outcome, how many classifications the bounded queue let go and how the workers were chosen) and a **Copy** button that puts the same text on the clipboard.
+-   **Building**: workers must be created with `new Worker(new URL('./x.worker.ts', import.meta.url), { type: 'module' })` written in full so Vite compiles them; `npm run build` runs `scripts/checkBuild.mjs`, which fails the build when a worker chunk is missing.
 
 ### Dynamic Environment
 The garden is no longer static. It features a fully dynamic climate system that directly impacts the survival and evolution of its inhabitants.
@@ -147,7 +157,17 @@ The garden is a self-regulating system. A dedicated **`PopulationManager`** acti
 The simulation is not just a passive experience. The **Intervention Tools** panel gives you direct control over the environment:
 -   **Weather Control**: Instantly trigger any of the four major weather events (Heatwave, Coldsnap, Heavy Rain, Drought) to test the resilience of your ecosystem. A cooldown prevents overuse.
 -   **Introduce Species**: Inject a specific number of any permitted actor—from snails to birds to entire ant colonies—into the garden at random locations.
--   **Plant a Champion**: Select a prized flower from your Seed Bank and enter "Planting Mode." Click any empty cell on the grid to plant your champion's seed, giving its superior genetics a fresh start.
+-   **Plant a Champion**: Select a prized flower from your Seed Bank (or from a record in the Field Guide) and enter "Planting Mode." Click a cell on the grid to plant the seed, giving its superior genetics a fresh start. Only another plant is in the way: insects, trails and nutrients share the cell, and a flower seed that is still being made counts as a plant even though you cannot see it. If the cell is taken you are told and stay in planting mode.
+
+## 🌼 Species, the Field Guide & Collecting Samples
+
+-   **What a species is**: a cell of the 12×8 self-organizing map (SOM) embedded in `@cristianglezm/flower-evolver-wasm`. A flower is described by 267 numbers (a 16×16 silhouette of its petals and 11 statistics) and lands on the nearest cell. It is classified under the **default environment**, so a genome always has the same species whatever the weather. Names come from the shape of the cell's prototype (no colours).
+-   **When**: a flower is asked for once, when it is mature, by the simulation worker; a worker classifies it and offers it to the collection. The collection is kept in IndexedDB (`speciesSamples`, `speciesGenomes`, `speciesMeta`) and is **not** part of a saved game; clearing the Seed Bank does not clear it.
+-   **What is kept** (per species, the cap is set in Controls → *Species collection*: Small 25, Medium 50 (default) or Large 100): a flower replaces the most typical stored one only if it is less typical; the **first flower of a species** (the founder) and the **record holders** are never evicted; flowers far from every prototype are **atypical** and kept outside the cap (500 in all); flowers the classifier cannot place are kept as **unclassified** (200 in all). Genomes are identified by a hash of the genome, so the same flower is never stored twice.
+-   **The Field Guide**: a map of the 96 species, polled every 3 seconds while open. Its header says how many species and samples there are and, while the workers are behind, how many flowers are waiting to be classified. Select a species for its details: samples kept, champions, and for each record the picture, the value, **Download** (the genome), **View 3D** and **Plant**. A species nobody has finished a life of says so.
+-   **When the map changes**: every stored sample remembers the map it was classified with. When a new version of the genetics module ships another map, the species worker classifies the stored genomes again in the background (about a tenth of a second each), keeping the founders and records of each species and merging species that became one.
+-   **Collect samples**: the button in the guide writes `evogarden-samples-<date>.json` (`{"Generation": [...]}`, unique flowers, species first, then atypical, then unclassified) and `evogarden-samples-<date>-manifest.json` (the map's fingerprint, the environment, versions, counts and one entry per flower). Train a better map with `tools/som.py` or `tools/train_som.ipynb` of [FlowerEvolver-WASM](https://github.com/cristianglezm/FlowerEvolver-WASM) and embed it there. The button is disabled while stale samples wait to be classified again.
+-   **Challenges**: *Field Naturalist* (10 species), *Taxonomist* (24), *Keeper of the Garden* (48) and *Strange Bloom* (find an atypical flower) read the collection, so they count what you found in earlier sessions too. *Mixed Meadow*, *Living Gallery* and *Botanical Paradise* (10, 20 and 30 different species alive at once) count the living flowers that have been classified, so a flower is only counted once its species is known.
 
 ## 🧬 The Genetics Engine: `@cristianglezm/flower-evolver-wasm`
 
@@ -170,17 +190,23 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
 -   `src/`: Contains all the application source code.
     -   **`index.tsx` & `App.tsx`**: The main entry points for the React application.
     -   **`hooks/`**: Custom React hooks.
-        -   `useSimulation.ts`: Manages the simulation web worker and communication.
+        -   `useSimulation.ts`: Creates the workers (from the plan of `workerPlan.ts`) and communicates with the simulation worker.
         -   `useActorTracker.ts`: Encapsulates actor tracking logic.
-    -   **`workers/`**: Web Worker files.
+        -   `useSpeciesChallenges.ts`: Reads the species collection for the species challenges.
+        -   `useFlower3DView.tsx`: The 3D view of a flower (pauses the garden while it is shown).
+        -   `useDismissOnOutsideClick.ts`: Closes a panel on an outside click, but not on a click in a modal opened from it.
+    -   **Workers** (in `src/`):
         -   `simulation.worker.ts`: Hosts the `SimulationEngine` and runs the main game loop.
-        -   `flower.worker.ts`: Handles all expensive calls to the WASM genetics module.
+        -   `flower.worker.ts`: Makes flowers with its own WASM instance; when it has nothing to make it classifies species too.
+        -   `species.worker.ts`: Only classifies species, owns the collection's migration and the champions' records.
     -   **`lib/`**: The core simulation logic.
         -   `simulationEngine.ts`: The high-level orchestrator for the simulation's main loop.
-        -   `PopulationManager.ts`: Manages ecosystem balancing and dynamic actor spawning.
-        -   `AsyncFlowerFactory.ts`: Handles asynchronous communication with the `flower.worker.ts`.
-        -   `EcosystemManager.ts`: Contains functions for system-wide behaviors.
+        -   `populationManager.ts`: Manages ecosystem balancing and dynamic actor spawning.
+        -   `asyncFlowerFactory.ts`: The scheduler: queues, workers, statistics.
+        -   `ecosystemManager.ts`: Contains functions for system-wide behaviors.
         -   `behaviors/`: Contains individual behavior modules for each actor type.
+        -   `workerPlan.ts`, `workerSetting.ts`, `workerReport.ts`, `workerWasm.ts`: How many workers, the player's choice, the text of the worker bar, starting a WASM instance.
+        -   `species*.ts`: The species system: `species.ts` (names, genome ids), `speciesRepository.ts` (the policy of what is kept), `speciesJobs.ts` and `speciesRequester.ts` (what is classified, when), `speciesMigration.ts`, `speciesGuide.ts` and `speciesExport.ts` (the guide and the sample export).
     -   **`components/`**: All React components.
         -   **Main View**:
             -   `SimulationView.tsx`: Hosts the two stacked canvas elements.
@@ -188,6 +214,8 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
             -   `Controls.tsx`: UI for changing simulation parameters.
             -   `ToolsPanel.tsx`: UI for direct user interventions (triggering weather, spawning actors).
             -   `DataPanel.tsx`: Main UI for challenges, analytics, and the Seed Bank.
+            -   `FieldGuideHost.tsx` & `FieldGuideModal.tsx`: The Field Guide, rendered once in `App` so the Seed Bank, a champion card and a flower's details can all open it.
+            -   `WorkerStatusDisplay.tsx`, `WorkersSetting.tsx`, `SpeciesCapSetting.tsx`: The worker bar and two settings of Controls.
             -   `...DetailsPanel.tsx`: A suite of panels for inspecting individual actors.
         -   **Header UI**:
             -   `StatusPanel.tsx`: The main container in the header for status information.
@@ -198,7 +226,8 @@ The visual variety and evolutionary mechanics are powered by a custom WebAssembl
     -   **`services/`**: Singleton services.
         -   `flowerService.ts`: A TypeScript wrapper for the WASM module.
         -   `eventService.ts`: Central hub for all UI notifications.
-        -   `db.ts`: Dexie (IndexedDB) setup for persistence.
+        -   `db.ts`: Dexie (IndexedDB) setup for persistence (versions 4 and 5 add the species collection).
+        -   `speciesClassifier.ts`, `speciesSource.ts`, `speciesStore.ts`, `speciesSettings.ts`: The species classifier over the WASM module, what the page reads of the collection, and how it is stored.
     -   **`stores/`**: Zustand global state management stores.
     -   **`types/` & `constants.ts`**: Shared TypeScript types and global simulation constants.
 
@@ -244,6 +273,8 @@ For a more visual testing experience with a dedicated UI, run:
 npm run test:ui
 ```
 
+Tests that involve the genetics module use the **real** WASM library, and the species collection is tested against a real IndexedDB (`fake-indexeddb`); the workers are tested as real workers over `MessageChannel`s.
+
 ## 🧪 End-to-End Testing
 
 This project uses [Playwright](https://playwright.dev/) for End-to-End (E2E) testing, which runs tests against a real browser to simulate user interactions.
@@ -252,6 +283,8 @@ To run all E2E tests, first make sure the development server is not running, and
 ```bash
 npm run test:e2e
 ```
+
+The specs are in `e2e/` (`app.spec.ts` for the game, `species.spec.ts` for the field guide, the species of a flower, the workers and the species challenges), with one controller per panel in `e2e/controllers/`. Note that `test:e2e` runs with `--update-snapshots`.
 
 ## 📦 Building for Production
 

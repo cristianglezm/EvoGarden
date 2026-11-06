@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import type { Flower } from '../types';
 import { CopyIcon, CheckIcon, LoaderIcon, DownloadIcon, XIcon, SearchIcon } from './icons';
 import { flowerService } from '../services/flowerService';
@@ -6,6 +6,7 @@ import { Modal } from './Modal';
 import { Flower3DViewer } from './Flower3DViewer';
 import { TOXIC_FLOWER_THRESHOLD } from '../constants';
 import { getShortId } from '../utils';
+import type { SpeciesSource } from '../services/speciesSource';
 
 interface FlowerDetailsPanelProps {
     flower: Flower | null;
@@ -15,6 +16,10 @@ interface FlowerDetailsPanelProps {
     onTrackActor: (id: string) => void;
     onStopTracking: () => void;
     trackedActorId: string | null;
+    /** Where the species of the flower comes from; without it the panel does not say. */
+    speciesSource?: SpeciesSource;
+    /** Opens the field guide at the species of the flower ("x,y"); without it there is no button. */
+    onViewInGuide?: (speciesKey: string) => void;
 }
 
 const StatBar: React.FC<{ value: number, max: number, label: string, colorClass: string }> = ({ value, max, label, colorClass }) => (
@@ -29,13 +34,28 @@ const StatBar: React.FC<{ value: number, max: number, label: string, colorClass:
     </div>
 );
 
-export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning, onClose, onTrackActor, onStopTracking, trackedActorId }) => {
+export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning, onClose, onTrackActor, onStopTracking, trackedActorId, speciesSource, onViewInGuide }) => {
     const [copied, setCopied] = useState(false);
     const [is3DViewerOpen, setIs3DViewerOpen] = useState(false);
     const [gltfString, setGltfString] = useState<string | null>(null);
     const [isLoading3D, setIsLoading3D] = useState(false);
     const [useEmissive, setUseEmissive] = useState(false);
     const wasRunningRef = useRef(false);
+    // undefined while it is asked for, null when the flower has no species or it cannot be told
+    const [species, setSpecies] = useState<Awaited<ReturnType<SpeciesSource['speciesFor']>> | undefined>(undefined);
+
+    // The genome does not change while the flower lives (the flower object does, every tick): ask once per genome.
+    const genome = flower?.genome;
+    useEffect(() => {
+        if (!speciesSource || genome === undefined) return;
+        let current = true;
+        setSpecies(undefined);
+        speciesSource.speciesFor(genome).then(
+            found => { if (current) setSpecies(found); },
+            () => { if (current) setSpecies(null); },
+        );
+        return () => { current = false; };
+    }, [speciesSource, genome]);
 
     const handleCopyGenome = useCallback(() => {
         if (flower?.genome) {
@@ -127,6 +147,26 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                                 </button>
                             )}
                         </div>
+                        {speciesSource && species !== null && (
+                            <p className="text-sm text-secondary">
+                                Species: {species === undefined ? '…' : (
+                                    <span
+                                        className="font-semibold text-primary-light"
+                                        title={species.stored ? undefined : 'Not kept in the collection: its species had no room for it.'}
+                                    >{species.name}</span>
+                                )}
+                                {species && onViewInGuide && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onViewInGuide(species.key)}
+                                        className="ml-2 text-xs text-accent-green hover:underline"
+                                        title="Show this species in the field guide"
+                                    >
+                                        View in field guide
+                                    </button>
+                                )}
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="space-y-3">
