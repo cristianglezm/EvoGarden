@@ -18,7 +18,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     confirmText = 'Confirm & Clear',
     cancelText = 'Cancel'
 }) => createPortal(
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onCancel} role="dialog" aria-modal="true" aria-label={title}>
         <div className="bg-surface border border-border rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-primary-light">{title}</h3>
             <p className="text-secondary my-4">{message}</p>

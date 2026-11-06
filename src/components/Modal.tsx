@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { XIcon } from './icons';
 
 interface ModalProps {
@@ -19,7 +20,9 @@ const PANELS = {
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
 
-  return (
+  // Rendered in the body, not where it is used: a panel that slides in with a CSS transform becomes the
+  // containing block of everything `fixed` inside it, so a modal opened from a panel was as big as the panel.
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
@@ -44,6 +47,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
           {children}
         </main>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

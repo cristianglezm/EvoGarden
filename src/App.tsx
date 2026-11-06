@@ -6,6 +6,7 @@ import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach, Co
 import { DEFAULT_SIM_PARAMS } from './constants';
 import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon, ChatBubbleIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
+import { useDismissOnOutsideClick } from './hooks/useDismissOnOutsideClick';
 import { useSpeciesChallenges } from './hooks/useSpeciesChallenges';
 import { useActorTracker } from './hooks/useActorTracker';
 import { ToastContainer } from './components/ToastContainer';
@@ -282,32 +283,13 @@ export default function App(): React.ReactNode {
       }
   }, [handleActorSelection, isRunning, setIsRunning, trackedActorId]);
 
-  // Effect to handle clicking outside of the details panel to close it.
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-        if (trackedActorId) return; // Ignore clicks when tracking
-
-        if (!selectedActor && actorsInSelectedCell.length === 0) return;
-
-        const isClickInsideDetails = detailsPanelRef.current?.contains(event.target as Node);
-        const isClickInsideControlsButton = controlsButtonRef.current?.contains(event.target as Node);
-        const isClickInsideControlsPanel = controlsPanelRef.current?.contains(event.target as Node);
-        const isClickInsideToolsButton = toolsButtonRef.current?.contains(event.target as Node);
-        const isClickInsideToolsPanel = toolsPanelRef.current?.contains(event.target as Node);
-        const isClickInsideSimulationView = simulationViewRef.current?.contains(event.target as Node);
-
-        if (isClickInsideSimulationView || isClickInsideDetails || isClickInsideControlsButton || isClickInsideControlsPanel || isClickInsideToolsButton || isClickInsideToolsPanel) {
-            return;
-        }
-
-        handleActorSelection(null);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [selectedActor, actorsInSelectedCell, handleActorSelection, trackedActorId]);
+  // Clicking outside of the details panel closes it (not while tracking, nor from the grid, the controls or the tools).
+  // A modal opened from the panel, like the 3D view of a flower, is not outside it.
+  useDismissOnOutsideClick(
+    !trackedActorId && (Boolean(selectedActor) || actorsInSelectedCell.length > 0),
+    [detailsPanelRef, controlsButtonRef, controlsPanelRef, toolsButtonRef, toolsPanelRef, simulationViewRef],
+    () => handleActorSelection(null),
+  );
 
   const handleSaveSimulation = useCallback(async () => {
     if (!workerRef.current || isSaving) return;
