@@ -90,20 +90,23 @@ export class SimulationEngine {
         this.loadChampionsFromDb();
     }
     
+    /** Reads the records of the seed bank again, for when something outside the engine changed it (the player cleared it). */
+    public reloadChampions() {
+        return this.loadChampionsFromDb();
+    }
+
+    /** The records a dying flower has to beat are the ones in the seed bank: an empty bank (cleared by the player) starts them again from 0. */
     private async loadChampionsFromDb() {
         try {
-            const longestLived = await db.seedBank.get('longestLived');
-            if (longestLived) {
-                this.longestLivedChampion.value = longestLived.value;
-            }
-            const mostToxic = await db.seedBank.get('mostToxic');
-            if (mostToxic) {
-                this.mostToxicChampion.value = mostToxic.value;
-            }
-            const mostHealing = await db.seedBank.get('mostHealing');
-            if (mostHealing) {
-                this.mostHealingChampion.value = mostHealing.value;
-            }
+            // Read all three before changing any, so a failed read leaves what was known
+            const [longestLived, mostToxic, mostHealing] = await Promise.all([
+                db.seedBank.get('longestLived'),
+                db.seedBank.get('mostToxic'),
+                db.seedBank.get('mostHealing'),
+            ]);
+            this.longestLivedChampion.value = longestLived?.value ?? 0;
+            this.mostToxicChampion.value = mostToxic?.value ?? 0;
+            this.mostHealingChampion.value = mostHealing?.value ?? 0;
         } catch (error) {
             console.error("Failed to load champions from DB:", error);
         }

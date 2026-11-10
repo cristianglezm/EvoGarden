@@ -15,9 +15,11 @@ interface SeedBankPanelProps {
     source?: SpeciesSource;
     /** Opens the field guide at the species of a champion ("x,y"); without it the cards have no way to the guide. */
     onOpenGuide?: (cell: string | null) => void;
+    /** Called once the champions are gone, so whoever compares new flowers with them can start again. */
+    onCleared?: () => void;
 }
 
-export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRunning, source = defaultSpeciesSource, onOpenGuide }) => {
+export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRunning, source = defaultSpeciesSource, onOpenGuide, onCleared }) => {
     const [champions, setChampions] = useState<SeedBankEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -56,6 +58,7 @@ export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRu
         try {
             await db.seedBank.clear();
             setChampions([]);
+            onCleared?.();
         } catch (error) {
             console.error("Failed to clear seed bank:", error);
         } finally {

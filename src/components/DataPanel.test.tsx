@@ -11,9 +11,10 @@ vi.mock('./ChartsPanel', () => ({
   ChartsPanel: () => <div data-testid="charts-panel-mock" />,
 }));
 vi.mock('./SeedBankPanel', () => ({
-  SeedBankPanel: ({ onOpenGuide }: { onOpenGuide?: (cell: string | null) => void }) => (
+  SeedBankPanel: ({ onOpenGuide, onCleared }: { onOpenGuide?: (cell: string | null) => void; onCleared?: () => void }) => (
     <div data-testid="seed-bank-panel-mock">
       {onOpenGuide && <button onClick={() => onOpenGuide('3,2')}>open the guide</button>}
+      {onCleared && <button onClick={onCleared}>clear the bank</button>}
     </div>
   ),
 }));
@@ -101,6 +102,14 @@ describe('DataPanel', () => {
     fireEvent.click(screen.getByText('Seed Bank'));
     fireEvent.click(screen.getByText('open the guide'));
     expect(onOpenGuide).toHaveBeenCalledExactlyOnceWith('3,2');
+  });
+
+  it('passes on that the seed bank was cleared', () => {
+    const onSeedBankCleared = vi.fn();
+    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} onSeedBankCleared={onSeedBankCleared} />);
+    fireEvent.click(screen.getByText('Seed Bank'));
+    fireEvent.click(screen.getByText('clear the bank'));
+    expect(onSeedBankCleared).toHaveBeenCalledTimes(1);
   });
 
   it('gives the seed bank no way to the guide when it has none', () => {
