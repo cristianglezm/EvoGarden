@@ -9,7 +9,13 @@ interface BaseEffectsChartProps {
 }
 
 export const BaseEffectsChart: React.FC<BaseEffectsChartProps> = ({ history }) => {
-    const [effectsLegend, setEffectsLegend] = useState<Record<string, boolean>>({ 'Avg Vitality': true, 'Avg Agility': true, 'Avg Strength': true, 'Avg Intelligence': true, 'Avg Luck': true });
+    const [effectsLegend, setEffectsLegend] = useState<Record<string, boolean>>({
+        'Avg Vitality': true,
+        'Avg Agility': true,
+        'Avg Strength': true,
+        'Avg Intelligence': true,
+        'Avg Luck': true,
+    });
     const handleEffectsLegendChange = createLegendSelectHandler(setEffectsLegend);
 
     const baseEffectsOption = useMemo<EChartsOption>(() => {
@@ -17,7 +23,12 @@ export const BaseEffectsChart: React.FC<BaseEffectsChartProps> = ({ history }) =
         return {
             ...baseChartOptions,
             title: { text: 'Base Genetic Effects', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Avg Vitality', 'Avg Agility', 'Avg Strength', 'Avg Intelligence', 'Avg Luck'], top: 35, textStyle: { color: '#bbf7d0' }, selected: effectsLegend },
+            legend: {
+                data: ['Avg Vitality', 'Avg Agility', 'Avg Strength', 'Avg Intelligence', 'Avg Luck'],
+                top: 35,
+                textStyle: { color: '#bbf7d0' },
+                selected: effectsLegend,
+            },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             yAxis: { ...baseChartOptions.yAxis, name: 'Effect Score' },
             series: [
@@ -29,6 +40,6 @@ export const BaseEffectsChart: React.FC<BaseEffectsChartProps> = ({ history }) =
             ],
         };
     }, [history, effectsLegend]);
-    
-    return <Chart option={baseEffectsOption} onEvents={{ 'legendselectchanged': handleEffectsLegendChange }} />;
+
+    return <Chart option={baseEffectsOption} onEvents={{ legendselectchanged: handleEffectsLegendChange }} />;
 };

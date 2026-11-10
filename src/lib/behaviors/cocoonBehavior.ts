@@ -10,11 +10,11 @@ interface CocoonContext {
 
 export const processCocoonTick = (cocoon: Cocoon, context: CocoonContext) => {
     const { nextActorState, events, getNextId } = context;
-    
+
     cocoon.hatchTimer--;
     if (cocoon.hatchTimer <= 0) {
         nextActorState.delete(cocoon.id);
-        
+
         const baseStats = INSECT_DATA.get('🦋');
         if (!baseStats) {
             console.error(`Could not find base stats for butterfly emoji: 🦋`);
@@ -35,7 +35,7 @@ export const processCocoonTick = (cocoon: Cocoon, context: CocoonContext) => {
             stamina: baseStats.maxStamina,
             maxStamina: baseStats.maxStamina,
         };
-        
+
         nextActorState.set(newButterflyId, newButterfly);
         events.push({ message: '🦋 A butterfly has emerged from its cocoon!', type: 'success', importance: 'low' });
     }

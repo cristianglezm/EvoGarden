@@ -1,5 +1,17 @@
 import type { SimulationParams, CellContent, AppEvent, PopulationTrend, Bird, Eagle, HerbicidePlane, Coord, Grid, Cockroach } from '../types';
-import { POPULATION_TREND_WINDOW, POPULATION_GROWTH_THRESHOLD_INSECT, POPULATION_DECLINE_THRESHOLD_INSECT, BIRD_SPAWN_COOLDOWN, EAGLE_SPAWN_COOLDOWN, COCKROACH_SPAWN_COOLDOWN, POPULATION_GROWTH_THRESHOLD_CORPSE, POPULATION_DECLINE_THRESHOLD_CORPSE, INSECT_DATA, INSECT_GENOME_LENGTH, FLOWER_STAT_INDICES } from '../constants';
+import {
+    POPULATION_TREND_WINDOW,
+    POPULATION_GROWTH_THRESHOLD_INSECT,
+    POPULATION_DECLINE_THRESHOLD_INSECT,
+    BIRD_SPAWN_COOLDOWN,
+    EAGLE_SPAWN_COOLDOWN,
+    COCKROACH_SPAWN_COOLDOWN,
+    POPULATION_GROWTH_THRESHOLD_CORPSE,
+    POPULATION_DECLINE_THRESHOLD_CORPSE,
+    INSECT_DATA,
+    INSECT_GENOME_LENGTH,
+    FLOWER_STAT_INDICES,
+} from '../constants';
 import { calculatePopulationTrend, findCellForStationaryActor } from './simulationUtils';
 import type { TickSummary } from '../types';
 
@@ -28,7 +40,7 @@ export class PopulationManager {
             this.reset();
         }
     }
-    
+
     public reset() {
         this.insectCountHistory = [];
         this.birdCountHistory = [];
@@ -42,26 +54,21 @@ export class PopulationManager {
         this.totalHerbicidePlanesSpawned = 0;
     }
 
-    public loadState(state: { totalBirdsHunted?: number; totalHerbicidePlanesSpawned?: number; }) {
+    public loadState(state: { totalBirdsHunted?: number; totalHerbicidePlanesSpawned?: number }) {
         this.totalBirdsHunted = state.totalBirdsHunted || 0;
         this.totalHerbicidePlanesSpawned = state.totalHerbicidePlanesSpawned || 0;
     }
-    
-    public processTick(
-        nextActorState: Map<string, CellContent>,
-        grid: Grid,
-        summary: TickSummary,
-        events: AppEvent[]
-    ): CellContent[] {
+
+    public processTick(nextActorState: Map<string, CellContent>, grid: Grid, summary: TickSummary, events: AppEvent[]): CellContent[] {
         this.updateCooldowns();
-        
+
         const newActors: CellContent[] = [];
-        
+
         this.insectCountHistory.push(summary.insectCount);
         if (this.insectCountHistory.length > POPULATION_TREND_WINDOW) {
             this.insectCountHistory.shift();
         }
-        
+
         this.birdCountHistory.push(summary.birdCount);
         if (this.birdCountHistory.length > POPULATION_TREND_WINDOW) {
             this.birdCountHistory.shift();
@@ -89,7 +96,7 @@ export class PopulationManager {
                 this.birdSpawnCooldown = BIRD_SPAWN_COOLDOWN;
             }
         }
-        
+
         // Spawn eagles
         else if (this.params.allowedActors.includes('🦅') && insectTrend === 'declining') {
             const currentBirdCount = Array.from(nextActorState.values()).filter(a => a.type === 'bird').length;
@@ -117,10 +124,15 @@ export class PopulationManager {
                 cockroachGenome[FLOWER_STAT_INDICES.STAMINA] = -1.0; // Dislike high-stamina flowers
 
                 const newCockroach: Cockroach = {
-                    id: cockroachId, type: 'cockroach', x: spot.x, y: spot.y,
+                    id: cockroachId,
+                    type: 'cockroach',
+                    x: spot.x,
+                    y: spot.y,
                     emoji: '🪳',
-                    health: baseStats.maxHealth, maxHealth: baseStats.maxHealth,
-                    stamina: baseStats.maxStamina, maxStamina: baseStats.maxStamina,
+                    health: baseStats.maxHealth,
+                    maxHealth: baseStats.maxHealth,
+                    stamina: baseStats.maxStamina,
+                    maxStamina: baseStats.maxStamina,
                     genome: cockroachGenome,
                 };
                 newActors.push(newCockroach);
@@ -134,23 +146,53 @@ export class PopulationManager {
         const totalCells = this.params.gridWidth * this.params.gridHeight;
         const flowerDensityThresholdCount = totalCells * this.params.herbicideFlowerDensityThreshold;
         const hasPlane = Array.from(nextActorState.values()).some(a => a.type === 'herbicidePlane');
-        
+
         if (this.herbicideCooldown === 0 && !hasPlane && flowerCountForDensity >= flowerDensityThresholdCount) {
             this.totalHerbicidePlanesSpawned++;
             const STRIDE = 3;
             const pattern = Math.floor(Math.random() * 4);
             let start: Coord = { x: 1, y: 1 };
-            let dx = 0, dy = 0, turnDx = 0, turnDy = 0;
+            let dx = 0,
+                dy = 0,
+                turnDx = 0,
+                turnDy = 0;
             const { gridWidth, gridHeight } = this.params;
-            const minX = 1, maxX = gridWidth - 2, minY = 1, maxY = gridHeight - 2;
+            const minX = 1,
+                maxX = gridWidth - 2,
+                minY = 1,
+                maxY = gridHeight - 2;
 
             switch (pattern) {
-                case 0: start = { x: minX, y: minY }; dx = 1; dy = 0; turnDx = 0; turnDy = STRIDE; break;
-                case 1: start = { x: maxX, y: maxY - (STRIDE - 1) }; dx = -1; dy = 0; turnDx = 0; turnDy = -STRIDE; break;
-                case 2: start = { x: minX, y: minY }; dx = 0; dy = 1; turnDx = STRIDE; turnDy = 0; break;
-                case 3: start = { x: maxX - (STRIDE - 1), y: maxY }; dx = 0; dy = -1; turnDx = -STRIDE; turnDy = 0; break;
+                case 0:
+                    start = { x: minX, y: minY };
+                    dx = 1;
+                    dy = 0;
+                    turnDx = 0;
+                    turnDy = STRIDE;
+                    break;
+                case 1:
+                    start = { x: maxX, y: maxY - (STRIDE - 1) };
+                    dx = -1;
+                    dy = 0;
+                    turnDx = 0;
+                    turnDy = -STRIDE;
+                    break;
+                case 2:
+                    start = { x: minX, y: minY };
+                    dx = 0;
+                    dy = 1;
+                    turnDx = STRIDE;
+                    turnDy = 0;
+                    break;
+                case 3:
+                    start = { x: maxX - (STRIDE - 1), y: maxY };
+                    dx = 0;
+                    dy = -1;
+                    turnDx = -STRIDE;
+                    turnDy = 0;
+                    break;
             }
-            
+
             const planeId = `plane-${Date.now()}`;
             const newPlane: HerbicidePlane = { id: planeId, type: 'herbicidePlane', ...start, dx, dy, turnDx, turnDy, stride: STRIDE };
             newActors.push(newPlane);
@@ -171,7 +213,7 @@ export class PopulationManager {
 
         return newActors;
     }
-    
+
     private updateCooldowns() {
         if (this.birdSpawnCooldown > 0) this.birdSpawnCooldown--;
         if (this.eagleSpawnCooldown > 0) this.eagleSpawnCooldown--;

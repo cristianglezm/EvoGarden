@@ -22,13 +22,19 @@ export const EnvironmentChart: React.FC<EnvironmentChartProps> = ({ history }) =
             yAxis: [
                 {
                     ...(baseChartOptions.yAxis as object),
-                    type: 'value', name: '°C', position: 'left'
+                    type: 'value',
+                    name: '°C',
+                    position: 'left',
                 },
                 {
                     ...(baseChartOptions.yAxis as object),
-                    type: 'value', name: '%', position: 'right', min: 0, max: 100,
+                    type: 'value',
+                    name: '%',
+                    position: 'right',
+                    min: 0,
+                    max: 100,
                     splitLine: { show: false },
-                }
+                },
             ],
             series: [
                 { name: 'Temperature (°C)', type: 'line', yAxisIndex: 0, data: history.map(h => h.currentTemperature?.toFixed(1)), color: '#f56565' },
@@ -36,6 +42,6 @@ export const EnvironmentChart: React.FC<EnvironmentChartProps> = ({ history }) =
             ],
         };
     }, [history, environmentLegend]);
-    
-    return <Chart option={environmentOption} onEvents={{ 'legendselectchanged': handleEnvironmentLegendChange }} />;
+
+    return <Chart option={environmentOption} onEvents={{ legendselectchanged: handleEnvironmentLegendChange }} />;
 };

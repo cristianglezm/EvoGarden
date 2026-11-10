@@ -67,7 +67,19 @@ export interface InsectStats {
     reproductionCost: number; // stamina cost
 }
 
-export type InsectBehaviorState = 'seeking_food' | 'returning_to_hive' | 'hunting' | 'patrolling' | 'idle' | 'collecting' | 'depositing' | 'returning_to_colony' | 'building' | 'ambushing' | 'consuming' | 'repairing';
+export type InsectBehaviorState =
+    | 'seeking_food'
+    | 'returning_to_hive'
+    | 'hunting'
+    | 'patrolling'
+    | 'idle'
+    | 'collecting'
+    | 'depositing'
+    | 'returning_to_colony'
+    | 'building'
+    | 'ambushing'
+    | 'consuming'
+    | 'repairing';
 
 export interface Insect extends Actor {
     type: 'insect';
@@ -97,7 +109,7 @@ export interface Insect extends Actor {
         type: 'corpse' | 'egg' | 'cocoon' | 'pollen';
         value: number;
     };
-    lastPheromonePosition?: { x: number, y: number } | null; // For ant pathfinding memory
+    lastPheromonePosition?: { x: number; y: number } | null; // For ant pathfinding memory
     isReturningToHive?: boolean; // For honeybees
     behaviorState?: InsectBehaviorState;
     // Spider-specific
@@ -105,8 +117,8 @@ export interface Insect extends Actor {
     webs?: string[];
     webStamina?: number;
     decisionCooldown?: number; // For AI optimization
-    targetPosition?: { x: number, y: number }; // For AI targeting
-    signalToSend?: { type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND' | 'ALL_CLEAR', origin?: { x: number, y: number } };
+    targetPosition?: { x: number; y: number }; // For AI targeting
+    signalToSend?: { type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND' | 'ALL_CLEAR'; origin?: { x: number; y: number } };
 }
 
 export type SignalType = 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND' | 'ALL_CLEAR';
@@ -161,13 +173,13 @@ export interface SpiderWeb extends Actor {
 
 export interface Bird extends Actor {
     type: 'bird';
-    target: {x: number, y: number} | null; // target insect coordinates
-    patrolTarget: {x: number, y: number} | null;
+    target: { x: number; y: number } | null; // target insect coordinates
+    patrolTarget: { x: number; y: number } | null;
 }
 
 export interface Eagle extends Actor {
     type: 'eagle';
-    target: {x: number, y: number} | null; // target bird coordinates
+    target: { x: number; y: number } | null; // target bird coordinates
 }
 
 export interface Nutrient extends Actor {
@@ -238,8 +250,38 @@ export interface InsectPlaceholder extends Actor {
 }
 
 // --- Grid and State types ---
-export type CellContent = Flower | Insect | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon | SlimeTrail | Hive | TerritoryMark | AntColony | PheromoneTrail | SpiderWeb;
-export type SavedCellActor = FlowerPlaceholder | InsectPlaceholder | Bird | Nutrient | Egg | Eagle | HerbicidePlane | HerbicideSmoke | FlowerSeed | Corpse | Cockroach | Cocoon;
+export type CellContent =
+    | Flower
+    | Insect
+    | Bird
+    | Nutrient
+    | Egg
+    | Eagle
+    | HerbicidePlane
+    | HerbicideSmoke
+    | FlowerSeed
+    | Corpse
+    | Cockroach
+    | Cocoon
+    | SlimeTrail
+    | Hive
+    | TerritoryMark
+    | AntColony
+    | PheromoneTrail
+    | SpiderWeb;
+export type SavedCellActor =
+    | FlowerPlaceholder
+    | InsectPlaceholder
+    | Bird
+    | Nutrient
+    | Egg
+    | Eagle
+    | HerbicidePlane
+    | HerbicideSmoke
+    | FlowerSeed
+    | Corpse
+    | Cockroach
+    | Cocoon;
 
 export type ActorAddDelta = {
     type: 'add';

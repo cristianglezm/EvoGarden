@@ -40,7 +40,10 @@ export function useSpeciesChallenges(summary: TickSummary | null, { source = def
             }
             const wait = lastRead + minIntervalMs - Date.now();
             if (wait > 0) {
-                timer ??= setTimeout(() => { timer = null; request(); }, wait);
+                timer ??= setTimeout(() => {
+                    timer = null;
+                    request();
+                }, wait);
                 return;
             }
             void readNow();
@@ -65,7 +68,10 @@ export function useSpeciesChallenges(summary: TickSummary | null, { source = def
             }
         };
 
-        read.current = () => { failures = 0; request(); };
+        read.current = () => {
+            failures = 0;
+            request();
+        };
         request();
         return () => {
             alive = false;

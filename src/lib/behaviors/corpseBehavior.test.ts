@@ -29,7 +29,7 @@ describe('corpseBehavior', () => {
         processCorpseTick(corpse, setupContext());
 
         expect(nextActorState.has(corpse.id)).toBe(false);
-        
+
         const nutrient = nextActorState.get('new-nutrient-id') as Nutrient | undefined;
         expect(nutrient).toBeDefined();
         expect(nutrient?.x).toBe(corpse.x);

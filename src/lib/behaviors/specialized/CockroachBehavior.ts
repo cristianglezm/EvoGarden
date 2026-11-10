@@ -1,8 +1,8 @@
 import type { Cockroach, Corpse, Nutrient, Flower, CellContent, Egg, Cocoon } from '../../../types';
-import { 
-    COCKROACH_VISION_RANGE, 
-    CORPSE_NUTRITION_VALUE, 
-    NUTRIENT_FROM_COCKROACH_LIFESPAN, 
+import {
+    COCKROACH_VISION_RANGE,
+    CORPSE_NUTRITION_VALUE,
+    NUTRIENT_FROM_COCKROACH_LIFESPAN,
     INSECT_DATA,
     COCKROACH_STAMINA_REGEN_PER_TICK,
     COCKROACH_MIN_STAMINA_TO_MOVE,
@@ -48,7 +48,7 @@ export class CockroachBehavior extends InsectBehavior {
             this.handleEatCorpse(cockroach, corpseOnCell, context);
             return;
         }
-        
+
         // 2. Eat egg or cocoon on current cell
         if (this.handleEatEggOrCocoon(cockroach, actorsOnCell, context)) {
             return;
@@ -60,7 +60,7 @@ export class CockroachBehavior extends InsectBehavior {
             this.handleAttackFlower(cockroach, flowerOnCell, context);
             return;
         }
-        
+
         // 4. Search and Move
         if (cockroach.stamina >= COCKROACH_MIN_STAMINA_TO_MOVE) {
             cockroach.stamina -= COCKROACH_MOVE_STAMINA_COST;
@@ -86,7 +86,7 @@ export class CockroachBehavior extends InsectBehavior {
         context.nextActorState.delete(corpse.id);
         cockroach.health = Math.min(cockroach.maxHealth, cockroach.health + CORPSE_NUTRITION_VALUE);
         cockroach.stamina = Math.min(cockroach.maxStamina, cockroach.stamina + CORPSE_NUTRITION_VALUE);
-        
+
         const nutrientId = context.getNextId('nutrient', cockroach.x, cockroach.y);
         const nutrient: Nutrient = { id: nutrientId, type: 'nutrient', x: cockroach.x, y: cockroach.y, lifespan: NUTRIENT_FROM_COCKROACH_LIFESPAN };
         context.nextActorState.set(nutrientId, nutrient);
@@ -115,7 +115,7 @@ export class CockroachBehavior extends InsectBehavior {
         if (cockroach.stamina >= INSECT_ATTACK_COST) {
             flower.health = Math.max(0, flower.health - baseStats.attack);
             cockroach.stamina -= INSECT_ATTACK_COST;
-            
+
             if (flower.health <= 0) {
                 // Instead of spawning nutrient, set a cooldown on the cockroach
                 cockroach.nutrientDropCooldown = COCKROACH_NUTRIENT_DROP_COOLDOWN;
@@ -126,10 +126,11 @@ export class CockroachBehavior extends InsectBehavior {
 
     private findClosestEggOrCocoon(cockroach: Cockroach, context: InsectBehaviorContext): Egg | Cocoon | null {
         const vision = new Rectangle(cockroach.x, cockroach.y, COCKROACH_VISION_RANGE, COCKROACH_VISION_RANGE);
-        const nearbyPrey = context.qtree.query(vision)
+        const nearbyPrey = context.qtree
+            .query(vision)
             .map(p => p.data)
             .filter(a => (a?.type === 'egg' || a?.type === 'cocoon') && context.nextActorState.has(a.id)) as (Egg | Cocoon)[];
-        
+
         const validPrey = nearbyPrey.filter(p => {
             if (p.type === 'egg') {
                 return p.insectEmoji !== '🪳';
@@ -138,27 +139,34 @@ export class CockroachBehavior extends InsectBehavior {
         });
 
         if (validPrey.length === 0) return null;
-        
-        return validPrey.reduce((closest, current) => {
-            const dist = Math.hypot(cockroach.x - current.x, cockroach.y - current.y);
-            return dist < closest.dist ? { prey: current, dist } : closest;
-        }, { prey: null as (Egg | Cocoon | null), dist: Infinity }).prey;
+
+        return validPrey.reduce(
+            (closest, current) => {
+                const dist = Math.hypot(cockroach.x - current.x, cockroach.y - current.y);
+                return dist < closest.dist ? { prey: current, dist } : closest;
+            },
+            { prey: null as Egg | Cocoon | null, dist: Infinity }
+        ).prey;
     }
 
     private handleMovement(cockroach: Cockroach, context: InsectBehaviorContext) {
-        let target: { x: number, y: number } | null = null;
-        
+        let target: { x: number; y: number } | null = null;
+
         // Priority 1: Find corpses
         const vision = new Rectangle(cockroach.x, cockroach.y, COCKROACH_VISION_RANGE, COCKROACH_VISION_RANGE);
-        const nearbyCorpses = context.qtree.query(vision)
+        const nearbyCorpses = context.qtree
+            .query(vision)
             .map((p: Point<CellContent>) => p.data)
             .filter((a): a is Corpse => !!a && a.type === 'corpse' && context.nextActorState.has(a.id));
 
         if (nearbyCorpses.length > 0) {
-            target = nearbyCorpses.reduce((closest, corpse) => {
-                const dist = Math.hypot(cockroach.x - corpse.x, cockroach.y - corpse.y);
-                return (dist < closest.dist) ? { x: corpse.x, y: corpse.y, dist } : closest;
-            }, { x: 0, y: 0, dist: Infinity });
+            target = nearbyCorpses.reduce(
+                (closest, corpse) => {
+                    const dist = Math.hypot(cockroach.x - corpse.x, cockroach.y - corpse.y);
+                    return dist < closest.dist ? { x: corpse.x, y: corpse.y, dist } : closest;
+                },
+                { x: 0, y: 0, dist: Infinity }
+            );
         } else {
             // Priority 2: Find eggs or cocoons
             target = this.findClosestEggOrCocoon(cockroach, context);
@@ -167,7 +175,7 @@ export class CockroachBehavior extends InsectBehavior {
                 target = this.findBestFlowerTarget(cockroach, context);
             }
         }
-        
+
         if (target) {
             this.moveTowards(cockroach, target, context);
         } else {

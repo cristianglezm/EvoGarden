@@ -59,7 +59,9 @@ export function normalizeSamples(samples: SpeciesSample[], limits: SpeciesLimits
 
     for (const members of species.values()) {
         members.sort(byAge);
-        members.forEach((s, i) => { s.founder = i === 0; });
+        members.forEach((s, i) => {
+            s.founder = i === 0;
+        });
         for (const category of RECORD_CATEGORIES) {
             const holders = members.filter(s => s.records.includes(category));
             if (holders.length < 2) continue;
@@ -75,8 +77,17 @@ export function normalizeSamples(samples: SpeciesSample[], limits: SpeciesLimits
     const trim = (group: SpeciesSample[], cap: number, order: (a: SpeciesSample, b: SpeciesSample) => number) => {
         for (const id of excessOf(group, cap, order)) removed.add(id);
     };
-    for (const members of species.values()) trim(members.filter(s => s.kind === 'sample'), limits.cap, byTypical);
-    trim(classified.filter(s => s.kind === 'atypical'), limits.atypicalCap, byTypical);
+    for (const members of species.values())
+        trim(
+            members.filter(s => s.kind === 'sample'),
+            limits.cap,
+            byTypical
+        );
+    trim(
+        classified.filter(s => s.kind === 'atypical'),
+        limits.atypicalCap,
+        byTypical
+    );
     trim(lost, limits.unclassifiedCap, byAge);
 
     const before = new Map(samples.map(s => [s.id, JSON.stringify(s)]));

@@ -16,11 +16,7 @@ interface EnvironmentDisplayProps {
 
 export const EnvironmentDisplay: React.FC<EnvironmentDisplayProps> = ({ summary }) => {
     if (!summary) {
-        return (
-            <div className="bg-background px-3 py-1.5 rounded-md text-xs text-secondary font-mono">
-                Loading environment...
-            </div>
-        );
+        return <div className="bg-background px-3 py-1.5 rounded-md text-xs text-secondary font-mono">Loading environment...</div>;
     }
 
     const { season, currentTemperature, currentHumidity, weatherEvent } = summary;

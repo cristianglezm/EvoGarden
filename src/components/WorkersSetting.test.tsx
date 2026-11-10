@@ -9,12 +9,19 @@ const storageOf = (initial: Record<string, string> = {}) => {
     return {
         data,
         getItem: (key: string) => data[key] ?? null,
-        setItem: vi.fn((key: string, value: string) => { data[key] = value; }),
-        removeItem: vi.fn((key: string) => { delete data[key]; }),
+        setItem: vi.fn((key: string, value: string) => {
+            data[key] = value;
+        }),
+        removeItem: vi.fn((key: string) => {
+            delete data[key];
+        }),
     };
 };
 const select = () => screen.getByRole('combobox', { name: /Workers/i });
-const labels = () => within(select()).getAllByRole('option').map(o => o.textContent);
+const labels = () =>
+    within(select())
+        .getAllByRole('option')
+        .map(o => o.textContent);
 
 describe('WorkersSetting', () => {
     it('offers automatic, with the number it would use here, and one to eight workers', () => {
@@ -66,7 +73,9 @@ describe('WorkersSetting', () => {
 
     it('says it could not save the choice, and keeps what was chosen before', () => {
         const storage = storageOf({ [WORKERS_KEY]: '3' });
-        storage.setItem.mockImplementation(() => { throw new Error('full'); });
+        storage.setItem.mockImplementation(() => {
+            throw new Error('full');
+        });
         render(<WorkersSetting environment={{ hardwareConcurrency: 8 }} storage={storage} />);
         fireEvent.change(select(), { target: { value: '6' } });
         expect(screen.getByRole('status', { name: 'Workers result' })).toHaveTextContent('could not be saved');

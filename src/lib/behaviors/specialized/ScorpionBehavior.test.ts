@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ScorpionBehavior } from './ScorpionBehavior';
 import type { Insect, CellContent, SimulationParams, AppEvent, Corpse } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    DEFAULT_SIM_PARAMS, 
+import {
+    INSECT_DATA,
+    DEFAULT_SIM_PARAMS,
     SCORPION_HEAL_FROM_PREY,
     INSECT_ATTACK_COST,
     INSECT_HEALTH_DECAY_PER_TICK,
-    INSECT_STAMINA_REGEN_PER_TICK
+    INSECT_STAMINA_REGEN_PER_TICK,
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -24,23 +24,38 @@ describe('ScorpionBehavior', () => {
     let events: AppEvent[];
     const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
-    
+
     const createMockPrey = (id: string, x: number, y: number, emoji: '🪲' | '🐌' | '🪳' | '🐞'): Insect => {
         const data = INSECT_DATA.get(emoji)!;
         return {
-            id, type: 'insect', x, y, emoji, pollen: null, genome: [],
-            health: data.maxHealth, maxHealth: data.maxHealth,
-            stamina: data.maxStamina, maxStamina: data.maxStamina,
+            id,
+            type: 'insect',
+            x,
+            y,
+            emoji,
+            pollen: null,
+            genome: [],
+            health: data.maxHealth,
+            maxHealth: data.maxHealth,
+            stamina: data.maxStamina,
+            maxStamina: data.maxStamina,
         };
     };
 
     beforeEach(() => {
         behavior = new ScorpionBehavior();
         scorpion = {
-            id: 'scorpion1', type: 'insect', x: 10, y: 10, emoji: '🦂', pollen: null, 
+            id: 'scorpion1',
+            type: 'insect',
+            x: 10,
+            y: 10,
+            emoji: '🦂',
+            pollen: null,
             genome: [],
-            health: SCORPION_DATA.maxHealth, maxHealth: SCORPION_DATA.maxHealth,
-            stamina: SCORPION_DATA.maxStamina, maxStamina: SCORPION_DATA.maxStamina,
+            health: SCORPION_DATA.maxHealth,
+            maxHealth: SCORPION_DATA.maxHealth,
+            stamina: SCORPION_DATA.maxStamina,
+            maxStamina: SCORPION_DATA.maxStamina,
         };
         nextActorState = new Map();
         nextActorState.set(scorpion.id, scorpion);
@@ -49,14 +64,14 @@ describe('ScorpionBehavior', () => {
         events = [];
         getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
-    
+
     const setupContext = (): any => ({
         params,
         qtree,
         nextActorState,
         events,
         grid: Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => [])),
-        flowerQtree: new Quadtree(new Rectangle(10,10,10,10), 4),
+        flowerQtree: new Quadtree(new Rectangle(10, 10, 10, 10), 4),
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
@@ -71,7 +86,7 @@ describe('ScorpionBehavior', () => {
         nextActorState.set(ladybug.id, ladybug);
         qtree.insert({ x: beetle.x, y: beetle.y, data: beetle });
         qtree.insert({ x: ladybug.x, y: ladybug.y, data: ladybug });
-        
+
         behavior.update(scorpion, setupContext());
 
         expect(scorpion.targetId).toBe(beetle.id);
@@ -89,7 +104,7 @@ describe('ScorpionBehavior', () => {
 
         const context = setupContext();
         context.qtree.insert({ x: beetle.x, y: beetle.y, data: beetle });
-        
+
         behavior.update(scorpion, context);
 
         expect(nextActorState.has(beetle.id)).toBe(true);
@@ -98,16 +113,16 @@ describe('ScorpionBehavior', () => {
 
         const expectedStamina = initialScorpionStamina - INSECT_ATTACK_COST + INSECT_STAMINA_REGEN_PER_TICK;
         expect(scorpion.stamina).toBe(expectedStamina);
-        
+
         expect(scorpion.targetId).toBe(beetle.id);
         expect(events.some(e => e.message.includes('attacked a 🪲'))).toBe(true);
     });
-    
+
     it('should kill prey, create a corpse, heal, and reset target', () => {
         const beetle = createMockPrey('beetle1', 10, 10, '🪲');
         beetle.health = SCORPION_DATA.attack;
         nextActorState.set(beetle.id, beetle);
-        
+
         scorpion.health = 50;
         scorpion.stamina = 20;
         scorpion.targetId = beetle.id;
@@ -125,10 +140,10 @@ describe('ScorpionBehavior', () => {
         expect(corpse.originalEmoji).toBe(beetle.emoji);
 
         expect(scorpion.health).toBeCloseTo(50 - INSECT_HEALTH_DECAY_PER_TICK + SCORPION_HEAL_FROM_PREY);
-        
+
         const expectedStamina = Math.min(scorpion.maxStamina, 20 - INSECT_ATTACK_COST + SCORPION_HEAL_FROM_PREY + INSECT_STAMINA_REGEN_PER_TICK);
         expect(scorpion.stamina).toBe(expectedStamina);
-        
+
         expect(scorpion.targetId).toBeUndefined();
         expect(events.some(e => e.message.includes('killed a 🪲'))).toBe(true);
     });

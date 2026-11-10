@@ -6,8 +6,12 @@ const storageOf = (initial: Record<string, string> = {}) => {
     return {
         data,
         getItem: vi.fn((key: string) => data[key] ?? null),
-        setItem: vi.fn((key: string, value: string) => { data[key] = value; }),
-        removeItem: vi.fn((key: string) => { delete data[key]; }),
+        setItem: vi.fn((key: string, value: string) => {
+            data[key] = value;
+        }),
+        removeItem: vi.fn((key: string) => {
+            delete data[key];
+        }),
     };
 };
 
@@ -50,7 +54,11 @@ describe('the number of workers the player chose', () => {
     });
 
     it('is nothing when the storage cannot be read, or there is none', () => {
-        const broken = { getItem: () => { throw new Error('denied'); } } as unknown as Storage;
+        const broken = {
+            getItem: () => {
+                throw new Error('denied');
+            },
+        } as unknown as Storage;
         expect(readWorkerSetting(broken)).toBeNull();
         expect(readWorkerSetting(undefined)).toBeNull();
     });
@@ -64,7 +72,14 @@ describe('the number of workers the player chose', () => {
     });
 
     it('says when it could not be saved', () => {
-        const broken = { setItem: () => { throw new Error('full'); }, removeItem: () => { throw new Error('full'); } } as unknown as Storage;
+        const broken = {
+            setItem: () => {
+                throw new Error('full');
+            },
+            removeItem: () => {
+                throw new Error('full');
+            },
+        } as unknown as Storage;
         expect(writeWorkerSetting(broken, 3)).toBe(false);
         expect(writeWorkerSetting(broken, null)).toBe(false);
         expect(writeWorkerSetting(undefined, 3)).toBe(false);

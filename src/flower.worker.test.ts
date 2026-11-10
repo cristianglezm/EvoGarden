@@ -33,7 +33,9 @@ beforeAll(async () => {
 
     const channel = new MessageChannel();
     toWorker = channel.port2;
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
     classifier = flowerService.speciesClassifier;
     toWorker.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
@@ -83,9 +85,14 @@ describe('the flower worker', () => {
 
     it('creates a flower before the next classification, once the job in hand is done', async () => {
         let open!: () => void;
-        const gate = new Promise<void>(resolve => { open = resolve; });
+        const gate = new Promise<void>(resolve => {
+            open = resolve;
+        });
         const classify = classifier.classify.bind(classifier);
-        vi.spyOn(classifier, 'classify').mockImplementationOnce(async genome => { await gate; return classify(genome); });
+        vi.spyOn(classifier, 'classify').mockImplementationOnce(async genome => {
+            await gate;
+            return classify(genome);
+        });
 
         toWorker.postMessage(classifyRequest('c', genomes[1]));
         toWorker.postMessage({ type: 'request-flower', payload: { requestId: 'r2', flowerId: 'f2', x: 0, y: 0 } });
@@ -100,9 +107,14 @@ describe('the flower worker', () => {
 
     it('does a flower and then a species, however many flowers are waiting, so species are not left for when there are none', async () => {
         let open!: () => void;
-        const gate = new Promise<void>(resolve => { open = resolve; });
+        const gate = new Promise<void>(resolve => {
+            open = resolve;
+        });
         const classify = classifier.classify.bind(classifier);
-        vi.spyOn(classifier, 'classify').mockImplementationOnce(async genome => { await gate; return classify(genome); });
+        vi.spyOn(classifier, 'classify').mockImplementationOnce(async genome => {
+            await gate;
+            return classify(genome);
+        });
 
         toWorker.postMessage(classifyRequest('s0', genomes[9]));
         for (const n of [1, 2, 3, 4]) toWorker.postMessage({ type: 'request-flower', payload: { requestId: `r${n}`, flowerId: `f${n}`, x: n, y: 0 } });
@@ -124,9 +136,14 @@ describe('the flower worker', () => {
 
     it('drops the classifications waiting when everything is cancelled', async () => {
         let open!: () => void;
-        const gate = new Promise<void>(resolve => { open = resolve; });
+        const gate = new Promise<void>(resolve => {
+            open = resolve;
+        });
         const classify = classifier.classify.bind(classifier);
-        vi.spyOn(classifier, 'classify').mockImplementationOnce(async genome => { await gate; return classify(genome); });
+        vi.spyOn(classifier, 'classify').mockImplementationOnce(async genome => {
+            await gate;
+            return classify(genome);
+        });
 
         toWorker.postMessage(classifyRequest('e', genomes[3]));
         toWorker.postMessage(classifyRequest('f', genomes[4]));
@@ -148,7 +165,10 @@ describe('the flower worker', () => {
         toWorker.postMessage(classifyRequest('h', genomes[6]));
         toWorker.postMessage(classifyRequest('i', genomes[7]));
         await vi.waitFor(() => expect(types()).toHaveLength(2), { timeout: 15_000 });
-        expect(messages.map(m => [m.payload.flowerId, m.payload.status === 'failed'])).toEqual([['h', true], ['i', false]]);
+        expect(messages.map(m => [m.payload.flowerId, m.payload.status === 'failed'])).toEqual([
+            ['h', true],
+            ['i', false],
+        ]);
     }, 30_000);
 
     it('takes the records of the species of a flower that dies', async () => {

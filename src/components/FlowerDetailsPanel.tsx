@@ -22,11 +22,13 @@ interface FlowerDetailsPanelProps {
     onViewInGuide?: (speciesKey: string) => void;
 }
 
-const StatBar: React.FC<{ value: number, max: number, label: string, colorClass: string }> = ({ value, max, label, colorClass }) => (
+const StatBar: React.FC<{ value: number; max: number; label: string; colorClass: string }> = ({ value, max, label, colorClass }) => (
     <div>
         <div className="flex justify-between items-center mb-1">
             <span className="text-sm font-medium text-primary-light">{label}</span>
-            <span className="text-sm font-bold text-white">{Math.round(value)} / {Math.round(max)}</span>
+            <span className="text-sm font-bold text-white">
+                {Math.round(value)} / {Math.round(max)}
+            </span>
         </div>
         <div className="w-full bg-surface-hover rounded-full h-2.5">
             <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${(value / max) * 100}%` }}></div>
@@ -34,7 +36,17 @@ const StatBar: React.FC<{ value: number, max: number, label: string, colorClass:
     </div>
 );
 
-export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, isRunning, setIsRunning, onClose, onTrackActor, onStopTracking, trackedActorId, speciesSource, onViewInGuide }) => {
+export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({
+    flower,
+    isRunning,
+    setIsRunning,
+    onClose,
+    onTrackActor,
+    onStopTracking,
+    trackedActorId,
+    speciesSource,
+    onViewInGuide,
+}) => {
     const [copied, setCopied] = useState(false);
     const [is3DViewerOpen, setIs3DViewerOpen] = useState(false);
     const [gltfString, setGltfString] = useState<string | null>(null);
@@ -51,10 +63,16 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
         let current = true;
         setSpecies(undefined);
         speciesSource.speciesFor(genome).then(
-            found => { if (current) setSpecies(found); },
-            () => { if (current) setSpecies(null); },
+            found => {
+                if (current) setSpecies(found);
+            },
+            () => {
+                if (current) setSpecies(null);
+            }
         );
-        return () => { current = false; };
+        return () => {
+            current = false;
+        };
     }, [speciesSource, genome]);
 
     const handleCopyGenome = useCallback(() => {
@@ -76,14 +94,14 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
 
     const handleView3D = async () => {
         if (!flower) return;
-        
+
         wasRunningRef.current = isRunning;
         setIsRunning(false); // Pause simulation
 
         setIsLoading3D(true);
         setGltfString(null);
         setIs3DViewerOpen(true);
-        
+
         try {
             const gltf = useEmissive
                 ? await flowerService.drawEmissive3DFlower(flower.genome, flower.sex)
@@ -91,14 +109,14 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
 
             setGltfString(gltf);
         } catch (error) {
-            console.error("Failed to generate 3D model:", error);
+            console.error('Failed to generate 3D model:', error);
             setIs3DViewerOpen(false); // Close modal on error
             setIsRunning(wasRunningRef.current); // And resume to previous state
         } finally {
             setIsLoading3D(false);
         }
     };
-    
+
     const handleClose3DViewer = () => {
         setIs3DViewerOpen(false);
         setIsRunning(wasRunningRef.current); // Resume to previous state
@@ -115,19 +133,15 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                 </h2>
                 <div className="flex items-center gap-2">
                     {isTrackingThisFlower && (
-                        <button 
-                            onClick={onStopTracking} 
+                        <button
+                            onClick={onStopTracking}
                             className="px-2 py-1 bg-accent-red/80 hover:bg-accent-red text-white text-xs font-semibold rounded-md transition-colors"
                             title="Stop Tracking"
                         >
                             Stop
                         </button>
                     )}
-                    <button 
-                        onClick={onClose} 
-                        className="p-1 text-primary-light hover:bg-black/20 rounded-full"
-                        aria-label="Close details panel"
-                    >
+                    <button onClick={onClose} className="p-1 text-primary-light hover:bg-black/20 rounded-full" aria-label="Close details panel">
                         <XIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -135,25 +149,34 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
             <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-black/50 rounded flex items-center justify-center p-1 shrink-0">
-                         <img src={flower.imageData} alt={`Flower ${flower.id}`} className="w-full h-full object-contain"/>
+                        <img src={flower.imageData} alt={`Flower ${flower.id}`} className="w-full h-full object-contain" />
                     </div>
                     <div className="min-w-0">
                         <h3 className="text-xl font-bold text-primary-light truncate">Flower</h3>
                         <div className="flex items-center gap-2">
                             <p className="text-xs text-secondary font-mono truncate">{flower.id}</p>
                             {!isTrackingThisFlower && (
-                                <button onClick={() => onTrackActor(flower.id)} title="Track this flower" className="p-1 text-secondary hover:text-primary-light rounded-full transition-colors">
+                                <button
+                                    onClick={() => onTrackActor(flower.id)}
+                                    title="Track this flower"
+                                    className="p-1 text-secondary hover:text-primary-light rounded-full transition-colors"
+                                >
                                     <SearchIcon className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
                         {speciesSource && species !== null && (
                             <p className="text-sm text-secondary">
-                                Species: {species === undefined ? '…' : (
+                                Species:{' '}
+                                {species === undefined ? (
+                                    '…'
+                                ) : (
                                     <span
                                         className="font-semibold text-primary-light"
                                         title={species.stored ? undefined : 'Not kept in the collection: its species had no room for it.'}
-                                    >{species.name}</span>
+                                    >
+                                        {species.name}
+                                    </span>
                                 )}
                                 {species && onViewInGuide && (
                                     <button
@@ -176,39 +199,61 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
 
                 <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Current State</h3>
-                    <p><strong>Age:</strong> {flower.age} / {flower.maturationPeriod} ticks</p>
-                    <p><strong>Status:</strong> {flower.isMature ? 'Mature' : 'Immature'}</p>
+                    <p>
+                        <strong>Age:</strong> {flower.age} / {flower.maturationPeriod} ticks
+                    </p>
+                    <p>
+                        <strong>Status:</strong> {flower.isMature ? 'Mature' : 'Immature'}
+                    </p>
                 </div>
 
                 <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Genetic Traits</h3>
-                    <p><strong>Sex:</strong> <span className="capitalize">{flower.sex}</span></p>
-                    <p><strong>Optimal Temp:</strong> {flower.minTemperature}°C to {flower.maxTemperature}°C</p>
+                    <p>
+                        <strong>Sex:</strong> <span className="capitalize">{flower.sex}</span>
+                    </p>
+                    <p>
+                        <strong>Optimal Temp:</strong> {flower.minTemperature}°C to {flower.maxTemperature}°C
+                    </p>
                     <div className="flex items-center">
-                        <p className="mr-2"><strong>Toxicity:</strong> {(flower.toxicityRate * 100).toFixed(0)}%</p>
-                        {flower.toxicityRate < 0 && (
-                            <span className="text-xs text-accent-green bg-accent-green/20 px-2 py-0.5 rounded-full">Healing</span>
-                        )}
+                        <p className="mr-2">
+                            <strong>Toxicity:</strong> {(flower.toxicityRate * 100).toFixed(0)}%
+                        </p>
+                        {flower.toxicityRate < 0 && <span className="text-xs text-accent-green bg-accent-green/20 px-2 py-0.5 rounded-full">Healing</span>}
                         {flower.toxicityRate > TOXIC_FLOWER_THRESHOLD && (
                             <span className="text-xs text-accent-red bg-accent-red/20 px-2 py-0.5 rounded-full">Carnivorous</span>
                         )}
                     </div>
-                    <p><strong>Nutrient Efficiency:</strong> {flower.nutrientEfficiency.toFixed(2)}x</p>
+                    <p>
+                        <strong>Nutrient Efficiency:</strong> {flower.nutrientEfficiency.toFixed(2)}x
+                    </p>
                 </div>
-                
+
                 <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Base Effects</h3>
                     <div className="grid grid-cols-2 gap-x-4">
-                        <p><strong>Vitality:</strong> {flower.effects.vitality}</p>
-                        <p><strong>Agility:</strong> {flower.effects.agility}</p>
-                        <p><strong>Strength:</strong> {flower.effects.strength}</p>
-                        <p><strong>Intelligence:</strong> {flower.effects.intelligence}</p>
-                        <p><strong>Luck:</strong> {flower.effects.luck}</p>
+                        <p>
+                            <strong>Vitality:</strong> {flower.effects.vitality}
+                        </p>
+                        <p>
+                            <strong>Agility:</strong> {flower.effects.agility}
+                        </p>
+                        <p>
+                            <strong>Strength:</strong> {flower.effects.strength}
+                        </p>
+                        <p>
+                            <strong>Intelligence:</strong> {flower.effects.intelligence}
+                        </p>
+                        <p>
+                            <strong>Luck:</strong> {flower.effects.luck}
+                        </p>
                     </div>
                 </div>
-                
+
                 <div className="grow flex flex-col">
-                    <label htmlFor="genome" className="block mb-1 text-sm font-medium text-primary-light shrink-0">Genome</label>
+                    <label htmlFor="genome" className="block mb-1 text-sm font-medium text-primary-light shrink-0">
+                        Genome
+                    </label>
                     <textarea
                         id="genome"
                         readOnly
@@ -220,16 +265,16 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                 {/* --- ACTION BAR --- */}
                 <div className="border-t border-border/50 pt-3 mt-auto space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                        <button 
-                            onClick={handleCopyGenome} 
+                        <button
+                            onClick={handleCopyGenome}
                             className="flex items-center justify-center gap-2 text-sm p-2 bg-surface-hover rounded-md hover:bg-border/20 transition-colors"
                             title="Copy genome to clipboard"
                         >
                             {copied ? <CheckIcon data-testid="CheckIcon" className="w-4 h-4 text-tertiary" /> : <CopyIcon className="w-4 h-4" />}
                             Copy Genome
                         </button>
-                        <button 
-                            onClick={handleDownloadGenome} 
+                        <button
+                            onClick={handleDownloadGenome}
                             className="flex items-center justify-center gap-2 text-sm p-2 bg-surface-hover rounded-md hover:bg-border/20 transition-colors"
                             title="Download genome as a JSON file"
                         >
@@ -242,7 +287,7 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                         <input
                             type="checkbox"
                             checked={useEmissive}
-                            onChange={(e) => setUseEmissive(e.target.checked)}
+                            onChange={e => setUseEmissive(e.target.checked)}
                             className="h-4 w-4 rounded bg-surface border-border text-accent-green focus:ring-accent-green"
                         />
                         <span>Use Emissive Material</span>
@@ -254,7 +299,9 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
                         className="w-full flex items-center justify-center px-4 py-2 bg-accent/50 hover:bg-accent/70 text-white font-semibold rounded-md transition-colors duration-200 disabled:bg-surface disabled:cursor-not-allowed cursor-pointer"
                     >
                         {isLoading3D ? (
-                            <><LoaderIcon className="w-5 h-5 mr-2 animate-spin" /> Generating...</>
+                            <>
+                                <LoaderIcon className="w-5 h-5 mr-2 animate-spin" /> Generating...
+                            </>
                         ) : (
                             'View in 3D'
                         )}
@@ -271,22 +318,18 @@ export const FlowerDetailsPanel: React.FC<FlowerDetailsPanelProps> = ({ flower, 
 
     return (
         <>
-            <div className="bg-surface border-2 border-tertiary rounded-lg shadow-lg h-full flex flex-col">
-                {panelContent}
-            </div>
-            {flower && <Modal
-                isOpen={is3DViewerOpen}
-                onClose={handleClose3DViewer}
-                title={`3D Model for Flower #${getShortId(flower.id)}`}
-            >
-                {isLoading3D || !gltfString ? (
-                    <div className="flex items-center justify-center h-full">
-                        <LoaderIcon className="w-12 h-12 animate-spin text-tertiary" />
-                    </div>
-                ) : (
-                    <Flower3DViewer gltfString={gltfString} />
-                )}
-            </Modal>}
+            <div className="bg-surface border-2 border-tertiary rounded-lg shadow-lg h-full flex flex-col">{panelContent}</div>
+            {flower && (
+                <Modal isOpen={is3DViewerOpen} onClose={handleClose3DViewer} title={`3D Model for Flower #${getShortId(flower.id)}`}>
+                    {isLoading3D || !gltfString ? (
+                        <div className="flex items-center justify-center h-full">
+                            <LoaderIcon className="w-12 h-12 animate-spin text-tertiary" />
+                        </div>
+                    ) : (
+                        <Flower3DViewer gltfString={gltfString} />
+                    )}
+                </Modal>
+            )}
         </>
     );
 };

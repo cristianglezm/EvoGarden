@@ -24,10 +24,10 @@ export class RenderingEngine {
     private params: SimulationParams;
     private imageCache = new Map<string, HTMLImageElement>();
     private corpseImageCache = new Map<string, HTMLCanvasElement>();
-    
+
     // State for change detection
     private lastStaticActorIds = new Set<string>();
-    
+
     constructor(bgCanvas: HTMLCanvasElement, fgCanvas: HTMLCanvasElement, params: SimulationParams) {
         this.bgCanvas = bgCanvas;
         this.fgCanvas = fgCanvas;
@@ -36,7 +36,7 @@ export class RenderingEngine {
         const bgCtx = bgCanvas.getContext('2d');
         const fgCtx = fgCanvas.getContext('2d');
         if (!bgCtx || !fgCtx) {
-            throw new Error("Could not get canvas contexts");
+            throw new Error('Could not get canvas contexts');
         }
         this.bgCtx = bgCtx;
         this.fgCtx = fgCtx;
@@ -48,7 +48,7 @@ export class RenderingEngine {
         this.params = newParams;
         this.updateCanvasSize();
         // Force a full redraw of static elements on the next frame
-        this.lastStaticActorIds.clear(); 
+        this.lastStaticActorIds.clear();
     }
 
     private updateCanvasSize() {
@@ -94,12 +94,12 @@ export class RenderingEngine {
         offscreenCtx.globalAlpha = 0.6;
         offscreenCtx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
         offscreenCtx.fillText(actor.originalEmoji, centerX, centerY);
-        
+
         // Draw skull on top
         offscreenCtx.globalAlpha = 1.0;
         offscreenCtx.font = `${CELL_SIZE_PX * 0.4}px sans-serif`;
         offscreenCtx.fillText('💀', centerX, centerY);
-        
+
         offscreenCtx.restore();
 
         // Cache the result and draw it to the main canvas
@@ -121,19 +121,32 @@ export class RenderingEngine {
 
     private drawEmoji(ctx: CanvasRenderingContext2D, actor: CellContent) {
         const emoji =
-            actor.type === 'bird' ? '🐦' :
-            actor.type === 'eagle' ? '🦅' :
-            actor.type === 'insect' ? (actor as Insect).emoji :
-            actor.type === 'nutrient' ? '💩' :
-            actor.type === 'egg' ? '🥚' :
-            actor.type === 'herbicidePlane' ? '✈️' :
-            actor.type === 'herbicideSmoke' ? '💨' :
-            actor.type === 'cockroach' ? '🪳' :
-            actor.type === 'cocoon' ? '⚪️' : 
-            actor.type === 'hive' ? '🛖' :
-            actor.type === 'antColony' ? '⛰️' :
-            actor.type === 'spiderweb' ? '🕸️' : '';
-        
+            actor.type === 'bird'
+                ? '🐦'
+                : actor.type === 'eagle'
+                  ? '🦅'
+                  : actor.type === 'insect'
+                    ? (actor as Insect).emoji
+                    : actor.type === 'nutrient'
+                      ? '💩'
+                      : actor.type === 'egg'
+                        ? '🥚'
+                        : actor.type === 'herbicidePlane'
+                          ? '✈️'
+                          : actor.type === 'herbicideSmoke'
+                            ? '💨'
+                            : actor.type === 'cockroach'
+                              ? '🪳'
+                              : actor.type === 'cocoon'
+                                ? '⚪️'
+                                : actor.type === 'hive'
+                                  ? '🛖'
+                                  : actor.type === 'antColony'
+                                    ? '⛰️'
+                                    : actor.type === 'spiderweb'
+                                      ? '🕸️'
+                                      : '';
+
         if (emoji) {
             ctx.save();
             ctx.globalAlpha = 0.9;
@@ -144,10 +157,10 @@ export class RenderingEngine {
                 ctx.font = `${CELL_SIZE_PX * 0.4}px sans-serif`;
                 ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX * 0.3, actor.y * CELL_SIZE_PX + CELL_SIZE_PX * 0.3);
             } else {
-                 ctx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
-                 ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX / 2, actor.y * CELL_SIZE_PX + CELL_SIZE_PX / 2);
+                ctx.font = `${CELL_SIZE_PX * 0.6}px sans-serif`;
+                ctx.fillText(emoji, actor.x * CELL_SIZE_PX + CELL_SIZE_PX / 2, actor.y * CELL_SIZE_PX + CELL_SIZE_PX / 2);
             }
-            
+
             ctx.restore();
         }
     }
@@ -173,7 +186,6 @@ export class RenderingEngine {
         }
     }
 
-
     public draw(actors: Map<string, CellContent>, selectedActorId: string | null) {
         const staticActors = new Map<string, Flower | FlowerSeed>();
         const dynamicActors: CellContent[] = [];
@@ -181,7 +193,8 @@ export class RenderingEngine {
         for (const actor of actors.values()) {
             if (actor.type === 'flower' || actor.type === 'flowerSeed') {
                 staticActors.set(actor.id, actor);
-            } else if (actor.type !== 'territoryMark') { // Do not draw territory marks
+            } else if (actor.type !== 'territoryMark') {
+                // Do not draw territory marks
                 dynamicActors.push(actor);
             }
         }
@@ -201,7 +214,7 @@ export class RenderingEngine {
         const activeImageUrls = new Set<string>();
         for (const actor of currentStaticActors.values()) {
             if (actor.imageData) {
-                 activeImageUrls.add(actor.imageData);
+                activeImageUrls.add(actor.imageData);
             }
         }
         for (const cachedUrl of this.imageCache.keys()) {
@@ -210,14 +223,14 @@ export class RenderingEngine {
             }
         }
     }
-    
+
     private drawStaticLayer(currentStaticActors: Map<string, Flower | FlowerSeed>) {
         this.drawGrid();
 
         for (const actor of currentStaticActors.values()) {
             this.drawImage(actor);
         }
-        
+
         this._collectGarbage(currentStaticActors);
     }
 
@@ -232,14 +245,14 @@ export class RenderingEngine {
                 this.fgCtx.lineWidth = SELECTED_CELL_BORDER_WIDTH;
                 const offset = SELECTED_CELL_BORDER_WIDTH / 2;
                 this.fgCtx.strokeRect(
-                    selectedActor.x * CELL_SIZE_PX + offset, 
-                    selectedActor.y * CELL_SIZE_PX + offset, 
-                    CELL_SIZE_PX - SELECTED_CELL_BORDER_WIDTH, 
+                    selectedActor.x * CELL_SIZE_PX + offset,
+                    selectedActor.y * CELL_SIZE_PX + offset,
+                    CELL_SIZE_PX - SELECTED_CELL_BORDER_WIDTH,
                     CELL_SIZE_PX - SELECTED_CELL_BORDER_WIDTH
                 );
             }
         }
-        
+
         for (const actor of dynamicActors) {
             if (actor.type === 'corpse') {
                 this.drawCorpse(this.fgCtx, actor as Corpse);

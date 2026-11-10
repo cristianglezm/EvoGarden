@@ -43,7 +43,9 @@ describe('the database', () => {
     it('keeps the species collection of a version 4 database, and gives it a place for its settings', async () => {
         const old = new Dexie(NAME);
         old.version(4).stores(V4);
-        await old.table('speciesSamples').put({ id: 's1', cell: '3,2', x: 3, y: 2, d: 1, fp: 'f', kind: 'sample', founder: true, records: [], sex: 'both', createdAt: 1 });
+        await old
+            .table('speciesSamples')
+            .put({ id: 's1', cell: '3,2', x: 3, y: 2, d: 1, fp: 'f', kind: 'sample', founder: true, records: [], sex: 'both', createdAt: 1 });
         await old.table('speciesGenomes').put({ id: 's1', genome: 'g', image: 'png' });
         await old.table('seedBank').put({ category: 'mostToxic', genome: 'g', value: 0.5, imageData: 'i', sex: 'male' });
         old.close();

@@ -1,53 +1,53 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  /* Backgrounds */
-  --color-background: hsl(120, 100%, 15%);
+    /* Backgrounds */
+    --color-background: hsl(120, 100%, 15%);
 
-  /* Surface */
-  --color-surface: green;
-  --color-surface-hover: hsl(0, 0%, 25%);
+    /* Surface */
+    --color-surface: green;
+    --color-surface-hover: hsl(0, 0%, 25%);
 
-  /* Primary */
-  --color-primary: hsl(90, 60%, 80%);
-  --color-primary-light: hsl(90, 70%, 90%);
+    /* Primary */
+    --color-primary: hsl(90, 60%, 80%);
+    --color-primary-light: hsl(90, 70%, 90%);
 
-  /* Secondary & Tertiary */
-  --color-secondary: hsl(90, 50%, 70%);
-  --color-tertiary: lightgreen;
+    /* Secondary & Tertiary */
+    --color-secondary: hsl(90, 50%, 70%);
+    --color-tertiary: lightgreen;
 
-  /* Border */
-  --color-border: lime;
+    /* Border */
+    --color-border: lime;
 
-  /* Chart */
-  --color-chart-background: hsl(120, 35%, 22%);
-  --color-chart-border: hsl(120, 35%, 35%);
-  --color-chart-grid: hsl(120, 10%, 45%);
+    /* Chart */
+    --color-chart-background: hsl(120, 35%, 22%);
+    --color-chart-border: hsl(120, 35%, 35%);
+    --color-chart-grid: hsl(120, 10%, 45%);
 
-  /* Accent */
-  --color-accent: lightgreen;
-  --color-accent-blue: hsl(221, 83%, 60%);
-  --color-accent-purple: hsl(273, 80%, 65%);
-  --color-accent-yellow: hsl(45, 93%, 47%);
-  --color-accent-green: hsl(120, 100%, 50%);
-  --color-accent-red: hsl(0, 100%, 50%);
+    /* Accent */
+    --color-accent: lightgreen;
+    --color-accent-blue: hsl(221, 83%, 60%);
+    --color-accent-purple: hsl(273, 80%, 65%);
+    --color-accent-yellow: hsl(45, 93%, 47%);
+    --color-accent-green: hsl(120, 100%, 50%);
+    --color-accent-red: hsl(0, 100%, 50%);
 }
 
 :root {
-  /* Widget Background - Matching --color-background */
-  --color-lc-bg: hsl(120, 100%, 15%);
-  
-  /* Accent Color - Matching --color-accent */
-  --color-lc-accent: lightgreen;
-  --color-lc-accent-hover: hsl(120, 100%, 40%);
-  
-  /* Text Colors - Matching --color-primary */
-  --color-lc-text: hsl(90, 60%, 80%);
-  --color-lc-text-muted: hsl(90, 50%, 70%);
-  
-  /* Surface Colors */
-  --color-lc-surface-highlight: hsl(120, 100%, 20%);
-  --color-lc-surface-hover: hsl(0, 0%, 25%);
-  --color-lc-input-bg: hsl(120, 100%, 10%);
-  --color-lc-input-border: lime;
+    /* Widget Background - Matching --color-background */
+    --color-lc-bg: hsl(120, 100%, 15%);
+
+    /* Accent Color - Matching --color-accent */
+    --color-lc-accent: lightgreen;
+    --color-lc-accent-hover: hsl(120, 100%, 40%);
+
+    /* Text Colors - Matching --color-primary */
+    --color-lc-text: hsl(90, 60%, 80%);
+    --color-lc-text-muted: hsl(90, 50%, 70%);
+
+    /* Surface Colors */
+    --color-lc-surface-highlight: hsl(120, 100%, 20%);
+    --color-lc-surface-hover: hsl(0, 0%, 25%);
+    --color-lc-input-bg: hsl(120, 100%, 10%);
+    --color-lc-input-border: lime;
 }

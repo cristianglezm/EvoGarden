@@ -20,8 +20,14 @@ let samples: ReturnType<typeof vi.fn>;
 let grid: ReturnType<typeof vi.fn>;
 let source: SpeciesSource;
 
-const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(0); });
-const wait = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+const settle = () =>
+    act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+    });
+const wait = (ms: number) =>
+    act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+    });
 
 beforeEach(() => {
     vi.useFakeTimers();
@@ -57,7 +63,9 @@ describe('useSpeciesChallenges', () => {
     });
 
     it('does not read the collection while the classifier is not ready: it is the map that says what is in use', async () => {
-        grid.mockImplementation(() => { throw new Error('not initialised'); });
+        grid.mockImplementation(() => {
+            throw new Error('not initialised');
+        });
         hook();
         await settle();
         expect(samples).not.toHaveBeenCalled();
@@ -102,8 +110,13 @@ describe('useSpeciesChallenges', () => {
 
     it('makes one more read for what was answered while it was reading', async () => {
         let release!: () => void;
-        const slow = new Promise<void>(resolve => { release = resolve; });
-        samples.mockImplementationOnce(async () => { await slow; return rows; });
+        const slow = new Promise<void>(resolve => {
+            release = resolve;
+        });
+        samples.mockImplementationOnce(async () => {
+            await slow;
+            return rows;
+        });
         const { rerender } = hook(answered(1));
         await settle();
         rerender({ summary: answered(2) });
@@ -116,7 +129,9 @@ describe('useSpeciesChallenges', () => {
     });
 
     it('tries again later when the classifier was not ready, and gives the challenges what it finds then', async () => {
-        grid.mockImplementationOnce(() => { throw new Error('not initialised'); });
+        grid.mockImplementationOnce(() => {
+            throw new Error('not initialised');
+        });
         hook();
         await settle();
         expect(progress('species-1')).toBe(0);
@@ -134,7 +149,9 @@ describe('useSpeciesChallenges', () => {
     });
 
     it('gives up after the retries it was given, and tries again when a worker answers', async () => {
-        grid.mockImplementation(() => { throw new Error('never'); });
+        grid.mockImplementation(() => {
+            throw new Error('never');
+        });
         const { rerender } = hook(answered(1), { retries: 2 });
         await settle();
         await wait(MINUTE * 10);
@@ -163,7 +180,9 @@ describe('useSpeciesChallenges', () => {
     });
 
     it('has the retries again when a worker answers after it gave up', async () => {
-        grid.mockImplementation(() => { throw new Error('not yet'); });
+        grid.mockImplementation(() => {
+            throw new Error('not yet');
+        });
         const { rerender } = hook(answered(1), { retries: 1 });
         // start: one try and one retry, then it gives up
         await wait(MINUTE * 5);
@@ -177,8 +196,13 @@ describe('useSpeciesChallenges', () => {
 
     it('does not make the read it kept for later when it went away while reading', async () => {
         let release!: () => void;
-        const slow = new Promise<void>(resolve => { release = resolve; });
-        samples.mockImplementationOnce(async () => { await slow; return rows; });
+        const slow = new Promise<void>(resolve => {
+            release = resolve;
+        });
+        samples.mockImplementationOnce(async () => {
+            await slow;
+            return rows;
+        });
         const { rerender, unmount } = hook(answered(1));
         await settle();
         rerender({ summary: answered(2) });

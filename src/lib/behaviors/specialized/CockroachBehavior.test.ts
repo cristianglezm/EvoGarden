@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CockroachBehavior } from './CockroachBehavior';
 import type { Cockroach, Corpse, CellContent, Nutrient, SimulationParams, Flower, AppEvent } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    NUTRIENT_FROM_COCKROACH_LIFESPAN, 
-    DEFAULT_SIM_PARAMS, 
+import {
+    INSECT_DATA,
+    NUTRIENT_FROM_COCKROACH_LIFESPAN,
+    DEFAULT_SIM_PARAMS,
     CORPSE_NUTRITION_VALUE,
     COCKROACH_HEALTH_DECAY_PER_TICK,
     COCKROACH_MIN_STAMINA_TO_MOVE,
@@ -14,7 +14,7 @@ import {
     FLOWER_STAT_INDICES,
     INSECT_ATTACK_COST,
     INSECT_GENOME_LENGTH,
-    FOOD_VALUE_CORPSE
+    FOOD_VALUE_CORPSE,
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -34,10 +34,16 @@ describe('CockroachBehavior', () => {
     beforeEach(() => {
         behavior = new CockroachBehavior();
         cockroach = {
-            id: 'roach1', type: 'cockroach', x: 5, y: 5, emoji: '🪳',
+            id: 'roach1',
+            type: 'cockroach',
+            x: 5,
+            y: 5,
+            emoji: '🪳',
             genome: Array(INSECT_GENOME_LENGTH).fill(0.1),
-            health: COCKROACH_DATA.maxHealth, maxHealth: COCKROACH_DATA.maxHealth,
-            stamina: COCKROACH_DATA.maxStamina, maxStamina: COCKROACH_DATA.maxStamina,
+            health: COCKROACH_DATA.maxHealth,
+            maxHealth: COCKROACH_DATA.maxHealth,
+            stamina: COCKROACH_DATA.maxStamina,
+            maxStamina: COCKROACH_DATA.maxStamina,
         };
         nextActorState = new Map();
         nextActorState.set(cockroach.id, cockroach);
@@ -83,10 +89,10 @@ describe('CockroachBehavior', () => {
         nextActorState.set(corpse.id, corpse);
         cockroach.health = 10;
         cockroach.stamina = 10;
-        
+
         const context = setupContext();
         context.qtree.insert({ x: corpse.x, y: corpse.y, data: corpse });
-        
+
         behavior.update(cockroach, context);
 
         expect(nextActorState.has(corpse.id)).toBe(false);
@@ -95,7 +101,7 @@ describe('CockroachBehavior', () => {
         // Stamina check: 10 (initial) + 3 (regen) + 10 (nutrition) = 23
         const expectedStamina = Math.min(cockroach.maxStamina, 10 + COCKROACH_STAMINA_REGEN_PER_TICK + CORPSE_NUTRITION_VALUE);
         expect(cockroach.stamina).toBe(expectedStamina);
-        
+
         const nutrient = Array.from(nextActorState.values()).find(a => a.type === 'nutrient') as Nutrient | undefined;
         expect(nutrient).toBeDefined();
         expect(nutrient?.lifespan).toBe(NUTRIENT_FROM_COCKROACH_LIFESPAN);
@@ -108,15 +114,15 @@ describe('CockroachBehavior', () => {
         const initialX = cockroach.x;
         const initialY = cockroach.y;
         cockroach.stamina = COCKROACH_MIN_STAMINA_TO_MOVE - 1; // Starts with 1 stamina
-        
+
         behavior.update(cockroach, setupContext());
-        
+
         // The cockroach should move because it regenerates stamina before the movement check.
         expect(cockroach.x).not.toBe(initialX);
         expect(cockroach.y).not.toBe(initialY);
 
         // Stamina check: 1 (initial) + 3 (regen) - 1 (move cost) = 3
-        const expectedStamina = (COCKROACH_MIN_STAMINA_TO_MOVE - 1) + COCKROACH_STAMINA_REGEN_PER_TICK - COCKROACH_MOVE_STAMINA_COST;
+        const expectedStamina = COCKROACH_MIN_STAMINA_TO_MOVE - 1 + COCKROACH_STAMINA_REGEN_PER_TICK - COCKROACH_MOVE_STAMINA_COST;
         expect(cockroach.stamina).toBe(expectedStamina);
 
         randomSpy.mockRestore(); // Clean up the mock
@@ -139,16 +145,26 @@ describe('CockroachBehavior', () => {
 
     it('should search for and move towards the weakest flower if no corpses are nearby', () => {
         const baseFlower: Omit<Flower, 'id' | 'x' | 'y' | 'health'> = {
-            type: 'flower', genome: 'g1', imageData: '', stamina: 100,
-            age: 51, isMature: true, maxHealth: 100, maxStamina: 100,
-            maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-            minTemperature: 10, maxTemperature: 30, toxicityRate: 0.1,
-            effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+            type: 'flower',
+            genome: 'g1',
+            imageData: '',
+            stamina: 100,
+            age: 51,
+            isMature: true,
+            maxHealth: 100,
+            maxStamina: 100,
+            maturationPeriod: 50,
+            nutrientEfficiency: 1.0,
+            sex: 'both',
+            minTemperature: 10,
+            maxTemperature: 30,
+            toxicityRate: 0.1,
+            effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
         };
 
         const weakFlower: Flower = { ...baseFlower, id: 'flower1', x: 8, y: 8, health: 10 };
         const strongFlower: Flower = { ...baseFlower, id: 'flower2', x: 0, y: 0, health: 100 };
-        
+
         // Cockroaches prefer weak flowers. Set genome to dislike high health.
         cockroach.genome = Array(Object.keys(FLOWER_STAT_INDICES).length).fill(0.1);
         cockroach.genome[FLOWER_STAT_INDICES.HEALTH] = -2.0;
@@ -159,20 +175,33 @@ describe('CockroachBehavior', () => {
         flowerQtree.insert({ x: strongFlower.x, y: strongFlower.y, data: strongFlower });
 
         behavior.update(cockroach, setupContext());
-        
+
         // Cockroach at (5,5) should move towards weakFlower at (8,8)
         expect(cockroach.x).toBe(6);
         expect(cockroach.y).toBe(6);
     });
 
     it('should attack a flower on the same cell', () => {
-        const flower: Flower = { 
-            id: 'flower1', type: 'flower', x: 5, y: 5, health: 100,
-            genome: 'g1', imageData: '', stamina: 100,
-            age: 51, isMature: true, maxHealth: 100, maxStamina: 100,
-            maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-            minTemperature: 10, maxTemperature: 30, toxicityRate: 0.1,
-            effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+        const flower: Flower = {
+            id: 'flower1',
+            type: 'flower',
+            x: 5,
+            y: 5,
+            health: 100,
+            genome: 'g1',
+            imageData: '',
+            stamina: 100,
+            age: 51,
+            isMature: true,
+            maxHealth: 100,
+            maxStamina: 100,
+            maturationPeriod: 50,
+            nutrientEfficiency: 1.0,
+            sex: 'both',
+            minTemperature: 10,
+            maxTemperature: 30,
+            toxicityRate: 0.1,
+            effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
         };
         nextActorState.set(flower.id, flower);
         const initialFlowerHealth = flower.health;
@@ -182,10 +211,10 @@ describe('CockroachBehavior', () => {
         context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
 
         behavior.update(cockroach, context);
-        
+
         const updatedFlower = nextActorState.get(flower.id) as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth - COCKROACH_DATA.attack);
-        
+
         const expectedStamina = Math.min(initialStamina + COCKROACH_STAMINA_REGEN_PER_TICK, cockroach.maxStamina) - INSECT_ATTACK_COST;
         expect(cockroach.stamina).toBe(expectedStamina);
     });

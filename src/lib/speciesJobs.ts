@@ -2,9 +2,7 @@ import { genomeId, parseSom, speciesName } from './species';
 import type { SpeciesRepository, OfferResult, SpeciesLimits } from './speciesRepository';
 import type { SeedBankEntry, SpeciesClassifier, SpeciesMatch, SpeciesRecordRequest, SpeciesRequest, SpeciesResult } from '../types';
 
-type Job =
-    | { kind: 'classify'; request: SpeciesRequest }
-    | { kind: 'record'; request: SpeciesRecordRequest };
+type Job = { kind: 'classify'; request: SpeciesRequest } | { kind: 'record'; request: SpeciesRecordRequest };
 
 // Few at a time: a chunk is one call that cannot be interrupted, and a chunk takes the turn of one species job
 // between two flowers, so about 0.3 s of the garden's waiting for each flower that is made.
@@ -34,8 +32,12 @@ export interface SpeciesJobsOptions {
  */
 export function championRequest(entry: SeedBankEntry): SpeciesRecordRequest {
     const request: SpeciesRecordRequest = {
-        flowerId: `champion-${entry.category}`, genome: entry.genome, image: entry.imageData,
-        sex: entry.sex, tick: 0, only: [entry.category],
+        flowerId: `champion-${entry.category}`,
+        genome: entry.genome,
+        image: entry.imageData,
+        sex: entry.sex,
+        tick: 0,
+        only: [entry.category],
     };
     if (entry.category === 'longestLived') request.age = entry.value;
     else request.toxicity = entry.value;
@@ -70,7 +72,7 @@ export class SpeciesJobs {
         private readonly classifier: SpeciesClassifier,
         private readonly repository: SpeciesRepository,
         private readonly readLimits?: () => Promise<Partial<SpeciesLimits> | undefined>,
-        options: SpeciesJobsOptions = {},
+        options: SpeciesJobsOptions = {}
     ) {
         this.batchSize = Math.max(1, Math.floor(options.batchSize ?? 1));
         this.migrationChunk = Math.max(1, Math.floor(options.migrationChunk ?? MIGRATION_CHUNK));
@@ -154,7 +156,7 @@ export class SpeciesJobs {
                 const { genome } = job.request;
                 await this.prime(job);
                 const id = await genomeId(genome);
-                if (wanted.has(id) || this.matches.has(id) || await this.repository.isStored(genome)) continue;
+                if (wanted.has(id) || this.matches.has(id) || (await this.repository.isStored(genome))) continue;
                 wanted.set(id, genome);
             }
             if (wanted.size === 0) return;
@@ -233,8 +235,14 @@ export class SpeciesJobs {
 
         const match = await this.matchOf(genome);
         const offered = await this.repository.offer({
-            genome, match, fp: this.classifier.fingerprint,
-            sex: request.sex, age: request.age, toxicity: request.toxicity, tick: request.tick, image: request.image,
+            genome,
+            match,
+            fp: this.classifier.fingerprint,
+            sex: request.sex,
+            age: request.age,
+            toxicity: request.toxicity,
+            tick: request.tick,
+            image: request.image,
         });
         return { ...this.result(flowerId, statusOf(offered), match), tick: request.tick };
     }
@@ -243,10 +251,19 @@ export class SpeciesJobs {
         const { flowerId, genome } = request;
         // A genome that is stored has its species in the collection and needs no classifying.
         const match = (await this.repository.isStored(genome)) ? null : await this.matchOf(genome);
-        const recorded = await this.repository.record({
-            genome, match, fp: this.classifier.fingerprint, sex: request.sex,
-            age: request.age, toxicity: request.toxicity, tick: request.tick, image: request.image,
-        }, request.only);
+        const recorded = await this.repository.record(
+            {
+                genome,
+                match,
+                fp: this.classifier.fingerprint,
+                sex: request.sex,
+                age: request.age,
+                toxicity: request.toxicity,
+                tick: request.tick,
+                image: request.image,
+            },
+            request.only
+        );
         const status = recorded.discovered ? 'discovered' : recorded.recorded.length > 0 ? 'recorded' : 'unchanged';
         return this.result(flowerId, status, match);
     }

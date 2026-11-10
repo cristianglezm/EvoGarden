@@ -1,13 +1,13 @@
 import type { Insect, Flower } from '../../../types';
-import { 
-    INSECT_DORMANCY_TEMP, 
+import {
+    INSECT_DORMANCY_TEMP,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     HEALTHY_FLOWER_THRESHOLD,
     WEAK_FLOWER_THRESHOLD,
     BEETLE_HEAL_AMOUNT,
     BEETLE_COLLECT_STAMINA_COST,
-    BEETLE_DEPOSIT_STAMINA_COST
+    BEETLE_DEPOSIT_STAMINA_COST,
 } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../../../types';
@@ -32,7 +32,7 @@ export class BeetleBehavior extends InsectBehavior {
         }
 
         let hasInteracted = false;
-        
+
         // --- Interaction Phase ---
         if (insect.isCarryingNutrient) {
             // Trying to deposit
@@ -103,8 +103,8 @@ export class BeetleBehavior extends InsectBehavior {
             }
         } else {
             if (this.wander(insect, context)) {
-                 insect.stamina -= INSECT_MOVE_COST;
-                 return true;
+                insect.stamina -= INSECT_MOVE_COST;
+                return true;
             }
         }
         return false;
@@ -112,12 +112,10 @@ export class BeetleBehavior extends InsectBehavior {
 
     private findTypedFlowerOnCell(x: number, y: number, type: 'healthy' | 'weak', context: InsectBehaviorContext): Flower | undefined {
         const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, x, y);
-        const flower = actorsOnCell.find(
-            (actor) => actor.type === 'flower'
-        ) as Flower | undefined;
-        
+        const flower = actorsOnCell.find(actor => actor.type === 'flower') as Flower | undefined;
+
         if (!flower) return undefined;
-        
+
         const healthRatio = flower.health / flower.maxHealth;
         if (type === 'healthy' && healthRatio >= HEALTHY_FLOWER_THRESHOLD) {
             return flower;
@@ -130,22 +128,24 @@ export class BeetleBehavior extends InsectBehavior {
 
     private findClosestFlower(type: 'healthy' | 'weak', insect: Insect, context: InsectBehaviorContext): Flower | null {
         const vision = new Rectangle(insect.x, insect.y, 5, 5);
-        const nearbyFlowers = context.flowerQtree.query(vision)
+        const nearbyFlowers = context.flowerQtree
+            .query(vision)
             .map(p => p.data as Flower)
             .filter(f => context.nextActorState.has(f.id));
 
         const threshold = type === 'healthy' ? HEALTHY_FLOWER_THRESHOLD : WEAK_FLOWER_THRESHOLD;
-        const comparator = type === 'healthy' 
-            ? (ratio: number) => ratio >= threshold 
-            : (ratio: number) => ratio < threshold;
+        const comparator = type === 'healthy' ? (ratio: number) => ratio >= threshold : (ratio: number) => ratio < threshold;
 
         const validTargets = nearbyFlowers.filter(f => comparator(f.health / f.maxHealth));
 
         if (validTargets.length === 0) return null;
 
-        return validTargets.reduce((closest, current) => {
-            const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
-            return dist < closest.dist ? { flower: current, dist } : closest;
-        }, { flower: null as Flower | null, dist: Infinity }).flower;
+        return validTargets.reduce(
+            (closest, current) => {
+                const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
+                return dist < closest.dist ? { flower: current, dist } : closest;
+            },
+            { flower: null as Flower | null, dist: Infinity }
+        ).flower;
     }
 }

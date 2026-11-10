@@ -23,7 +23,11 @@ export function createMemorySpeciesStore(): SpeciesStore {
                     ofKind: async kind => [...workingSamples.values()].filter(s => s.kind === kind).map(clone),
                     distances: async () => [...workingSamples.values()].flatMap(s => (s.d === null ? [] : [s.d])).sort((a, b) => a - b),
                     genome: async id => clone(workingGenomes.get(id)),
-                    stale: async (fp, limit) => [...workingSamples.values()].filter(s => s.fp !== fp).slice(0, limit).map(clone),
+                    stale: async (fp, limit) =>
+                        [...workingSamples.values()]
+                            .filter(s => s.fp !== fp)
+                            .slice(0, limit)
+                            .map(clone),
                     all: async () => [...workingSamples.values()].map(clone),
                     async put(sample, genome, image) {
                         workingSamples.set(sample.id, clone(sample));
@@ -33,7 +37,10 @@ export function createMemorySpeciesStore(): SpeciesStore {
                         workingSamples.set(sample.id, clone(sample));
                     },
                     async remove(ids) {
-                        ids.forEach(id => { workingSamples.delete(id); workingGenomes.delete(id); });
+                        ids.forEach(id => {
+                            workingSamples.delete(id);
+                            workingGenomes.delete(id);
+                        });
                     },
                 };
                 const result = await fn(tx);
@@ -49,8 +56,11 @@ export function createMemorySpeciesStore(): SpeciesStore {
 
 export const speciesStoreFactories: Array<[string, () => Promise<SpeciesStore>]> = [
     ['memory', async () => createMemorySpeciesStore()],
-    ['dexie', async () => {
-        await Promise.all([db.speciesSamples.clear(), db.speciesGenomes.clear()]);
-        return createDexieSpeciesStore(db);
-    }],
+    [
+        'dexie',
+        async () => {
+            await Promise.all([db.speciesSamples.clear(), db.speciesGenomes.clear()]);
+            return createDexieSpeciesStore(db);
+        },
+    ],
 ];

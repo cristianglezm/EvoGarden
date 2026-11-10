@@ -97,8 +97,13 @@ export class SpeciesRequester {
 
     private requestOf(flower: Flower, tick: number): SpeciesRequest {
         return {
-            flowerId: flower.id, genome: flower.genome, image: flower.imageData,
-            sex: flower.sex, age: flower.age, toxicity: flower.toxicityRate, tick,
+            flowerId: flower.id,
+            genome: flower.genome,
+            image: flower.imageData,
+            sex: flower.sex,
+            age: flower.age,
+            toxicity: flower.toxicityRate,
+            tick,
         };
     }
 

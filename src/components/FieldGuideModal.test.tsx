@@ -132,7 +132,12 @@ describe('FieldGuideModal', () => {
         it('says so when the classifier is not ready', async () => {
             stubCanvas();
             vi.spyOn(console, 'error').mockImplementation(() => undefined);
-            const notReady = { ...h.source, grid: () => { throw new Error('call FEService.init() before using it'); } };
+            const notReady = {
+                ...h.source,
+                grid: () => {
+                    throw new Error('call FEService.init() before using it');
+                },
+            };
             render(guide({ source: notReady }));
             expect(await screen.findByText(/classifier is not ready yet/)).toBeInTheDocument();
         });
@@ -285,9 +290,14 @@ describe('FieldGuideModal', () => {
         });
     });
 
-    const readBlob = (blob: Blob): Promise<string> => typeof blob.text === 'function'
-        ? blob.text()
-        : new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(blob); });
+    const readBlob = (blob: Blob): Promise<string> =>
+        typeof blob.text === 'function'
+            ? blob.text()
+            : new Promise(resolve => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(String(reader.result));
+                  reader.readAsText(blob);
+              });
     const collectButton = () => screen.getByRole('button', { name: /Collect samples|Collecting/ });
 
     describe('collecting samples', () => {
@@ -364,7 +374,9 @@ describe('FieldGuideModal', () => {
             await ready();
 
             let open!: () => void;
-            const gate = new Promise<void>(resolve => { open = resolve; });
+            const gate = new Promise<void>(resolve => {
+                open = resolve;
+            });
             const samples = h.source.samples.bind(h.source);
             vi.spyOn(h.source, 'samples').mockImplementation(() => gate.then(samples));
             fireEvent.click(collectButton());
@@ -394,7 +406,11 @@ describe('FieldGuideModal', () => {
     describe('the storage', () => {
         it('says what the site stores, when the browser says', async () => {
             stubCanvas();
-            const source = createSpeciesSource(db, () => h.classifier, async () => ({ usage: 150 * 1024 ** 2, quota: 2 * 1024 ** 3 }));
+            const source = createSpeciesSource(
+                db,
+                () => h.classifier,
+                async () => ({ usage: 150 * 1024 ** 2, quota: 2 * 1024 ** 3 })
+            );
             render(guide({ source }));
             await ready();
             expect(screen.getByText('Storage used by this site: 150 MB of 2.0 GB')).toBeInTheDocument();

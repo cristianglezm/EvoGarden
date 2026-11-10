@@ -30,7 +30,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const speciesWorkerRef = useRef<Worker | null>(null);
     const isRunningRef = useRef(isRunning);
     const latestSummaryRef = useRef<TickSummary | null>(null);
-    
+
     // Effect to initialize and terminate the workers
     useEffect(() => {
         const simWorker = new Worker(new URL('../simulation.worker.ts', import.meta.url), {
@@ -40,10 +40,14 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
 
         // The species work has a worker of its own when there are cores for it; without it the first worker
         // that makes flowers does it too, a flower and then a species.
-        const { speciesWorker: wantsSpeciesWorker, creationWorkers } = planWorkers({ hardwareConcurrency: navigator.hardwareConcurrency, search: window.location.search, workers: readWorkerSetting(browserStorage()) });
+        const { speciesWorker: wantsSpeciesWorker, creationWorkers } = planWorkers({
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            search: window.location.search,
+            workers: readWorkerSetting(browserStorage()),
+        });
 
         const errorHandler = (event: ErrorEvent) => {
-            console.error("A worker encountered an error:", event.message, event);
+            console.error('A worker encountered an error:', event.message, event);
             setWorkerError(new Error(`A critical simulation component failed. Please refresh the page. Error: ${event.message}`));
             setIsLoading(false); // Stop loading on error
         };
@@ -56,19 +60,19 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
             worker.onerror = errorHandler;
             return { worker, channel: new MessageChannel() };
         };
-        const flowers = Array.from({ length: creationWorkers }, () =>
-            connect(new Worker(new URL('../flower.worker.ts', import.meta.url), { type: 'module' })));
-        const species = wantsSpeciesWorker
-            ? connect(new Worker(new URL('../species.worker.ts', import.meta.url), { type: 'module' }))
-            : null;
+        const flowers = Array.from({ length: creationWorkers }, () => connect(new Worker(new URL('../flower.worker.ts', import.meta.url), { type: 'module' })));
+        const species = wantsSpeciesWorker ? connect(new Worker(new URL('../species.worker.ts', import.meta.url), { type: 'module' })) : null;
         flowerWorkersRef.current = flowers.map(f => f.worker);
         speciesWorkerRef.current = species?.worker ?? null;
 
         const simPorts = [...flowers.map(f => f.channel.port1), ...(species ? [species.channel.port1] : [])];
-        simWorker.postMessage({
-            type: 'init-ports',
-            payload: { flowerWorkerPorts: flowers.map(f => f.channel.port1), ...(species && { speciesWorkerPort: species.channel.port1 }) },
-        }, simPorts);
+        simWorker.postMessage(
+            {
+                type: 'init-ports',
+                payload: { flowerWorkerPorts: flowers.map(f => f.channel.port1), ...(species && { speciesWorkerPort: species.channel.port1 }) },
+            },
+            simPorts
+        );
         flowers.forEach(({ worker, channel }, i) => {
             // Without a species worker the first one keeps all the roles, which is what a worker does without `roles`.
             // Next to one, every flower worker classifies when it has nothing to make, in small batches, and leaves
@@ -80,9 +84,9 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
             worker.postMessage({ type: 'init-ports', payload }, [channel.port2]);
         });
         species?.worker.postMessage({ type: 'init-ports', payload: { simWorkerPort: species.channel.port2 } }, [species.channel.port2]);
-        
+
         setIsWorkerInitialized(true);
-        
+
         simWorker.onmessage = (e: MessageEvent) => {
             const { type, payload } = e.data;
             switch (type) {
@@ -99,13 +103,13 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                 }
                 case 'tick-update': {
                     const { deltas, events, summary } = payload;
-                    
+
                     latestSummaryRef.current = summary;
                     setLatestSummary(summary);
 
                     setActors(currentActors => {
                         const newActors = new Map(currentActors);
-                        for (const delta of (deltas as ActorDelta[])) {
+                        for (const delta of deltas as ActorDelta[]) {
                             switch (delta.type) {
                                 case 'add':
                                     newActors.set(delta.actor.id, delta.actor);
@@ -124,9 +128,9 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
                         }
                         return newActors;
                     });
-                    
+
                     useChallengeStore.getState().processTick(summary);
-                    for (const event of (events as AppEvent[])) {
+                    for (const event of events as AppEvent[]) {
                         eventService.dispatch({ ...event, tick: summary.tick });
                     }
                     break;
@@ -150,11 +154,10 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         latestSummaryRef.current = null;
         setLatestSummary(null);
     }, []);
-    
+
     const updateLiveParams = useCallback((params: SimulationParams) => {
         workerRef.current?.postMessage({ type: 'set-live-params', payload: params });
     }, []);
-
 
     const setIsRunning = (running: React.SetStateAction<boolean>) => {
         const newIsRunning = typeof running === 'function' ? running(isRunningRef.current) : running;
@@ -179,7 +182,7 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
     const introduceStationary = useCallback((actorType: 'hive' | 'antColony', count: number) => {
         workerRef.current?.postMessage({ type: 'introduce-stationary', payload: { actorType, count } });
     }, []);
-    
+
     const plantChampionSeed = useCallback((genome: string, sex: 'male' | 'female' | 'both', position: Coord) => {
         workerRef.current?.postMessage({ type: 'plant-champion-seed', payload: { genome, sex, position } });
     }, []);
@@ -188,5 +191,21 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         workerRef.current?.postMessage({ type: 'reload-champions' });
     }, []);
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed, reloadChampions };
+    return {
+        actors,
+        isRunning,
+        setIsRunning,
+        workerRef,
+        resetWithNewParams,
+        updateLiveParams,
+        isWorkerInitialized,
+        latestSummaryRef,
+        workerError,
+        latestSummary,
+        triggerWeatherEvent,
+        introduceSpecies,
+        introduceStationary,
+        plantChampionSeed,
+        reloadChampions,
+    };
 };

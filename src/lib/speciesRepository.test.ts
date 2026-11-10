@@ -46,7 +46,20 @@ describe.each(speciesStoreFactories)('SpeciesRepository on the %s store', (_name
             expect(result).toEqual({ stored: true, kind: 'sample', discovered: true, evicted: [] });
 
             const [row] = await inCell('3,5');
-            expect(row).toMatchObject({ cell: '3,5', x: 3, y: 5, d: 0.7, fp: 'fp1', kind: 'sample', founder: true, records: [], sex: 'both', age: 40, toxicity: 0.2, tick: 900 });
+            expect(row).toMatchObject({
+                cell: '3,5',
+                x: 3,
+                y: 5,
+                d: 0.7,
+                fp: 'fp1',
+                kind: 'sample',
+                founder: true,
+                records: [],
+                sex: 'both',
+                age: 40,
+                toxicity: 0.2,
+                tick: 900,
+            });
             const stored = await store.transaction(tx => tx.genome(row.id));
             expect(stored).toEqual({ id: row.id, genome: first.genome, image: 'png' });
         });
@@ -396,7 +409,7 @@ describe.each(speciesStoreFactories)('SpeciesRepository on the %s store', (_name
             await fillBaseline(repo);
             const odd = flower([0, 0], 9);
             await repo.offer(odd);
-            expect((await ofKind('atypical'))).toHaveLength(1);
+            expect(await ofKind('atypical')).toHaveLength(1);
             await repo.record({ ...odd, age: 500 });
             const [row] = await ofKind('atypical');
             expect(row.records).toEqual(['longestLived']);
@@ -485,7 +498,16 @@ describe.each(speciesStoreFactories)('SpeciesRepository on the %s store', (_name
             const a = old([0, 0], 1, { age: 10 });
             await repo.record(a);
             await repo.migrate('new', [{ id: await idOf(a), match: null }]);
-            expect((await byId()).get(await idOf(a))).toMatchObject({ cell: 'none', x: null, y: null, d: null, kind: 'unclassified', founder: false, records: [], fp: 'new' });
+            expect((await byId()).get(await idOf(a))).toMatchObject({
+                cell: 'none',
+                x: null,
+                y: null,
+                d: null,
+                kind: 'unclassified',
+                founder: false,
+                records: [],
+                fp: 'new',
+            });
         });
 
         it('never leaves a sample without a species holding a record, not even before the run ends', async () => {
@@ -564,7 +586,10 @@ describe.each(speciesStoreFactories)('SpeciesRepository on the %s store', (_name
             for (const f of [c, d, e]) await repo.offer(f);
 
             const ids = await Promise.all([a, b, c, d, e].map(idOf));
-            await repo.migrate('new', ids.map(id => ({ id, match: match(9, 9, 1) })));
+            await repo.migrate(
+                'new',
+                ids.map(id => ({ id, match: match(9, 9, 1) }))
+            );
 
             const rows = [...(await byId()).values()];
             expect(rows.every(r => r.cell === '9,9' && r.fp === 'new')).toBe(true);
@@ -598,7 +623,12 @@ describe.each(speciesStoreFactories)('SpeciesRepository on the %s store', (_name
             const restarted = repository({ cap: 4 });
             const left = await restarted.staleChunk('new', 10);
             expect(left).toHaveLength(3);
-            expect(await restarted.migrate('new', first.results.filter(r => left.some(l => l.id === r.id)))).toBe(true);
+            expect(
+                await restarted.migrate(
+                    'new',
+                    first.results.filter(r => left.some(l => l.id === r.id))
+                )
+            ).toBe(true);
             expect(await settle()).toEqual(expected);
         });
     });

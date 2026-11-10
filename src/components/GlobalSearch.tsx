@@ -16,7 +16,15 @@ interface GlobalSearchProps {
 
 const MAX_SUGGESTIONS = 16;
 
-export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor, onStopTracking, onHighlightActor, isRunning, setIsRunning, trackedActorId }) => {
+export const GlobalSearch: React.FC<GlobalSearchProps> = ({
+    actors,
+    onTrackActor,
+    onStopTracking,
+    onHighlightActor,
+    isRunning,
+    setIsRunning,
+    trackedActorId,
+}) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [isFocused, setIsFocused] = useState(false);
@@ -51,7 +59,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
             onHighlightActor(null);
         }
     };
-    
+
     const handleSelect = (id: string) => {
         setSearchTerm(id);
         onHighlightActor(id);
@@ -69,7 +77,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
         setSuggestions([]);
         setIsFocused(false);
     };
-    
+
     // Click outside handler
     const handleBlur = useCallback(() => {
         if (isFocused && !trackedActorId) {
@@ -95,10 +103,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
         };
     }, [handleBlur]);
 
-
     if (trackedActorId) {
         return (
-             <div className="relative font-mono flex items-center">
+            <div className="relative font-mono flex items-center">
                 <input
                     type="text"
                     value={`Tracking: ${getShortId(trackedActorId)}`}
@@ -106,16 +113,16 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
                     className="bg-background text-xs rounded-l-md pl-2 pr-2 py-1 w-48 text-accent-yellow shadow-[inset_0_1px_1px_0_#000]"
                     aria-label="Currently tracking actor"
                 />
-                 <button
+                <button
                     onClick={onStopTracking}
                     className="bg-accent-red/80 hover:bg-accent-red text-white p-1.5 rounded-r-md"
                     aria-label="Stop tracking actor"
                     title="Stop Tracking"
                 >
-                    <XIcon className="w-4 h-4" /> 
+                    <XIcon className="w-4 h-4" />
                 </button>
             </div>
-        )
+        );
     }
 
     return (
@@ -131,14 +138,14 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
                     className="bg-background text-xs rounded-l-md pl-2 pr-2 py-1 w-48 focus:ring-1 focus:ring-accent-yellow focus:outline-none shadow-[inset_0_1px_1px_0_#000]"
                     aria-label="Find actor by ID"
                 />
-                 <button
+                <button
                     onClick={handleTrackClick}
                     className="bg-accent-blue/50 hover:bg-accent-blue/70 text-white p-1.5 rounded-r-md disabled:bg-surface-hover/50 disabled:cursor-not-allowed"
                     aria-label="Track selected actor"
                     title="Track actor by ID"
                     disabled={!searchTerm || suggestions.length > 0}
                 >
-                    <SearchIcon className="w-4 h-4" /> 
+                    <SearchIcon className="w-4 h-4" />
                 </button>
             </div>
             {isFocused && suggestions.length > 0 && (
@@ -146,7 +153,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ actors, onTrackActor
                     {suggestions.map(id => (
                         <li key={id}>
                             <button
-                                onMouseDown={(e) => e.preventDefault()}
+                                onMouseDown={e => e.preventDefault()}
                                 onClick={() => handleSelect(id)}
                                 className="w-full text-left px-3 py-1.5 text-xs text-secondary hover:bg-surface-hover transition-colors"
                             >

@@ -1,13 +1,13 @@
 import type { Insect, Flower } from '../../../types';
-import { 
-    INSECT_DORMANCY_TEMP, 
-    INSECT_HEAL_FROM_HEALING_FLOWER, 
+import {
+    INSECT_DORMANCY_TEMP,
+    INSECT_HEAL_FROM_HEALING_FLOWER,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     INSECT_DATA,
     INSECT_WANDER_CHANCE,
     INSECT_STAMINA_GAIN_FROM_EATING,
-    INSECT_DAMAGE_FROM_TOXIC_FLOWER
+    INSECT_DAMAGE_FROM_TOXIC_FLOWER,
 } from '../../../constants';
 import { scoreFlower } from '../../simulationUtils';
 import { InsectBehavior } from '../base/InsectBehavior';
@@ -35,7 +35,7 @@ export class DefaultInsectBehavior extends InsectBehavior {
         }
 
         let hasInteracted = false;
-        
+
         // 1. Check for a flower on the current cell to interact with
         const flowerOnCurrentCell = this.findFlowerOnCell(insect.x, insect.y, context);
         if (flowerOnCurrentCell) {
@@ -48,13 +48,13 @@ export class DefaultInsectBehavior extends InsectBehavior {
 
         // 3. Regenerate stamina if idle
         if (!hasInteracted && !hasMoved) {
-             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
-    
+
     protected handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const baseStats = INSECT_DATA.get(insect.emoji)!;
-        
+
         // Eating now restores stamina instead of costing it.
         insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_GAIN_FROM_EATING);
 
@@ -62,16 +62,16 @@ export class DefaultInsectBehavior extends InsectBehavior {
         if (flower.toxicityRate < 0) {
             // Healing flower: Restores insect's health.
             flower.health = Math.max(0, flower.health - baseStats.attack);
-            insect.health = Math.min(insect.maxHealth, insect.health + (INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate)));
+            insect.health = Math.min(insect.maxHealth, insect.health + INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate));
         } else {
             // Neutral or Toxic flower: Both parties take damage.
             flower.health = Math.max(0, flower.health - baseStats.attack);
-            
+
             // Damage to insect is scaled by toxicity. A neutral flower will do minimal damage.
             const damageToInsect = INSECT_DAMAGE_FROM_TOXIC_FLOWER * flower.toxicityRate;
             insect.health = Math.max(0, insect.health - damageToInsect);
         }
-        
+
         // Pollination logic
         this.handlePollination(insect, flower, context);
 
@@ -79,7 +79,7 @@ export class DefaultInsectBehavior extends InsectBehavior {
         const pollenScore = scoreFlower(insect, flower);
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
     }
-    
+
     protected handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext): boolean {
         const moveCost = INSECT_MOVE_COST * (context.currentTemperature < INSECT_DORMANCY_TEMP ? 2 : 1);
         if (insect.stamina < moveCost) return false;
@@ -95,7 +95,7 @@ export class DefaultInsectBehavior extends InsectBehavior {
                     moved = this.moveTowards(insect, targetFlower, context);
                 }
             }
-            
+
             if (!moved) {
                 moved = this.wander(insect, context);
             }

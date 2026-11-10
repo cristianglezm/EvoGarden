@@ -7,7 +7,20 @@ const grid = { w: 12, h: 8, fp: 'now' };
 
 function row(id: string, cell: string, extra: Partial<SpeciesSample> = {}): SpeciesSample {
     const [x, y] = cell === 'none' ? [null, null] : cell.split(',').map(Number);
-    return { id, cell, x, y, d: cell === 'none' ? null : 1, fp: 'now', kind: cell === 'none' ? 'unclassified' : 'sample', founder: false, records: [], sex: 'both', createdAt: 1, ...extra };
+    return {
+        id,
+        cell,
+        x,
+        y,
+        d: cell === 'none' ? null : 1,
+        fp: 'now',
+        kind: cell === 'none' ? 'unclassified' : 'sample',
+        founder: false,
+        records: [],
+        sex: 'both',
+        createdAt: 1,
+        ...extra,
+    };
 }
 const cellOf = (summary: ReturnType<typeof summarizeCollection>, key: string) => summary.cells.find(c => c.key === key)!;
 
@@ -31,22 +44,23 @@ describe('summarizeCollection', () => {
     });
 
     it('counts the samples, the atypical ones and the ones without a species apart', () => {
-        const s = summarizeCollection([
-            row('a', '1,1'), row('b', '1,1', { kind: 'atypical' }), row('c', '2,2'), row('l1', 'none'), row('l2', 'none'),
-        ], grid);
+        const s = summarizeCollection([row('a', '1,1'), row('b', '1,1', { kind: 'atypical' }), row('c', '2,2'), row('l1', 'none'), row('l2', 'none')], grid);
         expect(s).toMatchObject({ samples: 2, atypical: 1, unclassified: 2, discovered: 2 });
         expect(cellOf(s, '1,1')).toMatchObject({ samples: 1, atypical: 1 });
     });
 
     it('shows, for a species, the longest lived of its samples, else the one that discovered it, else the oldest', () => {
-        const s = summarizeCollection([
-            row('a', '1,1', { createdAt: 5, founder: true }),
-            row('b', '1,1', { createdAt: 9, records: ['longestLived'], age: 90 }),
-            row('c', '2,2', { createdAt: 5, founder: true }),
-            row('d', '2,2', { createdAt: 1 }),
-            row('e', '3,3', { createdAt: 7 }),
-            row('f', '3,3', { createdAt: 2 }),
-        ], grid);
+        const s = summarizeCollection(
+            [
+                row('a', '1,1', { createdAt: 5, founder: true }),
+                row('b', '1,1', { createdAt: 9, records: ['longestLived'], age: 90 }),
+                row('c', '2,2', { createdAt: 5, founder: true }),
+                row('d', '2,2', { createdAt: 1 }),
+                row('e', '3,3', { createdAt: 7 }),
+                row('f', '3,3', { createdAt: 2 }),
+            ],
+            grid
+        );
         expect(cellOf(s, '1,1').representativeId).toBe('b');
         expect(cellOf(s, '2,2').representativeId).toBe('c');
         expect(cellOf(s, '3,3').representativeId).toBe('f');
@@ -54,11 +68,14 @@ describe('summarizeCollection', () => {
     });
 
     it('lists who holds each record of a species, with the values', () => {
-        const s = summarizeCollection([
-            row('long', '1,1', { records: ['longestLived'], age: 90, sex: 'female' }),
-            row('toxic', '1,1', { records: ['mostToxic'], toxicity: 0.7, sex: 'male' }),
-            row('heal', '1,1', { records: ['mostHealing'], toxicity: -0.2 }),
-        ], grid);
+        const s = summarizeCollection(
+            [
+                row('long', '1,1', { records: ['longestLived'], age: 90, sex: 'female' }),
+                row('toxic', '1,1', { records: ['mostToxic'], toxicity: 0.7, sex: 'male' }),
+                row('heal', '1,1', { records: ['mostHealing'], toxicity: -0.2 }),
+            ],
+            grid
+        );
         expect(cellOf(s, '1,1').holders).toEqual([
             { category: 'longestLived', id: 'long', sex: 'female', age: 90 },
             { category: 'mostToxic', id: 'toxic', sex: 'male', toxicity: 0.7 },

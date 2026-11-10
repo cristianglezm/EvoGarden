@@ -9,7 +9,11 @@ interface PerformanceChartProps {
 }
 
 export const PerformanceChart: React.FC<PerformanceChartProps> = ({ history }) => {
-    const [performanceLegend, setPerformanceLegend] = useState<Record<string, boolean>>({ 'Tick Time (Worker)': true, 'Render Time (UI)': true, 'Pending Requests': true });
+    const [performanceLegend, setPerformanceLegend] = useState<Record<string, boolean>>({
+        'Tick Time (Worker)': true,
+        'Render Time (UI)': true,
+        'Pending Requests': true,
+    });
     const handlePerformanceLegendChange = createLegendSelectHandler(setPerformanceLegend);
 
     const performanceOption = useMemo<EChartsOption>(() => {
@@ -17,7 +21,12 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({ history }) =
         return {
             ...baseChartOptions,
             title: { text: 'Performance & Workload', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { data: ['Tick Time (Worker)', 'Render Time (UI)', 'Pending Requests'], top: 35, textStyle: { color: '#bbf7d0' }, selected: performanceLegend },
+            legend: {
+                data: ['Tick Time (Worker)', 'Render Time (UI)', 'Pending Requests'],
+                top: 35,
+                textStyle: { color: '#bbf7d0' },
+                selected: performanceLegend,
+            },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             yAxis: [
                 {
@@ -42,5 +51,5 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({ history }) =
         };
     }, [history, performanceLegend]);
 
-    return <Chart option={performanceOption} onEvents={{ 'legendselectchanged': handlePerformanceLegendChange }} />;
+    return <Chart option={performanceOption} onEvents={{ legendselectchanged: handlePerformanceLegendChange }} />;
 };

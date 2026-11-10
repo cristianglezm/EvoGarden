@@ -5,13 +5,13 @@ import { DEFAULT_SIM_PARAMS, INSECT_DATA, SEED_HEALTH } from '../constants';
 import type { FEService, Flower, Grid, CellContent, ActorUpdateDelta, ActorAddDelta, FlowerSeed } from '../types';
 
 vi.mock('../services/db', () => ({
-  db: {
-    seedBank: {
-      get: vi.fn().mockResolvedValue(undefined),
-      put: vi.fn().mockResolvedValue(undefined),
-      toArray: vi.fn().mockResolvedValue([]),
+    db: {
+        seedBank: {
+            get: vi.fn().mockResolvedValue(undefined),
+            put: vi.fn().mockResolvedValue(undefined),
+            toArray: vi.fn().mockResolvedValue([]),
+        },
     },
-  },
 }));
 
 const mockFlowerService: FEService = {
@@ -33,12 +33,25 @@ const mockFlowerService: FEService = {
 };
 
 const mockFlower: Flower = {
-    id: 'flower1', type: 'flower', x: 5, y: 5,
-    genome: 'g1', imageData: '', health: 100, stamina: 100,
-    age: 51, isMature: true, maxHealth: 100, maxStamina: 100,
-    maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-    minTemperature: 10, maxTemperature: 30, toxicityRate: 0.1,
-    effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+    id: 'flower1',
+    type: 'flower',
+    x: 5,
+    y: 5,
+    genome: 'g1',
+    imageData: '',
+    health: 100,
+    stamina: 100,
+    age: 51,
+    isMature: true,
+    maxHealth: 100,
+    maxStamina: 100,
+    maturationPeriod: 50,
+    nutrientEfficiency: 1.0,
+    sex: 'both',
+    minTemperature: 10,
+    maxTemperature: 30,
+    toxicityRate: 0.1,
+    effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
 };
 
 describe('SimulationEngine', () => {
@@ -58,22 +71,27 @@ describe('SimulationEngine', () => {
             const baseInsectStats = INSECT_DATA.get('🦋')!;
             const mockActors: CellContent[] = [
                 {
-                    id: 'insect-1', type: 'insect', x: 0, y: 0, emoji: '🦋', pollen: null,
+                    id: 'insect-1',
+                    type: 'insect',
+                    x: 0,
+                    y: 0,
+                    emoji: '🦋',
+                    pollen: null,
                     health: baseInsectStats.maxHealth,
                     maxHealth: baseInsectStats.maxHealth,
                     stamina: baseInsectStats.maxStamina,
                     maxStamina: baseInsectStats.maxStamina,
-                    genome: []
+                    genome: [],
                 },
-                { ...mockFlower, id: 'flower-1', x: 2, y: 3 }
+                { ...mockFlower, id: 'flower-1', x: 2, y: 3 },
             ];
-            
+
             engine.initializeGridWithActors(mockActors);
             const { grid } = engine.getGridState();
-            
-            const insects = grid.flat(2).filter((c : CellContent) => c.type === 'insect');
-            const flowers = grid.flat(2).filter((c : CellContent) => c.type === 'flower');
-            
+
+            const insects = grid.flat(2).filter((c: CellContent) => c.type === 'insect');
+            const flowers = grid.flat(2).filter((c: CellContent) => c.type === 'flower');
+
             expect(insects.length).toBe(1);
             expect(flowers.length).toBe(1);
             expect(grid[0][0][0].id).toBe('insect-1');
@@ -89,7 +107,7 @@ describe('SimulationEngine', () => {
             engine.setParams(newParams);
 
             expect(engine.getGridState().tick).toBe(0);
-            
+
             // Re-initialize to check new grid dimensions
             engine.initializeGridWithActors([]);
             expect(engine.getGridState().grid[0].length).toBe(5);
@@ -98,14 +116,23 @@ describe('SimulationEngine', () => {
 
     describe('State Persistence', () => {
         it('getStateForSave should return state with stripped image data and seeds', async () => {
-            const seed: FlowerSeed = { id: 'seed-1', type: 'flowerSeed', x: 1, y: 1, imageData: 'stem-data', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 0 };
+            const seed: FlowerSeed = {
+                id: 'seed-1',
+                type: 'flowerSeed',
+                x: 1,
+                y: 1,
+                imageData: 'stem-data',
+                health: SEED_HEALTH,
+                maxHealth: SEED_HEALTH,
+                age: 0,
+            };
             const flower: Flower = { ...mockFlower, id: 'flower-save', x: 2, y: 2, imageData: 'flower-data' };
             engine.initializeGridWithActors([seed, flower]);
-            
+
             const state = engine.getStateForSave();
             expect(state.params).toEqual(DEFAULT_SIM_PARAMS);
             expect(state.tick).toBe(0);
-            
+
             const savedActors = state.grid.flat(2);
             const savedSeed = savedActors.find((c: CellContent) => c.type === 'flowerSeed') as FlowerSeed;
             const savedFlower = savedActors.find((c: CellContent) => c.type === 'flower') as Flower;
@@ -119,12 +146,20 @@ describe('SimulationEngine', () => {
             const savedGrid: Grid = Array.from({ length: DEFAULT_SIM_PARAMS.gridHeight }, (_, y) =>
                 Array.from({ length: DEFAULT_SIM_PARAMS.gridWidth }, (_, x) => {
                     if (x === 0 && y === 0) {
-                        return [{
-                            ...mockFlower,
-                            id: 'flower-saved-1', x: 0, y: 0,
-                            genome: 'saved-genome', imageData: '', // Image data is empty in saved state
-                            health: 50, stamina: 50, age: 10, isMature: false,
-                        }];
+                        return [
+                            {
+                                ...mockFlower,
+                                id: 'flower-saved-1',
+                                x: 0,
+                                y: 0,
+                                genome: 'saved-genome',
+                                imageData: '', // Image data is empty in saved state
+                                health: 50,
+                                stamina: 50,
+                                age: 10,
+                                isMature: false,
+                            },
+                        ];
                     }
                     return [];
                 })
@@ -153,8 +188,13 @@ describe('SimulationEngine', () => {
             expect((updateDelta1.changes as Partial<Flower>).health).toBeUndefined();
 
             // Manually set stamina to 0 to test health decrease
-            (engine.getGridState().grid.flat(2).find(f => f.id === flower.id) as Flower).stamina = 0;
-            
+            (
+                engine
+                    .getGridState()
+                    .grid.flat(2)
+                    .find(f => f.id === flower.id) as Flower
+            ).stamina = 0;
+
             const { deltas: deltas2 } = await engine.calculateNextTick();
             const updateDelta2 = deltas2.find(d => d.type === 'update' && d.id === flower.id) as ActorUpdateDelta;
             expect(updateDelta2).toBeDefined();
@@ -164,7 +204,16 @@ describe('SimulationEngine', () => {
 
     describe('Asynchronous Flower Creation', () => {
         it('should process completed flowers from the queue and generate deltas', async () => {
-            const seed: FlowerSeed = { id: 'seed-to-replace', type: 'flowerSeed', x: 2, y: 2, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 10 };
+            const seed: FlowerSeed = {
+                id: 'seed-to-replace',
+                type: 'flowerSeed',
+                x: 2,
+                y: 2,
+                imageData: 'stem-img',
+                health: SEED_HEALTH,
+                maxHealth: SEED_HEALTH,
+                age: 10,
+            };
             engine.initializeGridWithActors([seed]);
 
             const completedFlower: Flower = { ...mockFlower, id: 'flower-new', x: 2, y: 2, genome: 'completed-genome', age: 0 };
@@ -181,7 +230,7 @@ describe('SimulationEngine', () => {
             const addedFlower = addDelta?.actor as Flower;
             expect(addedFlower.genome).toBe('completed-genome');
             expect(addedFlower.age).toBe(10); // Check that age was transferred
-            
+
             const { grid } = engine.getGridState();
             expect(grid[2][2].some(a => a.id === 'seed-to-replace')).toBe(false);
             const finalFlower = grid[2][2].find(a => a.id === 'flower-new') as Flower;
@@ -190,11 +239,29 @@ describe('SimulationEngine', () => {
         });
 
         it('gives the new flower the age of its seed and nothing else, even if another actor has the id the flower will have', async () => {
-            const seed: FlowerSeed = { id: 'seed-2-2', type: 'flowerSeed', x: 2, y: 2, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 10 };
+            const seed: FlowerSeed = {
+                id: 'seed-2-2',
+                type: 'flowerSeed',
+                x: 2,
+                y: 2,
+                imageData: 'stem-img',
+                health: SEED_HEALTH,
+                maxHealth: SEED_HEALTH,
+                age: 10,
+            };
             // flower ids are `flower-x-y`: nothing says another actor cannot carry the one the new flower arrives with
             const same: Flower = { ...mockFlower, id: 'flower-2-2', x: 2, y: 2, age: 100, maturationPeriod: 1000 };
             engine.initializeGridWithActors([seed, same]);
-            const completed: Flower = { ...mockFlower, id: 'flower-2-2', x: 2, y: 2, genome: 'completed-genome', age: 0, maturationPeriod: 1000, isMature: false };
+            const completed: Flower = {
+                ...mockFlower,
+                id: 'flower-2-2',
+                x: 2,
+                y: 2,
+                genome: 'completed-genome',
+                age: 0,
+                maturationPeriod: 1000,
+                isMature: false,
+            };
             ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-2-2', flower: completed });
 
             await engine.calculateNextTick();
@@ -211,7 +278,16 @@ describe('SimulationEngine', () => {
             ['is mature when the seed was older than that', 40, 30, true],
             ['is not mature when the seed was younger than that', 29, 30, false],
         ])('a flower that arrives %s', async (_name, seedAge, maturationPeriod, mature) => {
-            const seed: FlowerSeed = { id: 'seed-6-6', type: 'flowerSeed', x: 6, y: 6, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: seedAge - 10 };
+            const seed: FlowerSeed = {
+                id: 'seed-6-6',
+                type: 'flowerSeed',
+                x: 6,
+                y: 6,
+                imageData: 'stem-img',
+                health: SEED_HEALTH,
+                maxHealth: SEED_HEALTH,
+                age: seedAge - 10,
+            };
             engine.initializeGridWithActors([seed]);
             const completed: Flower = { ...mockFlower, id: 'flower-6-6', x: 6, y: 6, age: 10, maturationPeriod, isMature: false };
             ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-6-6', flower: completed });
@@ -223,7 +299,16 @@ describe('SimulationEngine', () => {
         });
 
         it('should correctly handle failed flower creation by removing the seed', async () => {
-            const seed: FlowerSeed = { id: 'seed-to-remove', type: 'flowerSeed', x: 3, y: 3, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 5 };
+            const seed: FlowerSeed = {
+                id: 'seed-to-remove',
+                type: 'flowerSeed',
+                x: 3,
+                y: 3,
+                imageData: 'stem-img',
+                health: SEED_HEALTH,
+                maxHealth: SEED_HEALTH,
+                age: 5,
+            };
             engine.initializeGridWithActors([seed]);
 
             ((engine as any).asyncFlowerFactory as any).completedFlowersQueue.push({ requestId: 'seed-to-remove', flower: null! });
@@ -232,7 +317,7 @@ describe('SimulationEngine', () => {
 
             const removeDelta = deltas.find(d => d.type === 'remove' && d.id === 'seed-to-remove');
             expect(removeDelta).toBeDefined();
-            
+
             const addDelta = deltas.find(d => d.type === 'add');
             expect(addDelta).toBeUndefined();
 
@@ -242,119 +327,112 @@ describe('SimulationEngine', () => {
     });
     describe('Seasonal Repopulation', () => {
         it('should repopulate insects and flowers when transitioning Winter → Spring (deterministic factory queue push)', async () => {
-          const params = {
-            ...DEFAULT_SIM_PARAMS,
-            seasonLengthInTicks: 1,
-            initialFlowers: 3,
-            initialInsects: 3,
-          };
-
-          engine = new SimulationEngine(params, mockFlowerService);
-          mockFlowerWorkerPort = {
-            postMessage: vi.fn(),
-            onmessage: null as any,
-          };
-
-          engine.setFlowerWorkerPort(mockFlowerWorkerPort as any, params);
-
-          // Start in Winter so the next tick will transition to Spring
-          engine.setEnvironmentState({
-            season: 'Winter',
-            currentHumidity: 23,
-            currentTemperature: 20,
-            currentWeatherEvent: { type: 'none', duration: 0 }
-          } as EnvironmentState);
-
-          // Make the AsyncFlowerFactory appear initialized and ready
-          const asyncFactory = (engine as any).asyncFlowerFactory;
-          asyncFactory.ready = true;
-
-          // Helper to create a completed Flower object for a given requestId and position
-          const makeCompletedFlower = (requestId: string, x: number, y: number): Flower => ({
-            ...mockFlower,
-            id: `flower-${requestId}`,
-            x,
-            y,
-            genome: 'g',
-            imageData: 'img',
-            age: 0,
-          });
-
-          // Replace requestNewFlower so it:
-          //  - returns a seed synchronously (engine expects this)
-          //  - uses getNextId when provided to produce the seed id
-          //  - immediately pushes a completed Flower into asyncFlowerFactory.completedFlowersQueue
-          asyncFactory.requestNewFlower = vi.fn((
-            _nextState: any,
-            x: number,
-            y: number,
-            _genome?: string,
-            _unused?: any,
-            getNextId?: () => string
-          ) => {
-            // Use engine-provided id generator if available, otherwise fallback to random
-            const seedId = typeof getNextId === 'function' ? getNextId() : `seed-${Math.random().toString(36).slice(2,8)}`;
-            const seed: FlowerSeed = {
-              id: seedId,
-              type: 'flowerSeed',
-              x,
-              y,
-              imageData: '',
-              health: SEED_HEALTH,
-              maxHealth: SEED_HEALTH,
-              age: 0,
+            const params = {
+                ...DEFAULT_SIM_PARAMS,
+                seasonLengthInTicks: 1,
+                initialFlowers: 3,
+                initialInsects: 3,
             };
-            (asyncFactory as any).completedFlowersQueue = (asyncFactory as any).completedFlowersQueue || [];
-            (asyncFactory as any).completedFlowersQueue.push({
-              requestId: seedId,
-              flower: makeCompletedFlower(seedId, x, y),
+
+            engine = new SimulationEngine(params, mockFlowerService);
+            mockFlowerWorkerPort = {
+                postMessage: vi.fn(),
+                onmessage: null as any,
+            };
+
+            engine.setFlowerWorkerPort(mockFlowerWorkerPort as any, params);
+
+            // Start in Winter so the next tick will transition to Spring
+            engine.setEnvironmentState({
+                season: 'Winter',
+                currentHumidity: 23,
+                currentTemperature: 20,
+                currentWeatherEvent: { type: 'none', duration: 0 },
+            } as EnvironmentState);
+
+            // Make the AsyncFlowerFactory appear initialized and ready
+            const asyncFactory = (engine as any).asyncFlowerFactory;
+            asyncFactory.ready = true;
+
+            // Helper to create a completed Flower object for a given requestId and position
+            const makeCompletedFlower = (requestId: string, x: number, y: number): Flower => ({
+                ...mockFlower,
+                id: `flower-${requestId}`,
+                x,
+                y,
+                genome: 'g',
+                imageData: 'img',
+                age: 0,
             });
-            return seed;
-          });
-          engine.initializeGridWithActors([]);
 
-          // Run multiple ticks to allow:
-          //  - season transition (tick 1)
-          //  - repopulation inserting seeds and pushing completed flowers into the queue
-          //  - engine processing completedFlowersQueue and emitting add deltas for real flowers
-          const collectedDeltas: any[] = [];
-          const maxTicks = 8;
-          for (let t = 0; t < maxTicks; t++) {
-            // Explicitly type result as any to avoid 'never' inference
-            const result: any = await engine.calculateNextTick();
-            // Normalize possible shapes: either an array of deltas or { deltas: [...] }
-            let deltas: any[] = [];
-            if (Array.isArray(result)) {
-              deltas = result;
-            } else if (result && Array.isArray(result.deltas)) {
-              deltas = result.deltas;
+            // Replace requestNewFlower so it:
+            //  - returns a seed synchronously (engine expects this)
+            //  - uses getNextId when provided to produce the seed id
+            //  - immediately pushes a completed Flower into asyncFlowerFactory.completedFlowersQueue
+            asyncFactory.requestNewFlower = vi.fn((_nextState: any, x: number, y: number, _genome?: string, _unused?: any, getNextId?: () => string) => {
+                // Use engine-provided id generator if available, otherwise fallback to random
+                const seedId = typeof getNextId === 'function' ? getNextId() : `seed-${Math.random().toString(36).slice(2, 8)}`;
+                const seed: FlowerSeed = {
+                    id: seedId,
+                    type: 'flowerSeed',
+                    x,
+                    y,
+                    imageData: '',
+                    health: SEED_HEALTH,
+                    maxHealth: SEED_HEALTH,
+                    age: 0,
+                };
+                (asyncFactory as any).completedFlowersQueue = (asyncFactory as any).completedFlowersQueue || [];
+                (asyncFactory as any).completedFlowersQueue.push({
+                    requestId: seedId,
+                    flower: makeCompletedFlower(seedId, x, y),
+                });
+                return seed;
+            });
+            engine.initializeGridWithActors([]);
+
+            // Run multiple ticks to allow:
+            //  - season transition (tick 1)
+            //  - repopulation inserting seeds and pushing completed flowers into the queue
+            //  - engine processing completedFlowersQueue and emitting add deltas for real flowers
+            const collectedDeltas: any[] = [];
+            const maxTicks = 8;
+            for (let t = 0; t < maxTicks; t++) {
+                // Explicitly type result as any to avoid 'never' inference
+                const result: any = await engine.calculateNextTick();
+                // Normalize possible shapes: either an array of deltas or { deltas: [...] }
+                let deltas: any[] = [];
+                if (Array.isArray(result)) {
+                    deltas = result;
+                } else if (result && Array.isArray(result.deltas)) {
+                    deltas = result.deltas;
+                }
+                collectedDeltas.push(...deltas);
+
+                // Early exit if we've observed at least one insect and one real flower added
+                const added = collectedDeltas.filter(d => d.type === 'add') as ActorAddDelta[];
+                const addedInsects = added.filter(a => a.actor.type === 'insect');
+                const addedFlowers = added.filter(a => a.actor.type === 'flower');
+                if (addedInsects.length > 0 && addedFlowers.length > 0) break;
             }
-            collectedDeltas.push(...deltas);
 
-            // Early exit if we've observed at least one insect and one real flower added
-            const added = collectedDeltas.filter(d => d.type === 'add') as ActorAddDelta[];
-            const addedInsects = added.filter(a => a.actor.type === 'insect');
-            const addedFlowers = added.filter(a => a.actor.type === 'flower');
-            if (addedInsects.length > 0 && addedFlowers.length > 0) break;
-          }
+            const allAdded = collectedDeltas.filter(d => d.type === 'add') as ActorAddDelta[];
 
-          const allAdded = collectedDeltas.filter(d => d.type === 'add') as ActorAddDelta[];
+            const addedInsects = allAdded.filter(a => a.actor.type === 'insect');
+            const addedFlowers = allAdded.filter(a => a.actor.type === 'flower');
 
-          const addedInsects = allAdded.filter(a => a.actor.type === 'insect');
-          const addedFlowers = allAdded.filter(a => a.actor.type === 'flower');
+            // Expect at least one insect and one flower to have been added during the Spring repopulation
+            expect(addedInsects.length).toBeGreaterThan(0);
+            expect(addedFlowers.length).toBeGreaterThan(0);
 
-          // Expect at least one insect and one flower to have been added during the Spring repopulation
-          expect(addedInsects.length).toBeGreaterThan(0);
-          expect(addedFlowers.length).toBeGreaterThan(0);
+            const { grid } = engine.getGridState();
+            const flat = grid.flat(2);
 
-          const { grid } = engine.getGridState();
-          const flat = grid.flat(2);
+            const gridFlowers = flat.filter(a => a.type === 'flower');
+            const gridInsects = flat.filter(a => a.type === 'insect');
 
-          const gridFlowers = flat.filter(a => a.type === 'flower');
-          const gridInsects = flat.filter(a => a.type === 'insect');
-
-          expect(gridFlowers.length).toBeGreaterThan(0);
-          expect(gridInsects.length).toBeGreaterThan(0);
+            expect(gridFlowers.length).toBeGreaterThan(0);
+            expect(gridInsects.length).toBeGreaterThan(0);
         });
     });
 });
@@ -406,7 +484,9 @@ describe('SimulationEngine species collection', () => {
     it('tells the player about a discovery on the next tick', async () => {
         engine.initializeGridWithActors([{ ...mockFlower }]);
         await engine.calculateNextTick();
-        port.onmessage!({ data: { type: 'species-classified', payload: { flowerId: 'flower1', status: 'discovered', species: { x: 3, y: 5, name: 'Stout Lotus' } } } });
+        port.onmessage!({
+            data: { type: 'species-classified', payload: { flowerId: 'flower1', status: 'discovered', species: { x: 3, y: 5, name: 'Stout Lotus' } } },
+        });
 
         const { events } = await engine.calculateNextTick();
         expect(events).toContainEqual({ message: '🌸 New species discovered: Stout Lotus!', type: 'success', importance: 'high' });
@@ -417,7 +497,12 @@ describe('SimulationEngine species collection', () => {
         engine.initializeGridWithActors([{ ...mockFlower }]);
         expect((await engine.calculateNextTick()).summary.speciesAlive).toBe(0);
         const asked = classifyRequests()[0].payload;
-        port.onmessage!({ data: { type: 'species-classified', payload: { flowerId: asked.flowerId, tick: asked.tick, status: 'stored', match: { x: 3, y: 5, distance: 1 }, fp: 'fp' } } });
+        port.onmessage!({
+            data: {
+                type: 'species-classified',
+                payload: { flowerId: asked.flowerId, tick: asked.tick, status: 'stored', match: { x: 3, y: 5, distance: 1 }, fp: 'fp' },
+            },
+        });
         expect((await engine.calculateNextTick()).summary.speciesAlive).toBe(1);
     });
 
@@ -436,16 +521,22 @@ describe('SimulationEngine with a species worker', () => {
         const engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
         const flowerPort = { postMessage: vi.fn(), onmessage: null };
         const speciesPort = { postMessage: vi.fn(), onmessage: null };
-        engine.setWorkerPorts([
-            { port: flowerPort as unknown as MessagePort, roles: ['creation'] },
-            { port: speciesPort as unknown as MessagePort, roles: ['species'] },
-        ], DEFAULT_SIM_PARAMS);
+        engine.setWorkerPorts(
+            [
+                { port: flowerPort as unknown as MessagePort, roles: ['creation'] },
+                { port: speciesPort as unknown as MessagePort, roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome' }]);
         await engine.calculateNextTick();
         const types = (port: { postMessage: ReturnType<typeof vi.fn> }) => port.postMessage.mock.calls.map(c => c[0].type);
         // the species worker is given what waits as a batch of jobs, the flower worker none of it
         expect(types(speciesPort)).toContain('species-batch');
-        const jobs = speciesPort.postMessage.mock.calls.map((c: any) => c[0]).filter((m: any) => m.type === 'species-batch').flatMap((m: any) => m.payload.jobs);
+        const jobs = speciesPort.postMessage.mock.calls
+            .map((c: any) => c[0])
+            .filter((m: any) => m.type === 'species-batch')
+            .flatMap((m: any) => m.payload.jobs);
         expect(jobs.map((j: any) => j.type)).toContain('classify-flower');
         expect(types(flowerPort)).not.toContain('classify-flower');
         expect(types(flowerPort)).not.toContain('species-batch');
@@ -476,10 +567,13 @@ describe('SimulationEngine: the workers in the tick summary', () => {
         const engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
         const flowerPort = { postMessage: vi.fn(), onmessage: null as any };
         const speciesPort = { postMessage: vi.fn(), onmessage: null as any };
-        engine.setWorkerPorts([
-            { port: flowerPort as unknown as MessagePort, roles: ['creation'] },
-            { port: speciesPort as unknown as MessagePort, roles: ['species'] },
-        ], DEFAULT_SIM_PARAMS);
+        engine.setWorkerPorts(
+            [
+                { port: flowerPort as unknown as MessagePort, roles: ['creation'] },
+                { port: speciesPort as unknown as MessagePort, roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         engine.initializeGridWithActors([{ ...mockFlower, id: 'bloom', genome: 'bloom-genome' }]);
 
         const first = await engine.calculateNextTick();
@@ -487,7 +581,9 @@ describe('SimulationEngine: the workers in the tick summary', () => {
             flowerWorkers: [{ name: 'Flower worker 1', inFlight: 0, produced: 0 }],
             speciesWorker: 'Species worker',
             species: { waiting: 1, answered: 0 },
-            produced: 0, seedsDiscarded: 0, queued: 0,
+            produced: 0,
+            seedsDiscarded: 0,
+            queued: 0,
         });
 
         speciesPort.onmessage({ data: { type: 'species-classified', payload: { flowerId: 'bloom', status: 'stored' } } });
@@ -517,7 +613,9 @@ describe('SimulationEngine: the counts of the workers and a game that is loaded'
         const before = await engine.calculateNextTick();
         expect(before.summary.workers!.species.waiting).toBe(1);
         // a flower arrives for a seed that is not there: it is thrown away and counted
-        flowerPort.onmessage({ data: { type: 'flower-created', payload: { requestId: 'seed-gone', flower: { ...mockFlower, id: 'flower-gone' }, durationMs: 12 } } });
+        flowerPort.onmessage({
+            data: { type: 'flower-created', payload: { requestId: 'seed-gone', flower: { ...mockFlower, id: 'flower-gone' }, durationMs: 12 } },
+        });
         const second = await engine.calculateNextTick();
         expect(second.summary.workers).toMatchObject({ seedsDiscarded: 1, produced: 1 });
 
@@ -532,18 +630,42 @@ describe('SimulationEngine: the counts of the workers and a game that is loaded'
 describe('SimulationEngine: planting a champion seed', () => {
     let engine: SimulationEngine;
     let request: ReturnType<typeof vi.spyOn>;
-    const seedAt = (x: number, y: number, id = `seed-${x}-${y}`): FlowerSeed => ({ id, type: 'flowerSeed', x, y, imageData: 'stem-img', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 0 });
+    const seedAt = (x: number, y: number, id = `seed-${x}-${y}`): FlowerSeed => ({
+        id,
+        type: 'flowerSeed',
+        x,
+        y,
+        imageData: 'stem-img',
+        health: SEED_HEALTH,
+        maxHealth: SEED_HEALTH,
+        age: 0,
+    });
     const insectAt = (x: number, y: number): CellContent => {
         const stats = INSECT_DATA.get('🦋')!;
-        return { id: `insect-${x}-${y}`, type: 'insect', x, y, emoji: '🦋', pollen: null, health: stats.maxHealth, maxHealth: stats.maxHealth, stamina: stats.maxStamina, maxStamina: stats.maxStamina, genome: [] } as CellContent;
+        return {
+            id: `insect-${x}-${y}`,
+            type: 'insect',
+            x,
+            y,
+            emoji: '🦋',
+            pollen: null,
+            health: stats.maxHealth,
+            maxHealth: stats.maxHealth,
+            stamina: stats.maxStamina,
+            maxStamina: stats.maxStamina,
+            genome: [],
+        } as CellContent;
     };
     const messages = (events: { message: string }[]) => events.map(e => e.message);
-    const planted = (deltas: { type: string; actor?: { id: string; type: string } }[]) => deltas.filter(d => d.type === 'add' && d.actor?.type === 'flowerSeed');
+    const planted = (deltas: { type: string; actor?: { id: string; type: string } }[]) =>
+        deltas.filter(d => d.type === 'add' && d.actor?.type === 'flowerSeed');
 
     beforeEach(() => {
         engine = new SimulationEngine(DEFAULT_SIM_PARAMS, mockFlowerService);
         // the flower worker is not what is tested: a request for a flower gives a seed
-        request = vi.spyOn((engine as any).asyncFlowerFactory, 'requestNewFlower').mockImplementation(((_state: unknown, x: number, y: number) => seedAt(x, y)) as never);
+        request = vi
+            .spyOn((engine as any).asyncFlowerFactory, 'requestNewFlower')
+            .mockImplementation(((_state: unknown, x: number, y: number) => seedAt(x, y)) as never);
     });
 
     it('plants in an empty cell, and tells the player once it did', async () => {
@@ -578,7 +700,21 @@ describe('SimulationEngine: planting a champion seed', () => {
     });
 
     it.each(['nutrient', 'corpse', 'slimeTrail', 'herbicideSmoke'])('plants where there is a %s', async type => {
-        const other = { id: `${type}-1`, type, x: 4, y: 5, age: 0, lifespan: 100, duration: 100, value: 1, health: 1, maxHealth: 1, imageData: '', timer: 100, ownerId: 'x' } as unknown as CellContent;
+        const other = {
+            id: `${type}-1`,
+            type,
+            x: 4,
+            y: 5,
+            age: 0,
+            lifespan: 100,
+            duration: 100,
+            value: 1,
+            health: 1,
+            maxHealth: 1,
+            imageData: '',
+            timer: 100,
+            ownerId: 'x',
+        } as unknown as CellContent;
         engine.initializeGridWithActors([other]);
         engine.plantChampionSeed('champion-genome', 'both', { x: 4, y: 5 });
         const { events } = await engine.calculateNextTick();

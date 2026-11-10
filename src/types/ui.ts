@@ -1,33 +1,62 @@
 import type { TickSummary, Season, WeatherEventType } from './base';
 
 export interface AppEvent {
-  message: string;
-  type: 'info' | 'success' | 'error';
-  importance: 'low' | 'high';
-  tick?: number;
-  timestamp?: number;
+    message: string;
+    type: 'info' | 'success' | 'error';
+    importance: 'low' | 'high';
+    tick?: number;
+    timestamp?: number;
 }
 
 export interface LogEntry extends AppEvent {
-  id: string;
-  count?: number;
+    id: string;
+    count?: number;
 }
 
 export interface ToastMessage {
-  id: string;
-  message: string;
-  type: 'info' | 'success' | 'error';
-  count?: number;
-  key?: number;
-  tick?: number;
+    id: string;
+    message: string;
+    type: 'info' | 'success' | 'error';
+    count?: number;
+    key?: number;
+    tick?: number;
 }
 
-export type ChallengeId = 'survival-1' | 'survival-2' | 'survival-3' | 'predation-1' | 'predation-2' | 'predation-3' |
-'circle-of-life' | 'pest-control' | 'bountiful-harvest' | 'poison-garden' | 'peak-performer' | 'the-swarm-1' | 'the-swarm-2' | 'avian-sanctuary-1' | 'avian-sanctuary-2' | 'unchecked-growth' |
-'hive-1' | 'hive-2' | 'colony-1' | 'pest-1' | 'metamorphosis-1' | 'healing-garden' |
-'specialist-ladybug' | 'specialist-beetle' | 'specialist-snail' | 'specialist-scorpion' | 'specialist-spider' |
-'species-1' | 'species-2' | 'species-3' | 'atypical-1' |
-'biodiversity-1' | 'biodiversity-2' | 'biodiversity-3';
+export type ChallengeId =
+    | 'survival-1'
+    | 'survival-2'
+    | 'survival-3'
+    | 'predation-1'
+    | 'predation-2'
+    | 'predation-3'
+    | 'circle-of-life'
+    | 'pest-control'
+    | 'bountiful-harvest'
+    | 'poison-garden'
+    | 'peak-performer'
+    | 'the-swarm-1'
+    | 'the-swarm-2'
+    | 'avian-sanctuary-1'
+    | 'avian-sanctuary-2'
+    | 'unchecked-growth'
+    | 'hive-1'
+    | 'hive-2'
+    | 'colony-1'
+    | 'pest-1'
+    | 'metamorphosis-1'
+    | 'healing-garden'
+    | 'specialist-ladybug'
+    | 'specialist-beetle'
+    | 'specialist-snail'
+    | 'specialist-scorpion'
+    | 'specialist-spider'
+    | 'species-1'
+    | 'species-2'
+    | 'species-3'
+    | 'atypical-1'
+    | 'biodiversity-1'
+    | 'biodiversity-2'
+    | 'biodiversity-3';
 
 export interface Challenge {
     id: ChallengeId;

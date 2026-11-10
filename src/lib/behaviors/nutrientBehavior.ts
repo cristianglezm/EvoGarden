@@ -6,7 +6,7 @@ interface NutrientContext {
 
 export const processNutrientTick = (nutrient: Nutrient, context: NutrientContext) => {
     const { nextActorState } = context;
-    
+
     nutrient.lifespan--;
     if (nutrient.lifespan <= 0) {
         nextActorState.delete(nutrient.id);

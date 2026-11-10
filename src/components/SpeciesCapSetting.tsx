@@ -68,11 +68,19 @@ export const SpeciesCapSetting: React.FC<SpeciesCapSettingProps> = ({ source }) 
                     }}
                     className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white"
                 >
-                    {capChoices(cap).map(choice => <option key={choice.cap} value={choice.cap}>{choice.label}</option>)}
+                    {capChoices(cap).map(choice => (
+                        <option key={choice.cap} value={choice.cap}>
+                            {choice.label}
+                        </option>
+                    ))}
                 </select>
             </label>
             <p className="text-xs text-secondary">Each species keeps up to {cap} samples for the field guide. It applies at once, no reset needed.</p>
-            {failed && <p role="alert" className="text-sm text-accent-red">The cap could not be saved.</p>}
+            {failed && (
+                <p role="alert" className="text-sm text-accent-red">
+                    The cap could not be saved.
+                </p>
+            )}
             {pendingCap !== null && (
                 <ConfirmationModal
                     title="Keep fewer samples?"

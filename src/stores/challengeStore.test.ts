@@ -113,8 +113,26 @@ describe('the challenges a player saved before there were new ones', () => {
 
     it('get the new ones, with no progress, and keep the progress they had', async () => {
         saved([
-            { id: 'survival-1', title: 'Budding Survivor', description: 'x', goal: 100, progress: 100, completed: true, metric: 'maxFlowerAge', aggregator: 'max' },
-            { id: 'predation-1', title: 'First Hunt', description: 'x', goal: 10, progress: 4, completed: false, metric: 'totalInsectsEaten', aggregator: 'sum' },
+            {
+                id: 'survival-1',
+                title: 'Budding Survivor',
+                description: 'x',
+                goal: 100,
+                progress: 100,
+                completed: true,
+                metric: 'maxFlowerAge',
+                aggregator: 'max',
+            },
+            {
+                id: 'predation-1',
+                title: 'First Hunt',
+                description: 'x',
+                goal: 10,
+                progress: 4,
+                completed: false,
+                metric: 'totalInsectsEaten',
+                aggregator: 'sum',
+            },
         ]);
         await useChallengeStore.persist.rehydrate();
         expect(challenge('survival-1')).toMatchObject({ progress: 100, completed: true });
@@ -125,7 +143,9 @@ describe('the challenges a player saved before there were new ones', () => {
     });
 
     it('take the text and the goal from the game, and the progress from the save', async () => {
-        saved([{ id: 'survival-2', title: 'old title', description: 'old', goal: 5, progress: 700, completed: false, metric: 'maxFlowerAge', aggregator: 'max' }]);
+        saved([
+            { id: 'survival-2', title: 'old title', description: 'old', goal: 5, progress: 700, completed: false, metric: 'maxFlowerAge', aggregator: 'max' },
+        ]);
         await useChallengeStore.persist.rehydrate();
         expect(challenge('survival-2')).toMatchObject({ title: 'Perennial Power', goal: 1000, progress: 700, completed: false });
     });

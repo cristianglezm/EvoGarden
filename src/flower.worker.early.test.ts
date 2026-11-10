@@ -14,17 +14,26 @@ let started: Promise<unknown>;
 
 beforeAll(async () => {
     (globalThis as any).self = globalThis;
-    (globalThis as any).reportError = (error: unknown) => { errors.push(error); };
+    (globalThis as any).reportError = (error: unknown) => {
+        errors.push(error);
+    };
     const { flowerService } = await import('./services/flowerService');
     // The service starts only when the gate opens, after the early messages were heard: in node the wasm
     // starts too fast to lose the race by itself.
     let open!: () => void;
-    const gate = new Promise<void>(resolve => { open = resolve; });
+    const gate = new Promise<void>(resolve => {
+        open = resolve;
+    });
     const initialize = flowerService.initialize.bind(flowerService);
-    vi.spyOn(flowerService, 'initialize').mockImplementationOnce(async () => { await gate; return initialize(); });
+    vi.spyOn(flowerService, 'initialize').mockImplementationOnce(async () => {
+        await gate;
+        return initialize();
+    });
     await import('./flower.worker');
     const channel = new MessageChannel();
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     // not awaited: the messages go in while the service starts
     started = (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1, roles: ['creation'] } } });
     channel.port2.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });

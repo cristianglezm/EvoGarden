@@ -30,7 +30,7 @@ export class ToolsPanelController {
     getActorCountInput() {
         return this.panel.getByLabel('Count');
     }
-    
+
     getIntroduceActorsButton() {
         // The collapsible header also has the text "Introduce Actors".
         // This targets the actual button inside the collapsible content, which is not an expandable header.
@@ -42,7 +42,7 @@ export class ToolsPanelController {
             longestLived: 'Plant longestLived',
             mostToxic: 'Plant mostToxic',
             mostHealing: 'Plant mostHealing',
-        }
+        };
         return this.panel.getByTitle(titleMap[category]);
     }
 

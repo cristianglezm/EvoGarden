@@ -12,11 +12,11 @@ interface EggContext {
 
 export const processEggTick = (egg: Egg, context: EggContext) => {
     const { nextActorState, events, incrementInsectsBorn, getNextId } = context;
-    
+
     egg.hatchTimer--;
     if (egg.hatchTimer <= 0) {
         nextActorState.delete(egg.id);
-        
+
         const baseStats = INSECT_DATA.get(egg.insectEmoji);
         if (!baseStats) {
             console.error(`Could not find base stats for emoji: ${egg.insectEmoji}`);
@@ -42,9 +42,9 @@ export const processEggTick = (egg: Egg, context: EggContext) => {
         // Check if cell is occupied by bird before hatching
         const isOccupiedByBird = Array.from(nextActorState.values()).some(a => a.x === egg.x && a.y === egg.y && a.type === 'bird');
         if (!isOccupiedByBird) {
-             nextActorState.set(newInsectId, newInsect);
-             events.push({ message: '🐣 An insect has hatched!', type: 'success', importance: 'low' });
-             incrementInsectsBorn();
+            nextActorState.set(newInsectId, newInsect);
+            events.push({ message: '🐣 An insect has hatched!', type: 'success', importance: 'low' });
+            incrementInsectsBorn();
         }
     }
 };

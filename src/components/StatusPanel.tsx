@@ -18,9 +18,16 @@ interface StatusPanelProps {
     setIsRunning: (running: boolean) => void;
 }
 
-export const StatusPanel: React.FC<StatusPanelProps> = ({ 
-    summary, onLogClick, actors, onTrackActor, onStopTracking, trackedActorId, 
-    onHighlightActor, isRunning, setIsRunning 
+export const StatusPanel: React.FC<StatusPanelProps> = ({
+    summary,
+    onLogClick,
+    actors,
+    onTrackActor,
+    onStopTracking,
+    trackedActorId,
+    onHighlightActor,
+    isRunning,
+    setIsRunning,
 }) => {
     return (
         <div className="flex flex-col gap-1.5">
@@ -28,8 +35,8 @@ export const StatusPanel: React.FC<StatusPanelProps> = ({
                 <EnvironmentDisplay summary={summary} />
                 <WorkerStatusDisplay summary={summary} />
                 <div className="flex-grow" />
-                <GlobalSearch 
-                    actors={actors} 
+                <GlobalSearch
+                    actors={actors}
                     onTrackActor={onTrackActor}
                     onStopTracking={onStopTracking}
                     trackedActorId={trackedActorId}

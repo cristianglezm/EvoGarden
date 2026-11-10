@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BeetleBehavior } from './BeetleBehavior';
 import type { Insect, Flower, CellContent, SimulationParams, AppEvent } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    DEFAULT_SIM_PARAMS, 
+import {
+    INSECT_DATA,
+    DEFAULT_SIM_PARAMS,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     BEETLE_HEAL_AMOUNT,
     BEETLE_COLLECT_STAMINA_COST,
     BEETLE_DEPOSIT_STAMINA_COST,
-    FLOWER_STAT_INDICES
+    FLOWER_STAT_INDICES,
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -26,23 +26,44 @@ describe('BeetleBehavior', () => {
     let flowerQtree: Quadtree<CellContent>;
     let events: AppEvent[];
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
-    
+
     const createMockFlower = (id: string, x: number, y: number, health: number, maxHealth: number): Flower => ({
-        id, type: 'flower', x, y, health, maxHealth,
+        id,
+        type: 'flower',
+        x,
+        y,
+        health,
+        maxHealth,
         // Fill in other required properties with defaults
-        genome: 'g1', imageData: '', stamina: 100, maxStamina: 100,
-        age: 51, isMature: true, maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-        minTemperature: 10, maxTemperature: 30, toxicityRate: 0.0,
-        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+        genome: 'g1',
+        imageData: '',
+        stamina: 100,
+        maxStamina: 100,
+        age: 51,
+        isMature: true,
+        maturationPeriod: 50,
+        nutrientEfficiency: 1.0,
+        sex: 'both',
+        minTemperature: 10,
+        maxTemperature: 30,
+        toxicityRate: 0.0,
+        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
     });
 
     beforeEach(() => {
         behavior = new BeetleBehavior();
         beetle = {
-            id: 'beetle1', type: 'insect', x: 10, y: 10, emoji: '🪲', pollen: null, 
+            id: 'beetle1',
+            type: 'insect',
+            x: 10,
+            y: 10,
+            emoji: '🪲',
+            pollen: null,
             genome: Array(Object.keys(FLOWER_STAT_INDICES).length).fill(1),
-            health: BEETLE_DATA.maxHealth, maxHealth: BEETLE_DATA.maxHealth,
-            stamina: BEETLE_DATA.maxStamina, maxStamina: BEETLE_DATA.maxStamina,
+            health: BEETLE_DATA.maxHealth,
+            maxHealth: BEETLE_DATA.maxHealth,
+            stamina: BEETLE_DATA.maxStamina,
+            maxStamina: BEETLE_DATA.maxStamina,
             isCarryingNutrient: false,
         };
         nextActorState = new Map();
@@ -52,7 +73,7 @@ describe('BeetleBehavior', () => {
         flowerQtree = new Quadtree(boundary, 4);
         events = [];
     });
-    
+
     const setupContext = (): any => ({
         params,
         qtree,
@@ -70,7 +91,7 @@ describe('BeetleBehavior', () => {
         const healthyFlower = createMockFlower('hf1', 12, 12, 90, 100); // 90% health
         nextActorState.set(healthyFlower.id, healthyFlower);
         flowerQtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
-        
+
         behavior.update(beetle, setupContext());
 
         // Moves 1 step from (10,10) towards (12,12) -> should be (11,11)
@@ -86,7 +107,7 @@ describe('BeetleBehavior', () => {
         const context = setupContext();
         context.flowerQtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
         context.qtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
-        
+
         behavior.update(beetle, context);
 
         expect(beetle.isCarryingNutrient).toBe(true);
@@ -99,7 +120,7 @@ describe('BeetleBehavior', () => {
         const weakFlower = createMockFlower('wf1', 8, 8, 40, 100); // 40% health
         nextActorState.set(weakFlower.id, weakFlower);
         flowerQtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
-        
+
         behavior.update(beetle, setupContext());
 
         // Moves 1 step from (10,10) towards (8,8) -> should be (9,9)
@@ -114,7 +135,7 @@ describe('BeetleBehavior', () => {
         const weakFlower = createMockFlower('wf1', 10, 10, 40, 100);
         nextActorState.set(weakFlower.id, weakFlower);
         const initialFlowerHealth = weakFlower.health;
-        
+
         const context = setupContext();
         context.flowerQtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
         context.qtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
@@ -133,7 +154,7 @@ describe('BeetleBehavior', () => {
         const weakFlower = createMockFlower('wf1', 8, 8, 40, 100);
         nextActorState.set(weakFlower.id, weakFlower);
         flowerQtree.insert({ x: weakFlower.x, y: weakFlower.y, data: weakFlower });
-        
+
         const initialX = beetle.x;
         const initialY = beetle.y;
 
@@ -150,7 +171,7 @@ describe('BeetleBehavior', () => {
         const healthyFlower = createMockFlower('hf1', 12, 12, 90, 100);
         nextActorState.set(healthyFlower.id, healthyFlower);
         flowerQtree.insert({ x: healthyFlower.x, y: healthyFlower.y, data: healthyFlower });
-        
+
         const initialX = beetle.x;
         const initialY = beetle.y;
 
@@ -171,7 +192,7 @@ describe('BeetleBehavior', () => {
         expect(beetle.x).toBe(initialX);
         expect(beetle.y).toBe(initialY);
         // Should not move, so it's idle and should regenerate stamina
-        expect(beetle.stamina).toBe((INSECT_MOVE_COST - 1) + INSECT_STAMINA_REGEN_PER_TICK);
+        expect(beetle.stamina).toBe(INSECT_MOVE_COST - 1 + INSECT_STAMINA_REGEN_PER_TICK);
     });
 
     it('should wander and spend stamina when it has no target', () => {

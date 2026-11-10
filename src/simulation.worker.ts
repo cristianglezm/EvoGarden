@@ -18,13 +18,11 @@ const INIT_TIMEOUT_MS = 15000;
 
 const initializeWasm = async (): Promise<boolean> => {
     try {
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Worker WASM Initialization timed out.")), INIT_TIMEOUT_MS)
-        );
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Worker WASM Initialization timed out.')), INIT_TIMEOUT_MS));
         await Promise.race([flowerService.initialize(), timeoutPromise]);
         return true;
     } catch (error) {
-        console.error("Worker: FEService initialization failed.", error);
+        console.error('Worker: FEService initialization failed.', error);
         self.postMessage({ type: 'toast', payload: { message: 'Simulation engine failed to load.', type: 'error' } });
         return false;
     }
@@ -36,7 +34,7 @@ const gameLoop = async () => {
     const { events, summary, deltas } = await engine.calculateNextTick();
 
     self.postMessage({ type: 'tick-update', payload: { deltas, events, summary } });
-    
+
     const currentParams = engine.getGridState().params;
     const tickRate = BASE_TICK_RATE_MS / (currentParams.simulationSpeed || 1);
 
@@ -76,15 +74,13 @@ self.onmessage = async (e: MessageEvent) => {
             if (flowerWorkerPorts.length > 0) {
                 engine.setWorkerPorts(workerPortSpecs({ flowerWorkerPorts, speciesWorkerPort }), params);
             } else {
-                console.error("Simulation worker could not set flower worker port on engine.");
+                console.error('Simulation worker could not set flower worker port on engine.');
             }
-            
-            const flowerPromises = Array.from({ length: params.initialFlowers }, () => 
-                createNewFlower(flowerService, params, -1, -1)
-            );
+
+            const flowerPromises = Array.from({ length: params.initialFlowers }, () => createNewFlower(flowerService, params, -1, -1));
             const initialFlowers = (await Promise.all(flowerPromises)).filter((f): f is Flower => f !== null);
             const initialMobileActors = createInitialMobileActors(params);
-            
+
             // Get all possible grid coordinates
             const allCoords: { x: number; y: number }[] = [];
             for (let y = 0; y < params.gridHeight; y++) {
@@ -92,7 +88,7 @@ self.onmessage = async (e: MessageEvent) => {
                     allCoords.push({ x, y });
                 }
             }
-            
+
             // Shuffle coordinates to randomize placement
             for (let i = allCoords.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -115,9 +111,9 @@ self.onmessage = async (e: MessageEvent) => {
                 actor.x = Math.floor(Math.random() * params.gridWidth);
                 actor.y = Math.floor(Math.random() * params.gridHeight);
             });
-            
+
             const allActors = [...initialFlowers, ...initialMobileActors];
-            
+
             if (params.allowedActors.includes('🐝')) {
                 initializeHivesAndBees(allActors, params);
             }
@@ -132,7 +128,7 @@ self.onmessage = async (e: MessageEvent) => {
             self.postMessage({ type: 'init-complete', payload: engine.getGridState() });
             break;
         }
-        
+
         case 'set-live-params': {
             if (engine) {
                 engine.setParams(payload, false);
@@ -160,35 +156,35 @@ self.onmessage = async (e: MessageEvent) => {
             break;
 
         case 'load-state':
-             isLoadingState = true;
-             isRunning = false;
-             if (gameLoopTimeoutId) clearTimeout(gameLoopTimeoutId);
-             
-             if (!engine) {
-                 if (!(await initializeWasm())) {
-                     isLoadingState = false;
-                     return;
-                 }
-                 engine = new SimulationEngine(payload.params, flowerService);
-             }
-             
-             if (flowerWorkerPorts.length > 0) {
-                engine.setWorkerPorts(workerPortSpecs({ flowerWorkerPorts, speciesWorkerPort }), payload.params);
-             } else {
-                console.error("Simulation worker could not set flower worker port on engine during load.");
-             }
-             
-             // Set parameters before generating stem to ensure correct quality
-             flowerService.setParams({ radius: (payload.params as SimulationParams).flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
-             
-             // Generate the stem image directly in this worker to avoid deadlocks
-             const stemForLoad = await flowerService.makeStem();
-             engine.setStemImage(stemForLoad.image);
+            isLoadingState = true;
+            isRunning = false;
+            if (gameLoopTimeoutId) clearTimeout(gameLoopTimeoutId);
 
-             await engine.loadState(payload);
-             
-             self.postMessage({ type: 'load-complete', payload: engine.getGridState() });
-             isLoadingState = false;
+            if (!engine) {
+                if (!(await initializeWasm())) {
+                    isLoadingState = false;
+                    return;
+                }
+                engine = new SimulationEngine(payload.params, flowerService);
+            }
+
+            if (flowerWorkerPorts.length > 0) {
+                engine.setWorkerPorts(workerPortSpecs({ flowerWorkerPorts, speciesWorkerPort }), payload.params);
+            } else {
+                console.error('Simulation worker could not set flower worker port on engine during load.');
+            }
+
+            // Set parameters before generating stem to ensure correct quality
+            flowerService.setParams({ radius: (payload.params as SimulationParams).flowerDetailRadius, numLayers: 3, P: 6.0, bias: 1.0 });
+
+            // Generate the stem image directly in this worker to avoid deadlocks
+            const stemForLoad = await flowerService.makeStem();
+            engine.setStemImage(stemForLoad.image);
+
+            await engine.loadState(payload);
+
+            self.postMessage({ type: 'load-complete', payload: engine.getGridState() });
+            isLoadingState = false;
             break;
 
         case 'trigger-weather':

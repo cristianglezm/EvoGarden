@@ -86,7 +86,6 @@ export const NUTRIENT_FROM_COCKROACH_LIFESPAN = 2; // Lower quality nutrient
 export const NUTRIENT_FROM_FLOWER_DEATH_LIFESPAN = 3; // From a flower killed by a cockroach
 export const CORPSE_DECAY_TIME = 25; // ticks
 
-
 // --- BIRD CONSTANTS ---
 export const BIRD_DROP_NUTRIENT_CHANCE = 0.05;
 
@@ -105,14 +104,13 @@ export const INSECT_MOVE_COST = 2;
 export const INSECT_ATTACK_COST = 4;
 export const INSECT_REPRODUCTION_COOLDOWN = 1; // ticks
 export const MUTATION_CHANCE = 0.05; // 5% chance per gene
-export const MUTATION_AMOUNT = 0.2;  // Mutate by +/- 20%
+export const MUTATION_AMOUNT = 0.2; // Mutate by +/- 20%
 export const INSECT_WANDER_CHANCE = 0.1;
 
 // --- CATERPILLAR & COCOON CONSTANTS ---
 export const CATERPILLAR_EAT_AMOUNT_FOR_COCOON = 50;
 export const COCOON_HATCH_TIME = 40; // ticks
 export const LADYBUG_HEAL_FROM_CATERPILLAR = 20;
-
 
 // --- BEETLE CONSTANTS ---
 export const HEALTHY_FLOWER_THRESHOLD = 0.8;
@@ -145,7 +143,7 @@ export const FLOWER_STAT_INDICES = {
     AGILITY: 5,
     STRENGTH: 6,
     INTELLIGENCE: 7,
-    LUCK: 8
+    LUCK: 8,
 };
 export const INSECT_GENOME_LENGTH = Object.keys(FLOWER_STAT_INDICES).length;
 

@@ -29,7 +29,10 @@ export const SpeciesClearSetting: React.FC<SpeciesClearSettingProps> = ({ source
     return (
         <div className="space-y-1">
             <button
-                onClick={() => { setState('idle'); setAsking(true); }}
+                onClick={() => {
+                    setState('idle');
+                    setAsking(true);
+                }}
                 className="flex items-center px-3 py-1.5 bg-accent-red/20 hover:bg-accent-red/40 text-accent-red font-semibold rounded-md transition-colors text-sm"
                 title="Remove every species found and every sample kept"
             >
@@ -37,8 +40,16 @@ export const SpeciesClearSetting: React.FC<SpeciesClearSettingProps> = ({ source
                 Clear species collection
             </button>
             <p className="text-xs text-secondary">Starts the field guide over. The Seed Bank has its own Clear.</p>
-            {state === 'cleared' && <p role="status" className="text-sm text-accent-green">The species collection is empty.</p>}
-            {state === 'failed' && <p role="alert" className="text-sm text-accent-red">The species collection could not be cleared.</p>}
+            {state === 'cleared' && (
+                <p role="status" className="text-sm text-accent-green">
+                    The species collection is empty.
+                </p>
+            )}
+            {state === 'failed' && (
+                <p role="alert" className="text-sm text-accent-red">
+                    The species collection could not be cleared.
+                </p>
+            )}
             {asking && (
                 <ConfirmationModal
                     title="Clear the species collection?"

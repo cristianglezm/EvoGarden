@@ -4,7 +4,18 @@ import { speciesStoreFactories } from '../test/speciesStores';
 import type { SpeciesSample, SpeciesStore } from '../types';
 
 const sample = (id: string, overrides: Partial<SpeciesSample> = {}): SpeciesSample => ({
-    id, cell: '3,5', x: 3, y: 5, d: 1, fp: 'fp1', kind: 'sample', founder: false, records: [], sex: 'both', createdAt: 1, ...overrides,
+    id,
+    cell: '3,5',
+    x: 3,
+    y: 5,
+    d: 1,
+    fp: 'fp1',
+    kind: 'sample',
+    founder: false,
+    records: [],
+    sex: 'both',
+    createdAt: 1,
+    ...overrides,
 });
 
 // The policy is tested on the memory store as well as on Dexie, so the memory one has to be
@@ -48,7 +59,7 @@ describe.each(speciesStoreFactories)('the %s species store', (_name, makeStore) 
             expect((await tx.stale('new', 100)).map(s => s.id).sort()).toEqual(['a', 'b', 'c', 'e']);
             expect(await tx.stale('new', 2)).toHaveLength(2);
             expect(await tx.stale('old', 100)).toHaveLength(2);
-            expect((await tx.stale('nobody', 100))).toHaveLength(5);
+            expect(await tx.stale('nobody', 100)).toHaveLength(5);
         });
     });
 
@@ -108,11 +119,13 @@ describe.each(speciesStoreFactories)('the %s species store', (_name, makeStore) 
 
     it('keeps nothing of a transaction that throws', async () => {
         await store.transaction(async tx => tx.put(sample('kept'), 'g'));
-        await expect(store.transaction(async tx => {
-            await tx.put(sample('lost'), 'g');
-            await tx.remove(['kept']);
-            throw new Error('boom');
-        })).rejects.toThrow('boom');
+        await expect(
+            store.transaction(async tx => {
+                await tx.put(sample('lost'), 'g');
+                await tx.remove(['kept']);
+                throw new Error('boom');
+            })
+        ).rejects.toThrow('boom');
         await store.transaction(async tx => {
             expect(await tx.get('lost')).toBeUndefined();
             expect(await tx.get('kept')).toBeDefined();
@@ -122,10 +135,14 @@ describe.each(speciesStoreFactories)('the %s species store', (_name, makeStore) 
 
     it('does not lose an update when two transactions read before they write', async () => {
         await store.transaction(async tx => tx.put(sample('counter', { age: 0 }), 'g'));
-        await Promise.all(Array.from({ length: 20 }, () => store.transaction(async tx => {
-            const current = (await tx.get('counter'))!;
-            await tx.put({ ...current, age: current.age! + 1 }, 'g');
-        })));
+        await Promise.all(
+            Array.from({ length: 20 }, () =>
+                store.transaction(async tx => {
+                    const current = (await tx.get('counter'))!;
+                    await tx.put({ ...current, age: current.age! + 1 }, 'g');
+                })
+            )
+        );
         await store.transaction(async tx => expect((await tx.get('counter'))!.age).toBe(20));
     });
 });

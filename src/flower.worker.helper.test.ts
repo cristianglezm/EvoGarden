@@ -15,7 +15,10 @@ let classifier: { classifyBatch: (g: string[]) => Promise<unknown[]>; classify: 
 let database: typeof import('./services/db').db;
 const types = () => messages.map(m => m.type);
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const job = (flowerId: string, genome: string) => ({ type: 'classify-flower', payload: { flowerId, genome, image: 'png', sex: 'both', age: 60, toxicity: 0.1, tick: 7 } });
+const job = (flowerId: string, genome: string) => ({
+    type: 'classify-flower',
+    payload: { flowerId, genome, image: 'png', sex: 'both', age: 60, toxicity: 0.1, tick: 7 },
+});
 
 beforeAll(async () => {
     const service = new FEService();
@@ -31,8 +34,12 @@ beforeAll(async () => {
     const { flowerService } = await import('./services/flowerService');
     const channel = new MessageChannel();
     toWorker = channel.port2;
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
-    await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false } } });
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
+    await (globalThis as any).onmessage({
+        data: { type: 'init-ports', payload: { simWorkerPort: channel.port1, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false } },
+    });
     toWorker.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
     classifier = flowerService.speciesClassifier;
     await wait(100);

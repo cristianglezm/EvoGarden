@@ -42,7 +42,6 @@ describe('AsyncFlowerFactory messages', () => {
     });
 });
 
-
 describe('AsyncFlowerFactory with several workers', () => {
     type FakePort = { postMessage: ReturnType<typeof vi.fn>; onmessage: ((e: { data: unknown }) => void) | null };
     const fakePort = (): FakePort => ({ postMessage: vi.fn(), onmessage: null });
@@ -58,22 +57,35 @@ describe('AsyncFlowerFactory with several workers', () => {
     beforeEach(() => {
         factory = new AsyncFlowerFactory();
         factory.setStemImage('stem');
-        a = fakePort(); b = fakePort(); species = fakePort();
+        a = fakePort();
+        b = fakePort();
+        species = fakePort();
     });
 
     describe('creation', () => {
         beforeEach(() => {
-            factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+            factory.setWorkerPorts(
+                [
+                    { port: asPort(a), roles: ['creation'] },
+                    { port: asPort(b), roles: ['creation'] },
+                ],
+                DEFAULT_SIM_PARAMS
+            );
         });
 
         it('gives a request to the worker with the fewest in flight, the first one on a tie', () => {
-            request(1); request(2); request(3);
+            request(1);
+            request(2);
+            request(3);
             expect(sent(a, 'request-flower').map(m => m.payload.requestId)).toEqual(['seed-1-0', 'seed-3-0']);
             expect(sent(b, 'request-flower').map(m => m.payload.requestId)).toEqual(['seed-2-0']);
         });
 
         it('gives the next request to the worker that just finished one', () => {
-            request(1); request(2); request(3); request(4); // a: 1, 3; b: 2, 4
+            request(1);
+            request(2);
+            request(3);
+            request(4); // a: 1, 3; b: 2, 4
             receive(b, 'flower-created', { requestId: 'seed-2-0', flower: null });
             receive(b, 'flower-created', { requestId: 'seed-4-0', flower: null });
             request(5);
@@ -81,7 +93,8 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('takes the result from whichever worker made it', () => {
-            request(1); request(2);
+            request(1);
+            request(2);
             expect(factory.getPendingRequestCount()).toBe(2);
             receive(b, 'flower-creation-failed', { requestId: 'seed-2-0' });
             receive(a, 'flower-created', { requestId: 'seed-1-0', flower: null });
@@ -89,7 +102,8 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('asks only the worker that holds a request to cancel it', () => {
-            request(1); request(2);
+            request(1);
+            request(2);
             factory.cancelFlowerRequest('seed-2-0');
             expect(sent(b, 'cancel-flower-request')).toEqual([{ type: 'cancel-flower-request', payload: { requestId: 'seed-2-0' } }]);
             expect(sent(a, 'cancel-flower-request')).toEqual([]);
@@ -97,7 +111,8 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('counts a cancelled request as free for the worker that held it', () => {
-            request(1); request(2);
+            request(1);
+            request(2);
             factory.cancelFlowerRequest('seed-2-0');
             request(3);
             expect(sent(b, 'request-flower').map(m => m.payload.requestId)).toEqual(['seed-2-0', 'seed-3-0']);
@@ -111,7 +126,8 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('cancels everything in every worker, and forgets what was in flight', () => {
-            request(1); request(2);
+            request(1);
+            request(2);
             factory.reset();
             expect(sent(a, 'cancel-all-requests')).toHaveLength(1);
             expect(sent(b, 'cancel-all-requests')).toHaveLength(1);
@@ -129,16 +145,24 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('keeps the count of a worker that is set again, so the balance goes on', () => {
-            request(1); request(2); // a: 1, b: 1
+            request(1);
+            request(2); // a: 1, b: 1
             request(3); // a: 2
-            factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+            factory.setWorkerPorts(
+                [
+                    { port: asPort(a), roles: ['creation'] },
+                    { port: asPort(b), roles: ['creation'] },
+                ],
+                DEFAULT_SIM_PARAMS
+            );
             request(4);
             expect(sent(b, 'request-flower').map(m => m.payload.requestId)).toEqual(['seed-2-0', 'seed-4-0']);
             expect(factory.getPendingRequestCount()).toBe(4);
         });
 
         it('lets go the requests of a worker that is no longer there', () => {
-            request(1); request(2);
+            request(1);
+            request(2);
             factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
             expect(factory.getPendingRequestCount()).toBe(1);
             expect(b.onmessage).toBeNull();
@@ -151,10 +175,13 @@ describe('AsyncFlowerFactory with several workers', () => {
         const message = { type: 'classify-flower', payload: { flowerId: 'f' } };
 
         it('goes to a worker that only does species, whatever the others', async () => {
-            factory.setWorkerPorts([
-                { port: asPort(a), roles: ['creation', 'species'] },
-                { port: asPort(species), roles: ['species'] },
-            ], DEFAULT_SIM_PARAMS);
+            factory.setWorkerPorts(
+                [
+                    { port: asPort(a), roles: ['creation', 'species'] },
+                    { port: asPort(species), roles: ['species'] },
+                ],
+                DEFAULT_SIM_PARAMS
+            );
             factory.postToSpeciesWorker(message);
             await Promise.resolve();
             expect(sent(species, 'species-batch')).toHaveLength(1);
@@ -162,7 +189,13 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('goes to the worker that makes flowers when none does only species', () => {
-            factory.setWorkerPorts([{ port: asPort(a), roles: ['creation', 'species'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+            factory.setWorkerPorts(
+                [
+                    { port: asPort(a), roles: ['creation', 'species'] },
+                    { port: asPort(b), roles: ['creation'] },
+                ],
+                DEFAULT_SIM_PARAMS
+            );
             factory.postToSpeciesWorker(message);
             expect(sent(a, 'classify-flower')).toHaveLength(1);
             expect(sent(b, 'classify-flower')).toEqual([]);
@@ -175,7 +208,13 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('is not given the flower requests, nor the parameters, but is told to cancel', () => {
-            factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(species), roles: ['species'] }], DEFAULT_SIM_PARAMS);
+            factory.setWorkerPorts(
+                [
+                    { port: asPort(a), roles: ['creation'] },
+                    { port: asPort(species), roles: ['species'] },
+                ],
+                DEFAULT_SIM_PARAMS
+            );
             request(1);
             factory.updateParams(DEFAULT_SIM_PARAMS);
             expect(sent(species, 'request-flower')).toEqual([]);
@@ -185,7 +224,13 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
 
         it('is heard like any other worker', () => {
-            factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(species), roles: ['species'] }], DEFAULT_SIM_PARAMS);
+            factory.setWorkerPorts(
+                [
+                    { port: asPort(a), roles: ['creation'] },
+                    { port: asPort(species), roles: ['species'] },
+                ],
+                DEFAULT_SIM_PARAMS
+            );
             const listener = vi.fn();
             factory.onMessage('species-classified', listener);
             receive(species, 'species-classified', { flowerId: 'f' });
@@ -202,7 +247,6 @@ describe('AsyncFlowerFactory with several workers', () => {
         });
     });
 });
-
 
 describe('AsyncFlowerFactory stats', () => {
     type FakePort = { postMessage: ReturnType<typeof vi.fn>; onmessage: ((e: { data: unknown }) => void) | null };
@@ -221,8 +265,16 @@ describe('AsyncFlowerFactory stats', () => {
         clock = 0;
         factory = new AsyncFlowerFactory(() => clock);
         factory.setStemImage('stem');
-        a = fakePort(); b = fakePort(); species = fakePort();
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+        a = fakePort();
+        b = fakePort();
+        species = fakePort();
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation'] },
+                { port: asPort(b), roles: ['creation'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
     });
 
     it('names the workers by their order, and says nobody does the species when nobody does', () => {
@@ -232,15 +284,29 @@ describe('AsyncFlowerFactory stats', () => {
     });
 
     it('names the worker that does the species: its own, or the first flower worker', () => {
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(species), roles: ['species'] }], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation'] },
+                { port: asPort(species), roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         expect(factory.getStats().speciesWorker).toBe('Species worker');
         expect(factory.getStats().flowerWorkers.map(w => w.name)).toEqual(['Flower worker 1']);
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation', 'species'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation', 'species'] },
+                { port: asPort(b), roles: ['creation'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         expect(factory.getStats().speciesWorker).toBe('Flower worker 1');
     });
 
     it('counts what each worker has in flight, produced and failed', () => {
-        request(1); request(2); request(3);
+        request(1);
+        request(2);
+        request(3);
         created(a, 1, 40);
         b.onmessage!({ data: { type: 'flower-creation-failed', payload: { requestId: 'seed-2-0' } } });
         const [first, second] = factory.getStats().flowerWorkers;
@@ -257,20 +323,28 @@ describe('AsyncFlowerFactory stats', () => {
 
     it('averages the milliseconds the worker reported, over the last 50 flowers', () => {
         expect(factory.getStats().flowerWorkers[0].avgMs).toBeNull();
-        for (let n = 0; n < 60; n++) { request(n * 2); created(a, n * 2, n < 10 ? 1000 : 10); }
+        for (let n = 0; n < 60; n++) {
+            request(n * 2);
+            created(a, n * 2, n < 10 ? 1000 : 10);
+        }
         // the 10 slow ones are out of the last 50
         expect(factory.getStats().flowerWorkers[0].avgMs).toBe(10);
     });
 
     it('does not average a flower that came without a duration', () => {
-        request(1); request(3);
-        created(a, 1, 30); created(a, 3, undefined);
+        request(1);
+        request(3);
+        created(a, 1, 30);
+        created(a, 3, undefined);
         expect(factory.getStats().flowerWorkers[0]).toMatchObject({ produced: 2, avgMs: 30 });
     });
 
     it('counts the seeds whose flower was thrown away because the seed was gone', () => {
-        request(1); request(2); request(3);
-        created(a, 1, 10); created(b, 2, 10);
+        request(1);
+        request(2);
+        request(3);
+        created(a, 1, 10);
+        created(b, 2, 10);
         b.onmessage!({ data: { type: 'flower-creation-failed', payload: { requestId: 'seed-3-0' } } });
         const seeds = new Map<string, any>([['seed-1-0', { type: 'flowerSeed', age: 1 }]]);
         factory.getCompletedFlowers(seeds);
@@ -280,8 +354,16 @@ describe('AsyncFlowerFactory stats', () => {
 
     describe('flowers per second', () => {
         it('counts the last 10 seconds', () => {
-            clock = 1000; request(1); request(2); created(a, 1); created(b, 2);
-            clock = 9000; for (const n of [3, 4, 5, 6]) { request(n); created(a, n); }
+            clock = 1000;
+            request(1);
+            request(2);
+            created(a, 1);
+            created(b, 2);
+            clock = 9000;
+            for (const n of [3, 4, 5, 6]) {
+                request(n);
+                created(a, n);
+            }
             clock = 10000;
             expect(factory.getStats().flowersPerSecond).toBeCloseTo(0.6);
             clock = 15000;
@@ -291,14 +373,17 @@ describe('AsyncFlowerFactory stats', () => {
         });
 
         it('does not call a rate a tenth of what it is in the first second', () => {
-            clock = 500; request(1); created(a, 1);
+            clock = 500;
+            request(1);
+            created(a, 1);
             expect(factory.getStats().flowersPerSecond).toBe(1);
         });
     });
 
     describe('the seeds that die while their flower is made', () => {
         it('counts every cancel, whether the request was still waiting or had already finished', () => {
-            request(1); request(2);
+            request(1);
+            request(2);
             created(a, 1, 10);
             factory.cancelFlowerRequest('seed-1-0');
             factory.cancelFlowerRequest('seed-2-0');
@@ -354,20 +439,33 @@ describe('AsyncFlowerFactory stats', () => {
     });
 
     it('starts again from zero with a new game, and when a game is loaded', () => {
-        clock = 2000; request(1); created(a, 1, 30); factory.getCompletedFlowers(new Map());
+        clock = 2000;
+        request(1);
+        created(a, 1, 30);
+        factory.getCompletedFlowers(new Map());
         expect(factory.getStats()).toMatchObject({ produced: 1, seedsDiscarded: 1 });
         factory.cancelFlowerRequest('seed-1-0');
         factory.reset();
-        expect(factory.getStats()).toMatchObject({ produced: 0, failed: 0, seedsDiscarded: 0, seedsCancelled: 0, discardedAfterCancel: 0, flowersPerSecond: 0 });
+        expect(factory.getStats()).toMatchObject({
+            produced: 0,
+            failed: 0,
+            seedsDiscarded: 0,
+            seedsCancelled: 0,
+            discardedAfterCancel: 0,
+            flowersPerSecond: 0,
+        });
         expect(factory.getStats().flowerWorkers[0]).toMatchObject({ produced: 0, avgMs: null });
 
-        clock = 3000; request(2); created(a, 2, 30);
+        clock = 3000;
+        request(2);
+        created(a, 2, 30);
         factory.resetStats();
         expect(factory.getStats().produced).toBe(0);
     });
 
     it('forgets the stats of a worker that is gone', () => {
-        request(1); created(a, 1, 10);
+        request(1);
+        created(a, 1, 10);
         factory.setWorkerPorts([{ port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
         expect(factory.getStats().flowerWorkers.map(w => w.name)).toEqual(['Flower worker 1']);
         expect(factory.getStats().flowerWorkers[0].produced).toBe(0);
@@ -391,8 +489,16 @@ describe('AsyncFlowerFactory: the requests that wait for a worker', () => {
     beforeEach(() => {
         factory = new AsyncFlowerFactory();
         factory.setStemImage('stem');
-        a = fakePort(); b = fakePort(); species = fakePort();
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+        a = fakePort();
+        b = fakePort();
+        species = fakePort();
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation'] },
+                { port: asPort(b), roles: ['creation'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
     });
 
     it('gives each worker two requests at a time, and keeps the rest', () => {
@@ -454,9 +560,14 @@ describe('AsyncFlowerFactory: the requests that wait for a worker', () => {
     it('gives the requests that wait to a worker that is added', () => {
         for (let n = 1; n <= 7; n++) request(n);
         const c = fakePort();
-        factory.setWorkerPorts([
-            { port: asPort(a), roles: ['creation'] }, { port: asPort(b), roles: ['creation'] }, { port: asPort(c), roles: ['creation'] },
-        ], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation'] },
+                { port: asPort(b), roles: ['creation'] },
+                { port: asPort(c), roles: ['creation'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         expect(ids(c)).toEqual(['seed-5-0', 'seed-6-0']);
         expect(factory.getStats().queued).toBe(1);
         // its parameters first: a worker cannot make a flower without them
@@ -482,7 +593,10 @@ describe('AsyncFlowerFactory: the requests that wait for a worker', () => {
 
     it('keeps the requests in the order they were asked when workers finish out of order', () => {
         for (let n = 1; n <= 8; n++) request(n);
-        done(b, 4); done(a, 1); done(b, 2); done(a, 3);
+        done(b, 4);
+        done(a, 1);
+        done(b, 2);
+        done(a, 3);
         expect(ids(a).slice(2)).toEqual(['seed-6-0', 'seed-8-0']);
         expect(ids(b).slice(2)).toEqual(['seed-5-0', 'seed-7-0']);
     });
@@ -510,12 +624,17 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
     const asPort = (p: FakePort) => p as unknown as MessagePort;
     const getNextId = (type: string, x: number, y: number) => `${type}-${x}-${y}`;
     const flush = () => Promise.resolve();
-    const batches = (p: FakePort) => p.postMessage.mock.calls.map(c => c[0]).filter(m => m.type === 'species-batch')
-        .map(m => m.payload.jobs.map((j: any) => j.payload.flowerId));
+    const batches = (p: FakePort) =>
+        p.postMessage.mock.calls
+            .map(c => c[0])
+            .filter(m => m.type === 'species-batch')
+            .map(m => m.payload.jobs.map((j: any) => j.payload.flowerId));
     const sentTypes = (p: FakePort) => p.postMessage.mock.calls.map(c => c[0].type);
     const answer = (p: FakePort, id: string) => p.onmessage!({ data: { type: 'species-classified', payload: { flowerId: id, status: 'stored' } } });
     const job = (n: number, type = 'classify-flower') => ({ type, payload: { flowerId: `f${n}` } });
-    const post = (from: number, to: number) => { for (let n = from; n <= to; n++) factory.postToSpeciesWorker(job(n)); };
+    const post = (from: number, to: number) => {
+        for (let n = from; n <= to; n++) factory.postToSpeciesWorker(job(n));
+    };
     const flowerRequest = (n: number) => factory.requestNewFlower(new Map(), n, 0, undefined, undefined, getNextId);
     const names = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `f${from + i}`);
 
@@ -525,13 +644,18 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
     beforeEach(() => {
         factory = new AsyncFlowerFactory();
         factory.setStemImage('stem');
-        a = fakePort(); b = fakePort(); d = fakePort();
+        a = fakePort();
+        b = fakePort();
+        d = fakePort();
         // two flower workers that can also classify, and one that only classifies
-        factory.setWorkerPorts([
-            { port: asPort(a), roles: ['creation', 'species'] },
-            { port: asPort(b), roles: ['creation', 'species'] },
-            { port: asPort(d), roles: ['species'] },
-        ], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation', 'species'] },
+                { port: asPort(b), roles: ['creation', 'species'] },
+                { port: asPort(d), roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
     });
 
     it('gives the worker that only classifies what waits, as one message, up to 32, in the order it came', async () => {
@@ -548,7 +672,13 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
 
     it('sends the next batch when the worker has answered every job of the last, not before', async () => {
         // no flower worker can help here, so what is left waits for the one that only classifies
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(d), roles: ['species'] }], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation'] },
+                { port: asPort(d), roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         post(1, 40);
         await flush();
         for (let n = 1; n <= 31; n++) answer(d, `f${n}`);
@@ -582,7 +712,9 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
     it('does not give flowers to a worker that is busy with a batch, and gives them back when it has answered', async () => {
         post(1, 60);
         await flush();
-        flowerRequest(1); flowerRequest(2); flowerRequest(3);
+        flowerRequest(1);
+        flowerRequest(2);
+        flowerRequest(3);
         // a and b are classifying, d only classifies: nobody can make them yet
         expect(sentTypes(a)).not.toContain('request-flower');
         expect(sentTypes(b)).not.toContain('request-flower');
@@ -616,7 +748,13 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
     });
 
     it('does the same when only one of several flower workers can classify', () => {
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation', 'species'] }, { port: asPort(b), roles: ['creation'] }], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation', 'species'] },
+                { port: asPort(b), roles: ['creation'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         factory.postToSpeciesWorker(job(1));
         expect(sentTypes(a)).toContain('classify-flower');
         expect(sentTypes(b)).not.toContain('classify-flower');
@@ -632,7 +770,13 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
 
     it('drops what waits with a new game, and counts the batch in hand as done', async () => {
         // nobody can help, so 8 of the 40 wait
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation'] }, { port: asPort(d), roles: ['species'] }], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation'] },
+                { port: asPort(d), roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         post(1, 40);
         await flush();
         factory.reset();
@@ -644,7 +788,13 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
 
     it('gives the flowers out before the species work, so a flower worker that is idle makes the flower', async () => {
         // the worker that only classifies is busy, the flower worker is idle: both a flower and a job arrive
-        factory.setWorkerPorts([{ port: asPort(a), roles: ['creation', 'species'] }, { port: asPort(d), roles: ['species'] }], DEFAULT_SIM_PARAMS);
+        factory.setWorkerPorts(
+            [
+                { port: asPort(a), roles: ['creation', 'species'] },
+                { port: asPort(d), roles: ['species'] },
+            ],
+            DEFAULT_SIM_PARAMS
+        );
         post(1, 1);
         await flush();
         post(2, 2);
@@ -671,7 +821,6 @@ describe('AsyncFlowerFactory: the species work waits here, for a worker that is 
         expect(listener).toHaveBeenCalledWith({ flowerId: 'f1', status: 'stored' });
     });
 });
-
 
 describe('AsyncFlowerFactory: the species queue is bounded', () => {
     type FakePort = { postMessage: ReturnType<typeof vi.fn>; onmessage: ((e: { data: unknown }) => void) | null };

@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LadybugBehavior } from './LadybugBehavior';
 import type { Insect, Flower, CellContent, SimulationParams, AppEvent } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    DEFAULT_SIM_PARAMS, 
+import {
+    INSECT_DATA,
+    DEFAULT_SIM_PARAMS,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     LADYBUG_HEAL_FROM_CATERPILLAR,
     INSECT_ATTACK_COST,
     INSECT_DORMANCY_TEMP,
     INSECT_HEALTH_DECAY_PER_TICK,
-    FLOWER_STAT_INDICES
+    FLOWER_STAT_INDICES,
 } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
@@ -28,29 +28,57 @@ describe('LadybugBehavior', () => {
     let flowerQtree: Quadtree<CellContent>;
     let events: AppEvent[];
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
-    
+
     const createMockFlower = (id: string, x: number, y: number, health: number = 100): Flower => ({
-        id, type: 'flower', x, y, health, maxHealth: 100,
-        genome: 'g1', imageData: '', stamina: 100, maxStamina: 100,
-        age: 51, isMature: true, maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-        minTemperature: 10, maxTemperature: 30, toxicityRate: 0.0,
-        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+        id,
+        type: 'flower',
+        x,
+        y,
+        health,
+        maxHealth: 100,
+        genome: 'g1',
+        imageData: '',
+        stamina: 100,
+        maxStamina: 100,
+        age: 51,
+        isMature: true,
+        maturationPeriod: 50,
+        nutrientEfficiency: 1.0,
+        sex: 'both',
+        minTemperature: 10,
+        maxTemperature: 30,
+        toxicityRate: 0.0,
+        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
     });
 
-     const createMockCaterpillar = (id: string, x: number, y: number): Insect => ({
-        id, type: 'insect', x, y, emoji: '🐛', pollen: null, genome: [],
-        health: CATERPILLAR_DATA.maxHealth, maxHealth: CATERPILLAR_DATA.maxHealth,
-        stamina: CATERPILLAR_DATA.maxStamina, maxStamina: CATERPILLAR_DATA.maxStamina,
+    const createMockCaterpillar = (id: string, x: number, y: number): Insect => ({
+        id,
+        type: 'insect',
+        x,
+        y,
+        emoji: '🐛',
+        pollen: null,
+        genome: [],
+        health: CATERPILLAR_DATA.maxHealth,
+        maxHealth: CATERPILLAR_DATA.maxHealth,
+        stamina: CATERPILLAR_DATA.maxStamina,
+        maxStamina: CATERPILLAR_DATA.maxStamina,
     });
-
 
     beforeEach(() => {
         behavior = new LadybugBehavior();
         ladybug = {
-            id: 'ladybug1', type: 'insect', x: 10, y: 10, emoji: '🐞', pollen: null, 
+            id: 'ladybug1',
+            type: 'insect',
+            x: 10,
+            y: 10,
+            emoji: '🐞',
+            pollen: null,
             genome: Array(Object.keys(FLOWER_STAT_INDICES).length).fill(1),
-            health: LADYBUG_DATA.maxHealth, maxHealth: LADYBUG_DATA.maxHealth,
-            stamina: LADYBUG_DATA.maxStamina, maxStamina: LADYBUG_DATA.maxStamina,
+            health: LADYBUG_DATA.maxHealth,
+            maxHealth: LADYBUG_DATA.maxHealth,
+            stamina: LADYBUG_DATA.maxStamina,
+            maxStamina: LADYBUG_DATA.maxStamina,
         };
         nextActorState = new Map();
         nextActorState.set(ladybug.id, ladybug);
@@ -59,7 +87,7 @@ describe('LadybugBehavior', () => {
         flowerQtree = new Quadtree(boundary, 4);
         events = [];
     });
-    
+
     const setupContext = (): any => ({
         params,
         qtree,
@@ -80,7 +108,7 @@ describe('LadybugBehavior', () => {
         nextActorState.set(farCaterpillar.id, farCaterpillar);
         qtree.insert({ x: closeCaterpillar.x, y: closeCaterpillar.y, data: closeCaterpillar });
         qtree.insert({ x: farCaterpillar.x, y: farCaterpillar.y, data: farCaterpillar });
-        
+
         behavior.update(ladybug, setupContext());
 
         // Ladybug at (10,10) should move towards (12,12). Speed is 2.
@@ -106,7 +134,7 @@ describe('LadybugBehavior', () => {
         context.qtree.insert({ x: caterpillar.x, y: caterpillar.y, data: caterpillar });
 
         behavior.update(ladybug, context);
-        
+
         expect(nextActorState.has(caterpillar.id)).toBe(false);
         // Health: 50 (start) - 0.2 (decay) + 20 (heal) = 69.8
         expect(ladybug.health).toBeCloseTo(50 - INSECT_HEALTH_DECAY_PER_TICK + LADYBUG_HEAL_FROM_CATERPILLAR);
@@ -139,16 +167,16 @@ describe('LadybugBehavior', () => {
         // Force ladybug to be on the flower cell, but with no caterpillar
         // so it doesn't try to eat. This means it will be idle and regenerate.
         const context = setupContext();
-        
+
         // Mock wander to do nothing to isolate the test
         vi.spyOn(behavior as any, 'wander').mockReturnValue(true);
 
         behavior.update(ladybug, context);
-        
+
         const finalFlower = nextActorState.get(flower.id) as Flower;
         expect(finalFlower.health).toBe(initialFlowerHealth);
     });
-    
+
     it('should wander if no caterpillars or flowers are nearby', () => {
         const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
         const initialX = ladybug.x;
@@ -166,7 +194,7 @@ describe('LadybugBehavior', () => {
         context.currentTemperature = INSECT_DORMANCY_TEMP - 1;
         const initialX = ladybug.x;
         const initialY = ladybug.y;
-        
+
         behavior.update(ladybug, context);
 
         expect(ladybug.x).toBe(initialX);

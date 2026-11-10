@@ -23,8 +23,13 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Holds the next classification: the worker classifies what waits in one call, so it is the batch that is held.
 const gate = () => {
     let open!: () => void;
-    const promise = new Promise<void>(resolve => { open = resolve; });
-    vi.spyOn(classifier, 'classifyBatch').mockImplementationOnce(async genomes => { await promise; return realClassifyBatch(genomes); });
+    const promise = new Promise<void>(resolve => {
+        open = resolve;
+    });
+    vi.spyOn(classifier, 'classifyBatch').mockImplementationOnce(async genomes => {
+        await promise;
+        return realClassifyBatch(genomes);
+    });
     return open;
 };
 
@@ -40,7 +45,9 @@ beforeAll(async () => {
 
     const channel = new MessageChannel();
     toWorker = channel.port2;
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
     classifier = flowerService.speciesClassifier;
     realClassifyBatch = classifier.classifyBatch.bind(classifier);
@@ -121,7 +128,10 @@ describe('the species worker', () => {
         toWorker.postMessage(classifyRequest('l', '{"Flower":{"b":1}}'));
         toWorker.postMessage(classifyRequest('m', '{"Flower":{"b":2}}'));
         await vi.waitFor(() => expect(messages).toHaveLength(2), { timeout: 15_000 });
-        expect(messages.map(m => [m.payload.flowerId, m.payload.status === 'failed'])).toEqual([['l', true], ['m', false]]);
+        expect(messages.map(m => [m.payload.flowerId, m.payload.status === 'failed'])).toEqual([
+            ['l', true],
+            ['m', false],
+        ]);
     }, 30_000);
 
     it('classifies the flowers that wait together, in one call, and says how long each took', async () => {
@@ -149,11 +159,13 @@ describe('the species worker', () => {
         const classify = vi.spyOn(classifier, 'classify');
         toWorker.postMessage({
             type: 'species-batch',
-            payload: { jobs: [
-                classifyRequest('u1', '{"Flower":{"d":1}}'),
-                classifyRequest('u2', '{"Flower":{"d":2}}'),
-                { type: 'record-flower', payload: { ...classifyRequest('u3', '{"Flower":{"d":3}}').payload, age: 5 } },
-            ] },
+            payload: {
+                jobs: [
+                    classifyRequest('u1', '{"Flower":{"d":1}}'),
+                    classifyRequest('u2', '{"Flower":{"d":2}}'),
+                    { type: 'record-flower', payload: { ...classifyRequest('u3', '{"Flower":{"d":3}}').payload, age: 5 } },
+                ],
+            },
         });
         await vi.waitFor(() => expect(messages).toHaveLength(3), { timeout: 20_000 });
         expect(ids()).toEqual(['u1', 'u2', 'u3']);

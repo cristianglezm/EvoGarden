@@ -21,8 +21,18 @@ beforeAll(async () => {
 
     ({ db: database } = await import('./services/db'));
     const row = (i: number): SpeciesSample => ({
-        id: `old-${i}`, cell: '0,0', x: 0, y: 0, d: 1, fp: 'an-older-classifier', kind: 'sample', founder: true,
-        records: i === 1 ? ['longestLived'] : [], sex: 'both', createdAt: 100 - i, ...(i === 1 ? { age: 50 } : {}),
+        id: `old-${i}`,
+        cell: '0,0',
+        x: 0,
+        y: 0,
+        d: 1,
+        fp: 'an-older-classifier',
+        kind: 'sample',
+        founder: true,
+        records: i === 1 ? ['longestLived'] : [],
+        sex: 'both',
+        createdAt: 100 - i,
+        ...(i === 1 ? { age: 50 } : {}),
     });
     await database.speciesSamples.bulkPut(genomes.map((_, i) => row(i)));
     await database.speciesGenomes.bulkPut(genomes.map((genome, i) => ({ id: `old-${i}`, genome })));
@@ -30,13 +40,15 @@ beforeAll(async () => {
     (globalThis as any).self = globalThis;
     await import('./flower.worker');
     const channel = new MessageChannel();
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
 }, 60_000);
 
 describe('the flower worker at start, with a collection from an older classifier', () => {
     it('classifies it again and decides its founders and records again', async () => {
-        await expect.poll(async () => (await database.speciesSamples.where('fp').equals(fingerprint).count()), { timeout: 30_000 }).toBe(6);
+        await expect.poll(async () => await database.speciesSamples.where('fp').equals(fingerprint).count(), { timeout: 30_000 }).toBe(6);
 
         const rows = await database.speciesSamples.toArray();
         expect(rows.every(r => r.fp === fingerprint)).toBe(true);
@@ -54,7 +66,7 @@ describe('the flower worker at start, with a collection from an older classifier
     }, 60_000);
 
     it('announces nothing', async () => {
-        await expect.poll(async () => (await database.speciesSamples.where('fp').equals(fingerprint).count()), { timeout: 30_000 }).toBe(6);
+        await expect.poll(async () => await database.speciesSamples.where('fp').equals(fingerprint).count(), { timeout: 30_000 }).toBe(6);
         expect(messages).toEqual([]);
     }, 60_000);
 });

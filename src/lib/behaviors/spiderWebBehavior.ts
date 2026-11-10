@@ -45,7 +45,7 @@ export const processSpiderWebTick = (web: SpiderWeb, context: SpiderWebContext) 
 
                 if (web.strength <= 0) {
                     nextActorState.delete(web.id);
-                     const owner = nextActorState.get(web.ownerId) as Insect | undefined;
+                    const owner = nextActorState.get(web.ownerId) as Insect | undefined;
                     if (owner && owner.webs) {
                         owner.webs = owner.webs.filter(id => id !== web.id);
                     }
@@ -58,9 +58,8 @@ export const processSpiderWebTick = (web: SpiderWeb, context: SpiderWebContext) 
     } else {
         // Try to trap a new insect
         const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, web.x, web.y);
-        const potentialPrey = actorsOnCell.find(a => 
-            (a.type === 'insect' && !FLYING_INSECTS.includes((a as Insect).emoji) && a.id !== web.ownerId) || 
-            a.type === 'cockroach'
+        const potentialPrey = actorsOnCell.find(
+            a => (a.type === 'insect' && !FLYING_INSECTS.includes((a as Insect).emoji) && a.id !== web.ownerId) || a.type === 'cockroach'
         ) as Insect | undefined;
 
         if (potentialPrey && !potentialPrey.isTrapped && Math.random() < params.spiderWebTrapChance) {

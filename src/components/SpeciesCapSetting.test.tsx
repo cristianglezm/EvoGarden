@@ -21,7 +21,10 @@ afterEach(() => {
 
 const cap = () => screen.findByRole('combobox', { name: /Species collection/i });
 const stored = async () => (await db.speciesMeta.get('limits'))?.value;
-const labels = (select: HTMLElement) => within(select).getAllByRole('option').map(o => o.textContent);
+const labels = (select: HTMLElement) =>
+    within(select)
+        .getAllByRole('option')
+        .map(o => o.textContent);
 
 describe('SpeciesCapSetting', () => {
     it('offers Small, Medium and Large, like Flower Detail, and starts on Medium', async () => {
@@ -89,7 +92,11 @@ describe('SpeciesCapSetting', () => {
     });
 
     it('asks in the body, so the side panel it sits in cannot trap the question', async () => {
-        const { container } = render(<div style={{ transform: 'translateX(0)' }}><SpeciesCapSetting source={h.source} /></div>);
+        const { container } = render(
+            <div style={{ transform: 'translateX(0)' }}>
+                <SpeciesCapSetting source={h.source} />
+            </div>
+        );
         fireEvent.change(await cap(), { target: { value: '25' } });
         const title = screen.getByText('Keep fewer samples?');
         expect(container.contains(title)).toBe(false);

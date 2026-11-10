@@ -6,25 +6,33 @@ import type { ActorDelta, Bird, CellContent, Flower, Insect } from '../types';
 
 // --- Mock Worker Setup ---
 const mockWorkerInstances: { postMessage: ReturnType<typeof vi.fn>; terminate: ReturnType<typeof vi.fn>; onmessage: ((e: MessageEvent) => void) | null }[] = [];
-vi.stubGlobal('Worker', class MockWorker {
-  constructor(_scriptURL: string | URL, _options?: WorkerOptions) {
-    const instance = {
-        postMessage: vi.fn(),
-        terminate: vi.fn(),
-        onmessage: null as ((e: MessageEvent) => void) | null,
-    };
-    mockWorkerInstances.push(instance);
-    return instance;
-  }
-});
+vi.stubGlobal(
+    'Worker',
+    class MockWorker {
+        constructor(_scriptURL: string | URL, _options?: WorkerOptions) {
+            const instance = {
+                postMessage: vi.fn(),
+                terminate: vi.fn(),
+                onmessage: null as ((e: MessageEvent) => void) | null,
+            };
+            mockWorkerInstances.push(instance);
+            return instance;
+        }
+    }
+);
 
 // --- Mock MessageChannel Setup ---
 const channels: { port1: { postMessage: ReturnType<typeof vi.fn> }; port2: { postMessage: ReturnType<typeof vi.fn> } }[] = [];
-vi.stubGlobal('MessageChannel', class MockMessageChannel {
-    port1 = { postMessage: vi.fn() };
-    port2 = { postMessage: vi.fn() };
-    constructor() { channels.push(this); }
-});
+vi.stubGlobal(
+    'MessageChannel',
+    class MockMessageChannel {
+        port1 = { postMessage: vi.fn() };
+        port2 = { postMessage: vi.fn() };
+        constructor() {
+            channels.push(this);
+        }
+    }
+);
 
 describe('useSimulation hook', () => {
     const mockSetIsLoading = vi.fn();
@@ -58,16 +66,13 @@ describe('useSimulation hook', () => {
 
             expect(sim.postMessage).toHaveBeenCalledWith(
                 { type: 'init-ports', payload: { flowerWorkerPorts: [toFlower.port1], speciesWorkerPort: toSpecies.port1 } },
-                [toFlower.port1, toSpecies.port1],
+                [toFlower.port1, toSpecies.port1]
             );
             expect(flower.postMessage).toHaveBeenCalledWith(
                 { type: 'init-ports', payload: { simWorkerPort: toFlower.port2, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false } },
-                [toFlower.port2],
+                [toFlower.port2]
             );
-            expect(species.postMessage).toHaveBeenCalledWith(
-                { type: 'init-ports', payload: { simWorkerPort: toSpecies.port2 } },
-                [toSpecies.port2],
-            );
+            expect(species.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: toSpecies.port2 } }, [toSpecies.port2]);
         });
 
         it('terminates the three workers on unmount', () => {
@@ -79,7 +84,9 @@ describe('useSimulation hook', () => {
         it('stops loading and says so when the species worker fails', () => {
             renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
             const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
-            act(() => { (mockWorkerInstances[2] as unknown as { onerror: (e: unknown) => void }).onerror({ message: 'boom' }); });
+            act(() => {
+                (mockWorkerInstances[2] as unknown as { onerror: (e: unknown) => void }).onerror({ message: 'boom' });
+            });
             quiet.mockRestore();
             expect(mockSetIsLoading).toHaveBeenCalledWith(false);
         });
@@ -91,14 +98,8 @@ describe('useSimulation hook', () => {
             renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
             const [sim, flower] = mockWorkerInstances;
             expect(mockWorkerInstances.length).toBe(2);
-            expect(sim.postMessage).toHaveBeenCalledWith(
-                { type: 'init-ports', payload: { flowerWorkerPorts: [channels[0].port1] } },
-                [channels[0].port1],
-            );
-            expect(flower.postMessage).toHaveBeenCalledWith(
-                { type: 'init-ports', payload: { simWorkerPort: channels[0].port2 } },
-                [channels[0].port2],
-            );
+            expect(sim.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { flowerWorkerPorts: [channels[0].port1] } }, [channels[0].port1]);
+            expect(flower.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[0].port2 } }, [channels[0].port2]);
         });
 
         it('terminates both workers on unmount', () => {
@@ -128,19 +129,22 @@ describe('useSimulation hook', () => {
             expect(channels).toHaveLength(4);
             const [sim, f1, f2, f3, species] = mockWorkerInstances;
             expect(sim.postMessage).toHaveBeenCalledWith(
-                { type: 'init-ports', payload: { flowerWorkerPorts: [channels[0].port1, channels[1].port1, channels[2].port1], speciesWorkerPort: channels[3].port1 } },
-                [channels[0].port1, channels[1].port1, channels[2].port1, channels[3].port1],
+                {
+                    type: 'init-ports',
+                    payload: { flowerWorkerPorts: [channels[0].port1, channels[1].port1, channels[2].port1], speciesWorkerPort: channels[3].port1 },
+                },
+                [channels[0].port1, channels[1].port1, channels[2].port1, channels[3].port1]
             );
             [f1, f2, f3].forEach((worker, i) => {
                 expect(worker.postMessage).toHaveBeenCalledWith(
-                    { type: 'init-ports', payload: { simWorkerPort: channels[i].port2, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false } },
-                    [channels[i].port2],
+                    {
+                        type: 'init-ports',
+                        payload: { simWorkerPort: channels[i].port2, roles: ['creation', 'species'], speciesBatch: 8, primarySpecies: false },
+                    },
+                    [channels[i].port2]
                 );
             });
-            expect(species.postMessage).toHaveBeenCalledWith(
-                { type: 'init-ports', payload: { simWorkerPort: channels[3].port2 } },
-                [channels[3].port2],
-            );
+            expect(species.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[3].port2 } }, [channels[3].port2]);
         });
 
         it('leaves the species to the first of them, and only that one, when there is no species worker', () => {
@@ -150,7 +154,9 @@ describe('useSimulation hook', () => {
             const [, f1, f2] = mockWorkerInstances;
             expect(mockWorkerInstances.length).toBe(3);
             expect(f1.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[0].port2 } }, [channels[0].port2]);
-            expect(f2.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[1].port2, roles: ['creation'] } }, [channels[1].port2]);
+            expect(f2.postMessage).toHaveBeenCalledWith({ type: 'init-ports', payload: { simWorkerPort: channels[1].port2, roles: ['creation'] } }, [
+                channels[1].port2,
+            ]);
         });
 
         it('terminates every one of them on unmount, and stops loading when any fails', () => {
@@ -158,7 +164,9 @@ describe('useSimulation hook', () => {
             window.history.replaceState({}, '', '/?creationWorkers=2');
             const { unmount } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
             const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
-            act(() => { (mockWorkerInstances[2] as unknown as { onerror: (e: unknown) => void }).onerror({ message: 'boom' }); });
+            act(() => {
+                (mockWorkerInstances[2] as unknown as { onerror: (e: unknown) => void }).onerror({ message: 'boom' });
+            });
             quiet.mockRestore();
             expect(mockSetIsLoading).toHaveBeenCalledWith(false);
             unmount();
@@ -168,7 +176,9 @@ describe('useSimulation hook', () => {
     });
 
     describe('when the player chose the number of workers', () => {
-        afterEach(() => { window.localStorage.removeItem('evoGarden-workers'); });
+        afterEach(() => {
+            window.localStorage.removeItem('evoGarden-workers');
+        });
 
         it('starts that many: one that only classifies and the rest for flowers', () => {
             cores(8);
@@ -250,14 +260,14 @@ describe('useSimulation hook', () => {
     it('updates actor state correctly from worker messages', () => {
         const { result } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
         const simWorker = mockWorkerInstances[0];
-        
+
         // 1. Initial state from 'init-complete'
         const initialActorsList: CellContent[] = [
             { id: 'flower-1', type: 'flower', x: 0, y: 0, health: 100 } as Flower,
             { id: 'insect-1', type: 'insect', x: 1, y: 1, lifespan: 50, emoji: '🦋' } as Insect,
         ];
 
-        const initialGrid: (CellContent[])[][] = [
+        const initialGrid: CellContent[][][] = [
             [[initialActorsList[0]], []],
             [[], [initialActorsList[1]]],
         ];
@@ -267,15 +277,15 @@ describe('useSimulation hook', () => {
                 type: 'init-complete',
                 payload: {
                     grid: initialGrid,
-                    params: { ...DEFAULT_SIM_PARAMS, gridWidth: 2, gridHeight: 2 }
-                }
-            }
+                    params: { ...DEFAULT_SIM_PARAMS, gridWidth: 2, gridHeight: 2 },
+                },
+            },
         } as MessageEvent;
-        
+
         act(() => {
             if (simWorker.onmessage) simWorker.onmessage(initMessage);
         });
-        
+
         const initialActorsMap = result.current.actors;
         expect(initialActorsMap.size).toBe(2);
         expect(initialActorsMap.get('flower-1')).toEqual(initialActorsList[0]);
@@ -294,9 +304,9 @@ describe('useSimulation hook', () => {
                 payload: {
                     deltas,
                     events: [],
-                    summary: { tick: 1, flowerCount: 1, insectCount: 0, birdCount: 1 }
-                }
-            }
+                    summary: { tick: 1, flowerCount: 1, insectCount: 0, birdCount: 1 },
+                },
+            },
         } as MessageEvent;
 
         act(() => {
@@ -306,30 +316,30 @@ describe('useSimulation hook', () => {
         // 3. Assert final actors map state
         const finalActorsMap = result.current.actors;
         expect(finalActorsMap.size).toBe(2);
-        
+
         const updatedFlower = finalActorsMap.get('flower-1') as Flower;
         expect(updatedFlower).toBeDefined();
         expect(updatedFlower.health).toBe(90);
-        
+
         expect(finalActorsMap.has('insect-1')).toBe(false);
-        
+
         const addedBird = finalActorsMap.get('bird-1') as Bird;
         expect(addedBird).toBeDefined();
         expect(addedBird.id).toBe('bird-1');
         expect(addedBird).toEqual(birdActor);
     });
-    
+
     it('does not change state for unhandled message types', () => {
         const { result } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
         const simWorker = mockWorkerInstances[0];
-        
+
         const initialActors = result.current.actors;
         const mockMessage = { data: { type: 'some-other-type', payload: {} } } as MessageEvent;
 
         act(() => {
-           if(simWorker.onmessage) {
-               simWorker.onmessage(mockMessage);
-           }
+            if (simWorker.onmessage) {
+                simWorker.onmessage(mockMessage);
+            }
         });
 
         expect(result.current.actors).toBe(initialActors);

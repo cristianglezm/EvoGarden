@@ -11,15 +11,20 @@ interface AntColonyContext {
     getNextId: (type: string, x: number, y: number) => string;
 }
 
-function createAntFromColony(colony: AntColony, position: {x: number, y: number}, params: SimulationParams, getNextId: (type: string, x: number, y: number) => string): Insect {
+function createAntFromColony(
+    colony: AntColony,
+    position: { x: number; y: number },
+    params: SimulationParams,
+    getNextId: (type: string, x: number, y: number) => string
+): Insect {
     const baseStats = INSECT_DATA.get('🐜')!;
     const newAntId = getNextId('insect-ant', position.x, position.y);
-    
+
     // Inherit from colony, with mutation
     const newGenome = [...colony.genome];
     for (let i = 0; i < newGenome.length; i++) {
         if (Math.random() < params.mutationChance) {
-            newGenome[i] *= 1 + (Math.random() * params.mutationAmount * 2) - params.mutationAmount;
+            newGenome[i] *= 1 + Math.random() * params.mutationAmount * 2 - params.mutationAmount;
         }
     }
 
@@ -43,16 +48,14 @@ function createAntFromColony(colony: AntColony, position: {x: number, y: number}
 
 export const processAntColonyTick = (colony: AntColony, context: AntColonyContext) => {
     const { nextActorState, events, newActorQueue, params, currentTemperature, getNextId } = context;
-    
+
     // 1. Handle ants emerging from dormancy
     if (currentTemperature > params.antDormancyTemp && colony.storedAnts && colony.storedAnts > 0) {
         const spawnSpot = findEmptyCell(
-            Array.from({ length: params.gridHeight }, (_, y) => 
-                Array.from({ length: params.gridWidth }, (_, x) => 
-                    Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y)
-                )
-            ), 
-            params, 
+            Array.from({ length: params.gridHeight }, (_, y) =>
+                Array.from({ length: params.gridWidth }, (_, x) => Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y))
+            ),
+            params,
             { x: colony.x, y: colony.y }
         );
 
@@ -67,12 +70,10 @@ export const processAntColonyTick = (colony: AntColony, context: AntColonyContex
     // 2. Spawn new ants if food reserves are high
     if (colony.foodReserves >= params.antColonySpawnThreshold && colony.spawnCooldown === 0) {
         const spawnSpot = findEmptyCell(
-            Array.from({ length: params.gridHeight }, (_, y) => 
-                Array.from({ length: params.gridWidth }, (_, x) => 
-                    Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y)
-                )
-            ), 
-            params, 
+            Array.from({ length: params.gridHeight }, (_, y) =>
+                Array.from({ length: params.gridWidth }, (_, x) => Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y))
+            ),
+            params,
             { x: colony.x, y: colony.y }
         );
 

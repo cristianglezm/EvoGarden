@@ -2,14 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SnailBehavior } from './SnailBehavior';
 import type { Insect, Flower, CellContent, SimulationParams, AppEvent, SlimeTrail, Grid } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    DEFAULT_SIM_PARAMS, 
-    SNAIL_MOVE_COOLDOWN,
-    SLIME_TRAIL_LIFESPAN,
-    FLOWER_STAT_INDICES,
-    INSECT_WANDER_CHANCE,
-} from '../../../constants';
+import { INSECT_DATA, DEFAULT_SIM_PARAMS, SNAIL_MOVE_COOLDOWN, SLIME_TRAIL_LIFESPAN, FLOWER_STAT_INDICES, INSECT_WANDER_CHANCE } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
 const SNAIL_DATA = INSECT_DATA.get('🐌')!;
@@ -26,22 +19,43 @@ describe('SnailBehavior', () => {
     let grid: Grid;
     const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
-    
+
     const createMockFlower = (id: string, x: number, y: number, health: number = 100): Flower => ({
-        id, type: 'flower', x, y, health, maxHealth: 100,
-        genome: 'g1', imageData: '', stamina: 100, maxStamina: 100,
-        age: 51, isMature: true, maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-        minTemperature: 10, maxTemperature: 30, toxicityRate: 0.0,
-        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+        id,
+        type: 'flower',
+        x,
+        y,
+        health,
+        maxHealth: 100,
+        genome: 'g1',
+        imageData: '',
+        stamina: 100,
+        maxStamina: 100,
+        age: 51,
+        isMature: true,
+        maturationPeriod: 50,
+        nutrientEfficiency: 1.0,
+        sex: 'both',
+        minTemperature: 10,
+        maxTemperature: 30,
+        toxicityRate: 0.0,
+        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
     });
 
     beforeEach(() => {
         behavior = new SnailBehavior();
         snail = {
-            id: 'snail1', type: 'insect', x: 10, y: 10, emoji: '🐌', pollen: null, 
+            id: 'snail1',
+            type: 'insect',
+            x: 10,
+            y: 10,
+            emoji: '🐌',
+            pollen: null,
             genome: Array(Object.keys(FLOWER_STAT_INDICES).length).fill(1),
-            health: SNAIL_DATA.maxHealth, maxHealth: SNAIL_DATA.maxHealth,
-            stamina: SNAIL_DATA.maxStamina, maxStamina: SNAIL_DATA.maxStamina,
+            health: SNAIL_DATA.maxHealth,
+            maxHealth: SNAIL_DATA.maxHealth,
+            stamina: SNAIL_DATA.maxStamina,
+            maxStamina: SNAIL_DATA.maxStamina,
             moveCooldown: 0,
         };
         grid = Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => []));
@@ -54,7 +68,7 @@ describe('SnailBehavior', () => {
         newActorQueue = [];
         getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
-    
+
     const setupContext = (): any => ({
         params,
         flowerQtree,
@@ -73,7 +87,7 @@ describe('SnailBehavior', () => {
         snail.moveCooldown = 1;
         const initialX = snail.x;
         const initialY = snail.y;
-        
+
         behavior.update(snail, setupContext());
 
         expect(snail.x).toBe(initialX);
@@ -98,7 +112,7 @@ describe('SnailBehavior', () => {
         expect(snail.x).toBe(11);
         expect(snail.y).toBe(11);
         expect(snail.moveCooldown).toBe(SNAIL_MOVE_COOLDOWN);
-        
+
         expect(newActorQueue.length).toBe(1);
         const slimeTrail = newActorQueue[0] as SlimeTrail;
         expect(slimeTrail.type).toBe('slimeTrail');
@@ -114,19 +128,19 @@ describe('SnailBehavior', () => {
 
         const context = setupContext();
         context.qtree.insert({ x: flower.x, y: flower.y, data: flower });
-        
+
         behavior.update(snail, context);
 
         const updatedFlower = nextActorState.get('f1') as Flower;
         expect(updatedFlower.health).toBe(initialFlowerHealth - SNAIL_DATA.attack);
     });
-    
+
     it('should not be slowed down by slime trails', () => {
         // This logic is tested in the base class, but we can verify the snail's immunity here.
         const context = setupContext();
         const slimeTrail: SlimeTrail = { id: 's1', type: 'slimeTrail', x: 10, y: 10, lifespan: 10 };
         context.grid[10][10] = [slimeTrail, snail];
-        
+
         const flower = createMockFlower('f1', 12, 12);
         nextActorState.set(flower.id, flower);
         flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
@@ -134,7 +148,7 @@ describe('SnailBehavior', () => {
         // The moveTowards method in the base class should see the snail emoji and not apply the slow factor.
         // It moves from (10,10) towards (12,12). Speed is 1. Should move to (11,11).
         // If it were slowed, speed would be 0.5, and it might not move a full cell.
-        
+
         // Mock random to ensure the snail targets the flower instead of wandering
         const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(INSECT_WANDER_CHANCE + 0.1);
 
@@ -142,7 +156,7 @@ describe('SnailBehavior', () => {
 
         expect(snail.x).toBe(11);
         expect(snail.y).toBe(11);
-        
+
         randomSpy.mockRestore();
     });
 
@@ -155,8 +169,8 @@ describe('SnailBehavior', () => {
         behavior.update(snail, setupContext());
 
         const moved = snail.x !== initialX || snail.y !== initialY;
-        expect(moved, "Snail should have moved from its initial position.").toBe(true);
-        
+        expect(moved, 'Snail should have moved from its initial position.').toBe(true);
+
         // Check it's a valid neighbor
         const dx = Math.abs(snail.x - initialX);
         const dy = Math.abs(snail.y - initialY);
@@ -165,7 +179,7 @@ describe('SnailBehavior', () => {
 
         // Cooldown should be reset
         expect(snail.moveCooldown).toBe(SNAIL_MOVE_COOLDOWN);
-        
+
         // Slime trail should be created at the old position
         expect(newActorQueue.length).toBe(1);
         const slimeTrail = newActorQueue[0] as SlimeTrail;

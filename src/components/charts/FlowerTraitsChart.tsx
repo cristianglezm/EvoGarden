@@ -9,7 +9,16 @@ interface FlowerTraitsChartProps {
 }
 
 export const FlowerTraitsChart: React.FC<FlowerTraitsChartProps> = ({ history }) => {
-    const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({ 'Avg Health': true, 'Max Health': true, 'Avg Stamina': true, 'Max Stamina': true, 'Avg Maturation': true, 'Avg Nutrient Efficiency': true, 'Max Toxicity': true, 'Max Healing': true });
+    const [traitsLegend, setTraitsLegend] = useState<Record<string, boolean>>({
+        'Avg Health': true,
+        'Max Health': true,
+        'Avg Stamina': true,
+        'Max Stamina': true,
+        'Avg Maturation': true,
+        'Avg Nutrient Efficiency': true,
+        'Max Toxicity': true,
+        'Max Healing': true,
+    });
     const handleTraitsLegendChange = createLegendSelectHandler(setTraitsLegend);
 
     const flowerTraitsOption = useMemo<EChartsOption>(() => {
@@ -27,14 +36,19 @@ export const FlowerTraitsChart: React.FC<FlowerTraitsChartProps> = ({ history })
             yAxis: [
                 {
                     ...(baseChartOptions.yAxis as object),
-                    type: 'value', name: 'Health / Stamina / Ticks', position: 'left'
+                    type: 'value',
+                    name: 'Health / Stamina / Ticks',
+                    position: 'left',
                 },
                 {
                     ...(baseChartOptions.yAxis as object),
-                    type: 'value', name: 'Efficiency / Toxicity', position: 'right', min: 0,
+                    type: 'value',
+                    name: 'Efficiency / Toxicity',
+                    position: 'right',
+                    min: 0,
                     axisLabel: { formatter: (value: number) => value.toFixed(2), color: '#bbf7d0' },
                     splitLine: { show: false }, // No grid lines for the right-side Y axis
-                }
+                },
             ],
             series: [
                 { name: 'Avg Health', type: 'line', yAxisIndex: 0, data: history.map(h => h.avgHealth.toFixed(2)), color: '#38b2ac' },
@@ -49,5 +63,5 @@ export const FlowerTraitsChart: React.FC<FlowerTraitsChartProps> = ({ history })
         };
     }, [history, traitsLegend]);
 
-    return <Chart option={flowerTraitsOption} onEvents={{ 'legendselectchanged': handleTraitsLegendChange }} />;
+    return <Chart option={flowerTraitsOption} onEvents={{ legendselectchanged: handleTraitsLegendChange }} />;
 };

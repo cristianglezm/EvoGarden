@@ -5,116 +5,116 @@ import { DataPanel } from './DataPanel';
 
 // Mock child components to isolate DataPanel's logic
 vi.mock('./ChallengesPanel', () => ({
-  ChallengesPanel: () => <div data-testid="challenges-panel-mock" />,
+    ChallengesPanel: () => <div data-testid="challenges-panel-mock" />,
 }));
 vi.mock('./ChartsPanel', () => ({
-  ChartsPanel: () => <div data-testid="charts-panel-mock" />,
+    ChartsPanel: () => <div data-testid="charts-panel-mock" />,
 }));
 vi.mock('./SeedBankPanel', () => ({
-  SeedBankPanel: ({ onOpenGuide, onCleared }: { onOpenGuide?: (cell: string | null) => void; onCleared?: () => void }) => (
-    <div data-testid="seed-bank-panel-mock">
-      {onOpenGuide && <button onClick={() => onOpenGuide('3,2')}>open the guide</button>}
-      {onCleared && <button onClick={onCleared}>clear the bank</button>}
-    </div>
-  ),
+    SeedBankPanel: ({ onOpenGuide, onCleared }: { onOpenGuide?: (cell: string | null) => void; onCleared?: () => void }) => (
+        <div data-testid="seed-bank-panel-mock">
+            {onOpenGuide && <button onClick={() => onOpenGuide('3,2')}>open the guide</button>}
+            {onCleared && <button onClick={onCleared}>clear the bank</button>}
+        </div>
+    ),
 }));
 
 describe('DataPanel', () => {
-  const mockOnClose = vi.fn();
-  const mockSetIsRunning = vi.fn();
+    const mockOnClose = vi.fn();
+    const mockSetIsRunning = vi.fn();
 
-  it('is visible when isOpen is true', () => {
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
-    const panel = screen.getByRole('complementary'); // <aside> role
-    expect(panel).toBeInTheDocument();
-    expect(panel).not.toHaveClass('-translate-x-full');
-    expect(panel).toHaveClass('translate-x-0');
-  });
+    it('is visible when isOpen is true', () => {
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
+        const panel = screen.getByRole('complementary'); // <aside> role
+        expect(panel).toBeInTheDocument();
+        expect(panel).not.toHaveClass('-translate-x-full');
+        expect(panel).toHaveClass('translate-x-0');
+    });
 
-  it('is hidden when isOpen is false', () => {
-    // Note: The component uses translate-x-full to hide, so it's still in the DOM.
-    render(<DataPanel isOpen={false} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
-    const panel = screen.getByRole('complementary');
-    expect(panel).toHaveClass('-translate-x-full');
-    expect(panel).not.toHaveClass('translate-x-0');
-  });
+    it('is hidden when isOpen is false', () => {
+        // Note: The component uses translate-x-full to hide, so it's still in the DOM.
+        render(<DataPanel isOpen={false} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
+        const panel = screen.getByRole('complementary');
+        expect(panel).toHaveClass('-translate-x-full');
+        expect(panel).not.toHaveClass('translate-x-0');
+    });
 
-  it('calls onClose when the close button is clicked', () => {
-    mockOnClose.mockClear();
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
-    
-    const closeButton = screen.getByLabelText('Close data panel');
-    fireEvent.click(closeButton);
-    
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
+    it('calls onClose when the close button is clicked', () => {
+        mockOnClose.mockClear();
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
 
-  it('calls onClose when the overlay is clicked', () => {
-    mockOnClose.mockClear();
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
-    
-    const panel = screen.getByRole('complementary');
-    const overlay = panel.previousElementSibling;
-    expect(overlay).not.toBeNull();
+        const closeButton = screen.getByLabelText('Close data panel');
+        fireEvent.click(closeButton);
 
-    fireEvent.click(overlay!);
-    
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
 
-  it('switches between all three tabs', () => {
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
+    it('calls onClose when the overlay is clicked', () => {
+        mockOnClose.mockClear();
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
 
-    const challengesTab = screen.getByRole('tab', { name: /Challenges/i });
-    const analyticsTab = screen.getByRole('tab', { name: /Analytics/i });
-    const seedBankTab = screen.getByRole('tab', { name: /Seed Bank/i });
+        const panel = screen.getByRole('complementary');
+        const overlay = panel.previousElementSibling;
+        expect(overlay).not.toBeNull();
 
-    // Initially, Challenges should be active
-    expect(challengesTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByTestId('challenges-panel-mock')).toBeVisible();
-    expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
+        fireEvent.click(overlay!);
 
-    // Click Analytics tab
-    fireEvent.click(analyticsTab);
-    expect(analyticsTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByTestId('challenges-panel-mock')).not.toBeInTheDocument();
-    expect(screen.getByTestId('charts-panel-mock')).toBeVisible();
-    expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
 
-    // Click Seed Bank tab
-    fireEvent.click(seedBankTab);
-    expect(seedBankTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByTestId('challenges-panel-mock')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
-    expect(screen.getByTestId('seed-bank-panel-mock')).toBeVisible();
-    
-    // Click Challenges tab again
-    fireEvent.click(challengesTab);
-    expect(challengesTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByTestId('challenges-panel-mock')).toBeVisible();
-    expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
-  });
-  it('gives the seed bank the way to the field guide, when it has one', () => {
-    const onOpenGuide = vi.fn();
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} onOpenGuide={onOpenGuide} />);
-    fireEvent.click(screen.getByText('Seed Bank'));
-    fireEvent.click(screen.getByText('open the guide'));
-    expect(onOpenGuide).toHaveBeenCalledExactlyOnceWith('3,2');
-  });
+    it('switches between all three tabs', () => {
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
 
-  it('passes on that the seed bank was cleared', () => {
-    const onSeedBankCleared = vi.fn();
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} onSeedBankCleared={onSeedBankCleared} />);
-    fireEvent.click(screen.getByText('Seed Bank'));
-    fireEvent.click(screen.getByText('clear the bank'));
-    expect(onSeedBankCleared).toHaveBeenCalledTimes(1);
-  });
+        const challengesTab = screen.getByRole('tab', { name: /Challenges/i });
+        const analyticsTab = screen.getByRole('tab', { name: /Analytics/i });
+        const seedBankTab = screen.getByRole('tab', { name: /Seed Bank/i });
 
-  it('gives the seed bank no way to the guide when it has none', () => {
-    render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
-    fireEvent.click(screen.getByText('Seed Bank'));
-    expect(screen.queryByText('open the guide')).not.toBeInTheDocument();
-  });
+        // Initially, Challenges should be active
+        expect(challengesTab).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByTestId('challenges-panel-mock')).toBeVisible();
+        expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
+
+        // Click Analytics tab
+        fireEvent.click(analyticsTab);
+        expect(analyticsTab).toHaveAttribute('aria-selected', 'true');
+        expect(screen.queryByTestId('challenges-panel-mock')).not.toBeInTheDocument();
+        expect(screen.getByTestId('charts-panel-mock')).toBeVisible();
+        expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
+
+        // Click Seed Bank tab
+        fireEvent.click(seedBankTab);
+        expect(seedBankTab).toHaveAttribute('aria-selected', 'true');
+        expect(screen.queryByTestId('challenges-panel-mock')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
+        expect(screen.getByTestId('seed-bank-panel-mock')).toBeVisible();
+
+        // Click Challenges tab again
+        fireEvent.click(challengesTab);
+        expect(challengesTab).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByTestId('challenges-panel-mock')).toBeVisible();
+        expect(screen.queryByTestId('charts-panel-mock')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('seed-bank-panel-mock')).not.toBeInTheDocument();
+    });
+    it('gives the seed bank the way to the field guide, when it has one', () => {
+        const onOpenGuide = vi.fn();
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} onOpenGuide={onOpenGuide} />);
+        fireEvent.click(screen.getByText('Seed Bank'));
+        fireEvent.click(screen.getByText('open the guide'));
+        expect(onOpenGuide).toHaveBeenCalledExactlyOnceWith('3,2');
+    });
+
+    it('passes on that the seed bank was cleared', () => {
+        const onSeedBankCleared = vi.fn();
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} onSeedBankCleared={onSeedBankCleared} />);
+        fireEvent.click(screen.getByText('Seed Bank'));
+        fireEvent.click(screen.getByText('clear the bank'));
+        expect(onSeedBankCleared).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives the seed bank no way to the guide when it has none', () => {
+        render(<DataPanel isOpen={true} onClose={mockOnClose} isRunning={false} setIsRunning={mockSetIsRunning} />);
+        fireEvent.click(screen.getByText('Seed Bank'));
+        expect(screen.queryByText('open the guide')).not.toBeInTheDocument();
+    });
 });

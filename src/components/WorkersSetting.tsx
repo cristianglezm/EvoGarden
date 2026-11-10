@@ -23,7 +23,7 @@ const describeWorkers = (n: number) => `${n} worker${n === 1 ? '' : 's'}`;
  */
 export const WorkersSetting: React.FC<WorkersSettingProps> = ({ environment, storage }) => {
     const store = storage ?? browserStorage();
-    const cores = environment ? environment.hardwareConcurrency : (typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency);
+    const cores = environment ? environment.hardwareConcurrency : typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency;
     const automatic = automaticWorkers(cores);
     const [chosen, setChosen] = useState<number | null>(() => readWorkerSetting(store));
     const [result, setResult] = useState('');
@@ -49,13 +49,20 @@ export const WorkersSetting: React.FC<WorkersSettingProps> = ({ environment, sto
                     className="w-full mt-1 p-2 bg-surface-hover border border-surface rounded-md text-white"
                 >
                     <option value="auto">Automatic ({automatic})</option>
-                    {Array.from({ length: MAX_WORKERS }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
+                    {Array.from({ length: MAX_WORKERS }, (_, i) => i + 1).map(n => (
+                        <option key={n} value={n}>
+                            {n}
+                        </option>
+                    ))}
                 </select>
             </label>
             <p className="text-xs text-secondary">
-                Workers make the flowers and classify the species off the main thread. With two or more, one only classifies the species, the others make flowers and classify when they have none to make. More is faster until the processor is full.
+                Workers make the flowers and classify the species off the main thread. With two or more, one only classifies the species, the others make
+                flowers and classify when they have none to make. More is faster until the processor is full.
             </p>
-            <p role="status" aria-label="Workers result" className="text-xs text-secondary">{result}</p>
+            <p role="status" aria-label="Workers result" className="text-xs text-secondary">
+                {result}
+            </p>
         </div>
     );
 };

@@ -8,8 +8,12 @@ describe('territoryMarkBehavior', () => {
 
     beforeEach(() => {
         mark = {
-            id: 'mark1', type: 'territoryMark', x: 1, y: 1,
-            hiveId: '1', lifespan: 10,
+            id: 'mark1',
+            type: 'territoryMark',
+            x: 1,
+            y: 1,
+            hiveId: '1',
+            lifespan: 10,
         };
         nextActorState = new Map();
         nextActorState.set(mark.id, mark);

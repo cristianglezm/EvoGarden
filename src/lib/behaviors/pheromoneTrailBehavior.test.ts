@@ -10,8 +10,13 @@ describe('pheromoneTrailBehavior', () => {
 
     beforeEach(() => {
         trail = {
-            id: 'trail1', type: 'pheromoneTrail', x: 1, y: 1,
-            colonyId: '1', lifespan: 10, strength: 1.0,
+            id: 'trail1',
+            type: 'pheromoneTrail',
+            x: 1,
+            y: 1,
+            colonyId: '1',
+            lifespan: 10,
+            strength: 1.0,
         };
         nextActorState = new Map();
         nextActorState.set(trail.id, trail);

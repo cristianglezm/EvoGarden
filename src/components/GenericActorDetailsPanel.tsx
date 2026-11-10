@@ -27,15 +27,15 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Bird Details',
                 stats: {
                     Status: (actor as Bird).target ? 'Hunting' : 'Patrolling',
-                }
+                },
             };
         case 'eagle':
-             return {
+            return {
                 emoji: '🦅',
                 title: 'Eagle Details',
                 stats: {
                     Status: (actor as Eagle).target ? 'Hunting Bird' : 'Searching',
-                }
+                },
             };
         case 'nutrient':
             return {
@@ -43,7 +43,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Nutrient Details',
                 stats: {
                     'Time Remaining': `${(actor as Nutrient).lifespan} ticks`,
-                }
+                },
             };
         case 'herbicidePlane':
             return {
@@ -51,7 +51,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Herbicide Plane',
                 stats: {
                     Status: 'Deploying herbicide',
-                }
+                },
             };
         case 'herbicideSmoke':
             return {
@@ -59,16 +59,16 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Herbicide Smoke',
                 stats: {
                     'Time Remaining': `${actor.lifespan} ticks`,
-                }
+                },
             };
         case 'flowerSeed':
-             return {
+            return {
                 emoji: '🌱',
                 title: 'Seed Details',
                 stats: {
                     Health: `${actor.health} / ${actor.maxHealth}`,
                     Age: `${actor.age} ticks`,
-                }
+                },
             };
         case 'corpse': {
             const corpse = actor as Corpse;
@@ -78,8 +78,8 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 stats: {
                     'Decay In': `${corpse.decayTimer} ticks`,
                     'Original Type': `${corpse.originalEmoji}`,
-                    'Food Value': (corpse.foodValue || 0).toFixed(0)
-                }
+                    'Food Value': (corpse.foodValue || 0).toFixed(0),
+                },
             };
         }
         case 'cocoon': {
@@ -90,7 +90,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 stats: {
                     'Time to Hatch': `${cocoon.hatchTimer} ticks`,
                     'Will become': '🦋 Butterfly',
-                }
+                },
             };
         }
         case 'slimeTrail': {
@@ -100,7 +100,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Slime Trail',
                 stats: {
                     'Time Remaining': `${slimeTrail.lifespan} ticks`,
-                }
+                },
             };
         }
         case 'hive': {
@@ -113,7 +113,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                     'Honey Reserves': (Number(hive.honey) || 0).toFixed(2),
                     'Stored Nectar': (Number(hive.pollen) || 0).toFixed(2),
                 },
-                genome: hive.genome
+                genome: hive.genome,
             };
         }
         case 'antColony': {
@@ -126,7 +126,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                     'Food Reserves': colony.foodReserves.toFixed(2),
                     'Stored Ants': colony.storedAnts || 0,
                 },
-                genome: colony.genome
+                genome: colony.genome,
             };
         }
         case 'territoryMark': {
@@ -139,10 +139,10 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 emoji: '📍',
                 title: 'Territory Mark',
                 stats: {
-                    'Owner': `Hive ${mark.hiveId}`,
-                    'Lifespan': `${mark.lifespan} ticks`,
+                    Owner: `Hive ${mark.hiveId}`,
+                    Lifespan: `${mark.lifespan} ticks`,
                     'Active Signal': signalInfo,
-                }
+                },
             };
         }
         case 'pheromoneTrail': {
@@ -155,11 +155,11 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 emoji: ' ', // Invisible
                 title: 'Pheromone Trail Details',
                 stats: {
-                    'Owner': `Colony ${trail.colonyId}`,
-                    'Lifespan': `${trail.lifespan} ticks`,
-                    'Strength': trail.strength.toFixed(2),
+                    Owner: `Colony ${trail.colonyId}`,
+                    Lifespan: `${trail.lifespan} ticks`,
+                    Strength: trail.strength.toFixed(2),
                     'Active Signal': signalInfo,
-                }
+                },
             };
         }
         case 'spiderweb': {
@@ -169,10 +169,10 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Spider Web Details',
                 stats: {
                     'Owner ID': getShortId(web.ownerId),
-                    'Strength': web.strength,
-                    'Lifespan': `${web.lifespan} ticks`,
+                    Strength: web.strength,
+                    Lifespan: `${web.lifespan} ticks`,
                     'Trapped Actor': web.trappedActorId ? getShortId(web.trappedActorId) : 'None',
-                }
+                },
             };
         }
         default:
@@ -181,7 +181,7 @@ const getActorDisplayInfo = (actor: CellContent): ActorDisplayInfo => {
                 title: 'Entity Details',
                 stats: {
                     Type: actor.type,
-                }
+                },
             };
     }
 };
@@ -202,19 +202,15 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
                 </h2>
                 <div className="flex items-center gap-2">
                     {isTrackingThisActor && (
-                        <button 
-                            onClick={onStopTracking} 
+                        <button
+                            onClick={onStopTracking}
                             className="px-2 py-1 bg-accent-red/80 hover:bg-accent-red text-white text-xs font-semibold rounded-md transition-colors"
                             title="Stop Tracking"
                         >
                             Stop
                         </button>
                     )}
-                    <button 
-                        onClick={onClose} 
-                        className="p-1 text-primary-light hover:bg-black/20 rounded-full"
-                        aria-label="Close details panel"
-                    >
+                    <button onClick={onClose} className="p-1 text-primary-light hover:bg-black/20 rounded-full" aria-label="Close details panel">
                         <XIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -222,24 +218,32 @@ export const GenericActorDetailsPanel: React.FC<GenericActorDetailsPanelProps> =
             <div className="p-4 grow flex flex-col space-y-3 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                 <div className="relative flex items-center gap-4">
                     <span className="text-5xl">{emoji}</span>
-                     {actor.type === 'corpse' && <span className="absolute top-1/2 left-[24px] -translate-x-1/2 -translate-y-1/2 text-2xl text-black/80">💀</span>}
+                    {actor.type === 'corpse' && (
+                        <span className="absolute top-1/2 left-[24px] -translate-x-1/2 -translate-y-1/2 text-2xl text-black/80">💀</span>
+                    )}
                     <div className="min-w-0">
                         <h3 className="text-xl font-bold text-primary-light capitalize">{actorName}</h3>
-                         <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <p className="text-xs text-secondary font-mono truncate">{actor.id}</p>
                             {!isTrackingThisActor && (
-                                <button onClick={() => onTrackActor(actor.id)} title={`Track this ${actor.type}`} className="p-1 text-secondary hover:text-primary-light rounded-full transition-colors">
+                                <button
+                                    onClick={() => onTrackActor(actor.id)}
+                                    title={`Track this ${actor.type}`}
+                                    className="p-1 text-secondary hover:text-primary-light rounded-full transition-colors"
+                                >
                                     <SearchIcon className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="text-sm space-y-1 text-secondary border-t border-border/50 pt-2">
                     <h3 className="text-base font-semibold text-primary-light/80 mb-1">Information</h3>
                     {Object.entries(stats).map(([key, value]) => (
-                        <p key={key}><strong>{key}:</strong> {value}</p>
+                        <p key={key}>
+                            <strong>{key}:</strong> {value}
+                        </p>
                     ))}
                 </div>
                 {genome && <GenomeVisualizer genome={genome} title="Colony Flower Preferences" />}

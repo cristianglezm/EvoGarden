@@ -106,7 +106,6 @@ describe('workerPortSpecs', () => {
     });
 });
 
-
 describe('workerPlanSource', () => {
     it('says it is the machine when nothing else decided', () => {
         expect(workerPlanSource('')).toEqual({ speciesWorker: 'automatic', creationWorkers: 'automatic' });

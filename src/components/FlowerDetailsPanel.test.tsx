@@ -20,31 +20,31 @@ vi.mock('./Flower3DViewer', () => ({
 }));
 
 const mockFlower: Flower = {
-  id: 'flower-1',
-  type: 'flower',
-  x: 1,
-  y: 1,
-  genome: '{"key":"value"}',
-  imageData: 'svg-data-string',
-  health: 80,
-  stamina: 60,
-  age: 55,
-  isMature: true,
-  maxHealth: 120,
-  maxStamina: 100,
-  nutrientEfficiency: 1.2,
-  minTemperature: 5,
-  maxTemperature: 25,
-  maturationPeriod: 50,
-  sex: 'both',
-  toxicityRate: 0.1,
-  effects: {
-    vitality: 10,
-    agility: 5,
-    strength: 8,
-    intelligence: 12,
-    luck: 3,
-  },
+    id: 'flower-1',
+    type: 'flower',
+    x: 1,
+    y: 1,
+    genome: '{"key":"value"}',
+    imageData: 'svg-data-string',
+    health: 80,
+    stamina: 60,
+    age: 55,
+    isMature: true,
+    maxHealth: 120,
+    maxStamina: 100,
+    nutrientEfficiency: 1.2,
+    minTemperature: 5,
+    maxTemperature: 25,
+    maturationPeriod: 50,
+    sex: 'both',
+    toxicityRate: 0.1,
+    effects: {
+        vitality: 10,
+        agility: 5,
+        strength: 8,
+        intelligence: 12,
+        luck: 3,
+    },
 };
 
 describe('FlowerDetailsPanel', () => {
@@ -79,17 +79,17 @@ describe('FlowerDetailsPanel', () => {
 
     it('renders all flower details correctly when a flower is provided', () => {
         render(<FlowerDetailsPanel {...defaultProps} flower={mockFlower} />);
-        
+
         // Check stats
         expect(screen.getByText('Health')).toBeInTheDocument();
         expect(screen.getByText('80 / 120')).toBeInTheDocument();
         expect(screen.getByText('Stamina')).toBeInTheDocument();
         expect(screen.getByText('60 / 100')).toBeInTheDocument();
-        
+
         // Check state - using parentElement to check the full text of the <p> tag
         expect(screen.getByText(/Age:/i).parentElement).toHaveTextContent('Age: 55 / 50 ticks');
         expect(screen.getByText(/Status:/i).parentElement).toHaveTextContent('Status: Mature');
-        
+
         // Check traits
         expect(screen.getByText(/Sex:/i).parentElement).toHaveTextContent('Sex: both');
         expect(screen.getByText(/Optimal Temp:/i).parentElement).toHaveTextContent('Optimal Temp: 5°C to 25°C');
@@ -98,7 +98,7 @@ describe('FlowerDetailsPanel', () => {
 
         // Check genome textarea
         expect(screen.getByLabelText('Genome')).toHaveValue(mockFlower.genome);
-        
+
         // Check for track button
         expect(screen.getByTitle('Track this flower')).toBeInTheDocument();
     });
@@ -112,22 +112,22 @@ describe('FlowerDetailsPanel', () => {
 
     it('shows Stop button and correct title when tracking this flower', () => {
         render(<FlowerDetailsPanel {...defaultProps} flower={mockFlower} trackedActorId={mockFlower.id} />);
-        
+
         expect(screen.getByText('Tracking:')).toBeInTheDocument();
-        
+
         const stopButton = screen.getByRole('button', { name: /Stop/i });
         expect(stopButton).toBeInTheDocument();
-        
+
         fireEvent.click(stopButton);
         expect(mockOnStopTracking).toHaveBeenCalledTimes(1);
-        
+
         // The individual track button should not be visible
         expect(screen.queryByTitle('Track this flower')).not.toBeInTheDocument();
     });
 
     it('copies genome to clipboard when copy button is clicked', async () => {
         render(<FlowerDetailsPanel {...defaultProps} flower={mockFlower} />);
-        
+
         const copyButton = screen.getByTitle('Copy genome to clipboard');
         fireEvent.click(copyButton);
 
@@ -138,12 +138,12 @@ describe('FlowerDetailsPanel', () => {
         // Check for visual feedback (check icon appears)
         expect(await screen.findByTestId('CheckIcon')).toBeInTheDocument();
     });
-    
+
     it('opens 3D viewer modal when "View in 3D" is clicked', async () => {
         vi.mocked(flowerService.draw3DFlower).mockResolvedValue('<gltf-string>');
-        
+
         render(<FlowerDetailsPanel {...defaultProps} flower={mockFlower} isRunning={true} />);
-        
+
         const view3DButton = screen.getByRole('button', { name: /View in 3D/i });
         fireEvent.click(view3DButton);
 
@@ -185,7 +185,12 @@ describe('FlowerDetailsPanel: the species of the flower', () => {
 
     it('shows the name of the species of the flower once it is known, and a mark while it is not', async () => {
         let answer!: (value: Answer) => void;
-        const source = sourceOf(() => new Promise<Answer>(resolve => { answer = resolve; }));
+        const source = sourceOf(
+            () =>
+                new Promise<Answer>(resolve => {
+                    answer = resolve;
+                })
+        );
         render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
         expect(screen.getByText('Species: …')).toBeInTheDocument();
         await act(async () => answer(known));
@@ -200,7 +205,7 @@ describe('FlowerDetailsPanel: the species of the flower', () => {
         expect(speciesFor).toHaveBeenCalledExactlyOnceWith(mockFlower.genome);
     });
 
-    it('says it is not in the collection when it is only the classifier\'s answer', async () => {
+    it("says it is not in the collection when it is only the classifier's answer", async () => {
         const source = sourceOf(() => Promise.resolve({ ...known, stored: false }));
         render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
         expect(await screen.findByText('Stout Lotus')).toHaveAttribute('title', expect.stringMatching(/not kept in the collection/i));
@@ -239,7 +244,12 @@ describe('FlowerDetailsPanel: the species of the flower', () => {
 
     it('does not keep the species of the flower that was selected before', async () => {
         const answers: Record<string, (value: Answer) => void> = {};
-        const source = sourceOf(genome => new Promise<Answer>(resolve => { answers[genome] = resolve; }));
+        const source = sourceOf(
+            genome =>
+                new Promise<Answer>(resolve => {
+                    answers[genome] = resolve;
+                })
+        );
         const { rerender } = render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
         rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, id: 'flower-2', genome: 'second' }} speciesSource={source} />);
         // the first answer comes late: it is not the species of the flower that is shown
@@ -252,7 +262,13 @@ describe('FlowerDetailsPanel: the species of the flower', () => {
     it('does not let the failure of the flower selected before hide the species of this one', async () => {
         const failures: Record<string, (error: Error) => void> = {};
         const answers: Record<string, (value: Answer) => void> = {};
-        const source = sourceOf(genome => new Promise<Answer>((resolve, reject) => { answers[genome] = resolve; failures[genome] = reject; }));
+        const source = sourceOf(
+            genome =>
+                new Promise<Answer>((resolve, reject) => {
+                    answers[genome] = resolve;
+                    failures[genome] = reject;
+                })
+        );
         const { rerender } = render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={source} />);
         rerender(<FlowerDetailsPanel {...props} flower={{ ...mockFlower, id: 'flower-2', genome: 'second' }} speciesSource={source} />);
         await act(async () => failures[mockFlower.genome](new Error('late')));
@@ -271,7 +287,14 @@ describe('FlowerDetailsPanel: the species of the flower', () => {
 
         it('is there for a species that is not in the collection too: the guide shows its cell', async () => {
             const onViewInGuide = vi.fn();
-            render(<FlowerDetailsPanel {...props} flower={mockFlower} speciesSource={sourceOf(() => Promise.resolve({ ...known, stored: false }))} onViewInGuide={onViewInGuide} />);
+            render(
+                <FlowerDetailsPanel
+                    {...props}
+                    flower={mockFlower}
+                    speciesSource={sourceOf(() => Promise.resolve({ ...known, stored: false }))}
+                    onViewInGuide={onViewInGuide}
+                />
+            );
             fireEvent.click(await screen.findByRole('button', { name: 'View in field guide' }));
             expect(onViewInGuide).toHaveBeenCalledExactlyOnceWith('3,5');
         });
@@ -285,8 +308,19 @@ describe('FlowerDetailsPanel: the species of the flower', () => {
         it('is not there while the species is not known yet, nor when the flower has none', async () => {
             const onViewInGuide = vi.fn();
             let answer!: (value: Answer) => void;
-            const { unmount } = render(<FlowerDetailsPanel {...props} flower={mockFlower} onViewInGuide={onViewInGuide}
-                speciesSource={sourceOf(() => new Promise<Answer>(resolve => { answer = resolve; }))} />);
+            const { unmount } = render(
+                <FlowerDetailsPanel
+                    {...props}
+                    flower={mockFlower}
+                    onViewInGuide={onViewInGuide}
+                    speciesSource={sourceOf(
+                        () =>
+                            new Promise<Answer>(resolve => {
+                                answer = resolve;
+                            })
+                    )}
+                />
+            );
             expect(screen.queryByRole('button', { name: 'View in field guide' })).not.toBeInTheDocument();
             await act(async () => answer(null));
             expect(screen.queryByRole('button', { name: 'View in field guide' })).not.toBeInTheDocument();

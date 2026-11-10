@@ -7,7 +7,14 @@ import type { SeedBankEntry } from '../types';
 export type SpeciesCollection =
     | { status: 'loading' }
     | { status: 'unavailable' }
-    | { status: 'ready'; grid: SpeciesGrid; summary: GuideSummary; images: Record<string, string>; limits: SpeciesLimits; storage: { usage: number; quota: number } | null };
+    | {
+          status: 'ready';
+          grid: SpeciesGrid;
+          summary: GuideSummary;
+          images: Record<string, string>;
+          limits: SpeciesLimits;
+          storage: { usage: number; quota: number } | null;
+      };
 
 // by the entries, not the array: a caller that builds a new array of the same champions must not make a read at every render
 const sameEntries = (a: SeedBankEntry[], b: SeedBankEntry[]) => a.length === b.length && a.every((entry, i) => entry === b[i]);
@@ -29,32 +36,38 @@ export function useSpeciesCollection(source: SpeciesSource, champions: SeedBankE
     const again = useRef(false);
     const alive = useRef(true);
 
-    const load = useCallback(async function run(): Promise<void> {
-        if (busy.current) {
-            again.current = true;
-            return;
-        }
-        busy.current = true;
-        try {
-            const grid = source.grid();
-            const [rows, championIds, limits, storage] = await Promise.all([
-                source.samples(), source.championIds(latestChampions.current), source.limits(), source.storage().catch(() => null),
-            ]);
-            const summary = summarizeCollection(rows, grid, championIds);
-            const missing = [...summary.cells.flatMap(c => c.representativeId ?? []), ...wanted.current].filter(id => !(id in images.current));
-            if (missing.length > 0) Object.assign(images.current, await source.images([...new Set(missing)]));
-            if (alive.current) setCollection({ status: 'ready', grid, summary, images: { ...images.current }, limits, storage });
-        } catch (error) {
-            console.error('Field guide: could not read the species collection.', error);
-            if (alive.current) setCollection(previous => (previous.status === 'ready' ? previous : { status: 'unavailable' }));
-        } finally {
-            busy.current = false;
-            if (again.current) {
-                again.current = false;
-                if (alive.current) void run();
+    const load = useCallback(
+        async function run(): Promise<void> {
+            if (busy.current) {
+                again.current = true;
+                return;
             }
-        }
-    }, [source]);
+            busy.current = true;
+            try {
+                const grid = source.grid();
+                const [rows, championIds, limits, storage] = await Promise.all([
+                    source.samples(),
+                    source.championIds(latestChampions.current),
+                    source.limits(),
+                    source.storage().catch(() => null),
+                ]);
+                const summary = summarizeCollection(rows, grid, championIds);
+                const missing = [...summary.cells.flatMap(c => c.representativeId ?? []), ...wanted.current].filter(id => !(id in images.current));
+                if (missing.length > 0) Object.assign(images.current, await source.images([...new Set(missing)]));
+                if (alive.current) setCollection({ status: 'ready', grid, summary, images: { ...images.current }, limits, storage });
+            } catch (error) {
+                console.error('Field guide: could not read the species collection.', error);
+                if (alive.current) setCollection(previous => (previous.status === 'ready' ? previous : { status: 'unavailable' }));
+            } finally {
+                busy.current = false;
+                if (again.current) {
+                    again.current = false;
+                    if (alive.current) void run();
+                }
+            }
+        },
+        [source]
+    );
 
     // The champions mark their species: a change of them is a reason to read, not to wait for the poll.
     const seenChampions = useRef(champions);
@@ -76,12 +89,15 @@ export function useSpeciesCollection(source: SpeciesSource, champions: SeedBankE
     }, [enabled, load, intervalMs]);
 
     /** Asks for the images of samples that are not shown on the map (the records of one species). */
-    const wantImages = useCallback((ids: string[]) => {
-        const missing = ids.filter(id => !(id in images.current) && !wanted.current.includes(id));
-        if (missing.length === 0) return;
-        wanted.current = [...wanted.current, ...missing];
-        load();
-    }, [load]);
+    const wantImages = useCallback(
+        (ids: string[]) => {
+            const missing = ids.filter(id => !(id in images.current) && !wanted.current.includes(id));
+            if (missing.length === 0) return;
+            wanted.current = [...wanted.current, ...missing];
+            load();
+        },
+        [load]
+    );
 
     return { collection, wantImages, refresh: load };
 }

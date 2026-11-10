@@ -29,9 +29,7 @@ export const EventLog: React.FC<EventLogProps> = ({ onClick }) => {
                     <span className="text-secondary/60 mr-2">[T:{(latestEvent.tick ?? 0).toString().padStart(4, '0')}]</span>
                     {latestEvent.message}
                     {latestEvent.count && latestEvent.count > 1 && (
-                        <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold bg-surface-hover/80 rounded-full">
-                            x{latestEvent.count}
-                        </span>
+                        <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold bg-surface-hover/80 rounded-full">x{latestEvent.count}</span>
                     )}
                 </p>
             ) : (

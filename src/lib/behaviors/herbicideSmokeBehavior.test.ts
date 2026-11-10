@@ -38,12 +38,12 @@ describe('herbicideSmokeBehavior', () => {
         nextActorState = new Map();
         nextActorState.set(smoke.id, smoke);
         nextActorState.set(flower.id, flower);
-        
+
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
         qtree = new Quadtree(boundary, 4);
         qtree.insert({ x: smoke.x, y: smoke.y, data: smoke });
         qtree.insert({ x: flower.x, y: flower.y, data: flower });
-        
+
         cancelFlowerRequest = vi.fn();
         mockAsyncFlowerFactory = new (AsyncFlowerFactory as any)();
         mockAsyncFlowerFactory.cancelFlowerRequest = cancelFlowerRequest;
@@ -88,7 +88,7 @@ describe('herbicideSmokeBehavior', () => {
         expect(smoke.lifespan).toBe(0);
         expect(nextActorState.has(smoke.id)).toBe(false);
     });
-    
+
     it('should destroy a flower seed and cancel its creation request', () => {
         const seed: FlowerSeed = {
             id: 'seed-1',
@@ -98,7 +98,7 @@ describe('herbicideSmokeBehavior', () => {
             health: 10,
             maxHealth: 10,
             age: 0,
-            imageData: 'stem'
+            imageData: 'stem',
         };
         nextActorState.set(seed.id, seed);
         grid[2][2].push(seed);

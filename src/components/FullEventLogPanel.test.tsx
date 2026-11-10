@@ -62,7 +62,7 @@ describe('FullEventLogPanel', () => {
         });
 
         render(<FullEventLogPanel isOpen={true} onClose={mockOnClose} />);
-        
+
         expect(screen.getByText('[Tick 0001]')).toBeInTheDocument();
         expect(screen.getByText('Event 1')).toBeInTheDocument();
         expect(screen.getByText('[Tick 0002]')).toBeInTheDocument();

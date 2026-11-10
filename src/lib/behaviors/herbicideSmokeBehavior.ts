@@ -17,9 +17,8 @@ export const processHerbicideSmokeTick = (smoke: HerbicideSmoke, context: Herbic
 
     // 1. Apply damage to flowers and seeds in the same cell
     const actorsOnCell = getActorsOnCell(qtree, nextActorState, smoke.x, smoke.y);
-    const vulnerableInCell = actorsOnCell
-        .filter(a => a.type === 'flower' || a.type === 'flowerSeed') as (Flower | FlowerSeed)[];
-    
+    const vulnerableInCell = actorsOnCell.filter(a => a.type === 'flower' || a.type === 'flowerSeed') as (Flower | FlowerSeed)[];
+
     for (const target of vulnerableInCell) {
         target.health = Math.max(0, target.health - herbicideDamage);
         if (target.health <= 0) {
@@ -38,9 +37,7 @@ export const processHerbicideSmokeTick = (smoke: HerbicideSmoke, context: Herbic
 
             if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight) {
                 // Check if a smoke cloud already exists at the new position
-                const alreadyExists = Array.from(nextActorState.values()).some(
-                    (actor) => actor.x === nx && actor.y === ny && actor.type === 'herbicideSmoke'
-                );
+                const alreadyExists = Array.from(nextActorState.values()).some(actor => actor.x === nx && actor.y === ny && actor.type === 'herbicideSmoke');
 
                 if (!alreadyExists) {
                     const neighborSmokeId = `smoke-${nx}-${ny}-${Date.now()}`;

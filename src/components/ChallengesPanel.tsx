@@ -15,18 +15,23 @@ export const ChallengesPanel: React.FC = () => {
                     </div>
                     <p className="text-sm text-secondary mt-1">{challenge.description}</p>
                     {!challenge.completed && (
-                         <div
+                        <div
                             className="w-full bg-surface-hover rounded-full h-2.5 mt-2"
                             role="progressbar"
                             aria-label={`Progress for ${challenge.title}`}
                             aria-valuenow={challenge.progress}
                             aria-valuemin={0}
                             aria-valuemax={challenge.goal}
-                         >
-                             <div className="bg-accent-green h-2.5 rounded-full" style={{ width: `${Math.min(100, (challenge.progress / challenge.goal) * 100)}%` }}></div>
-                         </div>
+                        >
+                            <div
+                                className="bg-accent-green h-2.5 rounded-full"
+                                style={{ width: `${Math.min(100, (challenge.progress / challenge.goal) * 100)}%` }}
+                            ></div>
+                        </div>
                     )}
-                    <p className="text-xs text-right text-tertiary mt-1">{Math.min(challenge.progress, challenge.goal).toLocaleString()} / {challenge.goal.toLocaleString()}</p>
+                    <p className="text-xs text-right text-tertiary mt-1">
+                        {Math.min(challenge.progress, challenge.goal).toLocaleString()} / {challenge.goal.toLocaleString()}
+                    </p>
                 </div>
             ))}
         </div>

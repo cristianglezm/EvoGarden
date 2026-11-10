@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processFlowerTick, processFlowerSeedTick } from './flowerBehavior';
 import type { Flower, Grid, CellContent, FlowerSeed } from '../../types';
-import { DEFAULT_SIM_PARAMS, FLOWER_STAMINA_COST_PER_TICK, FLOWER_TICK_COST_MULTIPLIER, FLOWER_EXPANSION_CHANCE, PROXIMITY_POLLINATION_CHANCE, SEED_HEALTH } from '../../constants';
+import {
+    DEFAULT_SIM_PARAMS,
+    FLOWER_STAMINA_COST_PER_TICK,
+    FLOWER_TICK_COST_MULTIPLIER,
+    FLOWER_EXPANSION_CHANCE,
+    PROXIMITY_POLLINATION_CHANCE,
+    SEED_HEALTH,
+} from '../../constants';
 import { AsyncFlowerFactory } from '../asyncFlowerFactory';
 
 vi.mock('../asyncFlowerFactory');
@@ -16,12 +23,25 @@ describe('flowerBehavior', () => {
     const getNextId = vi.fn((type: string, x: number, y: number) => `mock-${type}-${x}-${y}`);
 
     const mockFlower: Flower = {
-        id: 'flower1', type: 'flower', x: 5, y: 5,
-        genome: 'g1', imageData: '', health: 100, stamina: 100,
-        age: 51, isMature: true, maxHealth: 100, maxStamina: 100,
-        maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-        minTemperature: 10, maxTemperature: 30, toxicityRate: 0.1,
-        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+        id: 'flower1',
+        type: 'flower',
+        x: 5,
+        y: 5,
+        genome: 'g1',
+        imageData: '',
+        health: 100,
+        stamina: 100,
+        age: 51,
+        isMature: true,
+        maxHealth: 100,
+        maxStamina: 100,
+        maturationPeriod: 50,
+        nutrientEfficiency: 1.0,
+        sex: 'both',
+        minTemperature: 10,
+        maxTemperature: 30,
+        toxicityRate: 0.1,
+        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
     };
 
     const mockSeed: FlowerSeed = { id: 'seed-1', type: 'flowerSeed', x: 0, y: 0, imageData: 'stem-image', health: SEED_HEALTH, maxHealth: SEED_HEALTH, age: 0 };
@@ -30,7 +50,7 @@ describe('flowerBehavior', () => {
         flower = { ...mockFlower };
         grid = Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => []));
         grid[5][5].push(flower);
-        
+
         requestNewFlower = vi.fn().mockImplementation((_state, x, y, _parent1, _parent2, _id) => {
             return { ...mockSeed, id: `seed-${x}-${y}`, x, y };
         });
@@ -41,7 +61,7 @@ describe('flowerBehavior', () => {
         claimedCellsThisTick = new Set<string>();
         getNextId.mockClear();
     });
-    
+
     const setupContext = () => ({
         grid,
         params: DEFAULT_SIM_PARAMS,
@@ -57,7 +77,7 @@ describe('flowerBehavior', () => {
         const initialStamina = flower.stamina;
         processFlowerTick(flower, setupContext(), newActorQueue);
         expect(flower.age).toBe(initialAge + 1);
-        expect(flower.stamina).toBe(initialStamina - (FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER));
+        expect(flower.stamina).toBe(initialStamina - FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER);
     });
 
     it('should consume health if stamina is zero', () => {
@@ -73,7 +93,7 @@ describe('flowerBehavior', () => {
         const initialStamina = flower.stamina;
 
         processFlowerTick(flower, context, newActorQueue);
-        
+
         const expectedCost = FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER * 2;
         expect(flower.stamina).toBe(initialStamina - expectedCost);
     });
@@ -83,9 +103,16 @@ describe('flowerBehavior', () => {
         const context = setupContext();
         processFlowerTick(flower, context, newActorQueue);
         expect(requestNewFlower).toHaveBeenCalled();
-        expect(requestNewFlower).toHaveBeenCalledWith(context.nextActorState, expect.any(Number), expect.any(Number), flower.genome, undefined, expect.any(Function));
+        expect(requestNewFlower).toHaveBeenCalledWith(
+            context.nextActorState,
+            expect.any(Number),
+            expect.any(Number),
+            flower.genome,
+            undefined,
+            expect.any(Function)
+        );
         expect(newActorQueue.length).toBe(1);
-        
+
         const createdSeed = newActorQueue[0] as FlowerSeed;
         expect(claimedCellsThisTick.has(`flower-${createdSeed.x}-${createdSeed.y}`)).toBe(true);
         vi.spyOn(Math, 'random').mockRestore();
@@ -95,7 +122,7 @@ describe('flowerBehavior', () => {
         const neighborFlower: Flower = { ...mockFlower, id: 'flower2', x: 5, y: 6, genome: 'g2' };
         grid[6][5].push(neighborFlower);
         vi.spyOn(Math, 'random').mockReturnValue(PROXIMITY_POLLINATION_CHANCE / 2);
-        
+
         const context = setupContext();
         processFlowerTick(flower, context, newActorQueue);
 
@@ -121,7 +148,7 @@ describe('flowerBehavior', () => {
                 }
             }
         }
-        
+
         // Unblock one neighboring spot, making it the only valid cell on the grid.
         const emptySpot = { x: 4, y: 5 };
         grid[emptySpot.y][emptySpot.x] = [];
@@ -130,7 +157,7 @@ describe('flowerBehavior', () => {
         claimedCellsThisTick.add(`flower-${emptySpot.x}-${emptySpot.y}`);
 
         // Force an expansion attempt.
-        vi.spyOn(Math, 'random').mockReturnValue(FLOWER_EXPANSION_CHANCE / 2); 
+        vi.spyOn(Math, 'random').mockReturnValue(FLOWER_EXPANSION_CHANCE / 2);
 
         processFlowerTick(flower, setupContext(), newActorQueue);
 
@@ -151,7 +178,7 @@ describe('flowerBehavior', () => {
             seed = { id: 'seed-1', type: 'flowerSeed', x: 1, y: 1, imageData: 'stem', health: 5, maxHealth: 5, age: 0 };
             nextActorState = new Map();
             nextActorState.set(seed.id, seed);
-            
+
             cancelFlowerRequest = vi.fn();
             mockAsyncFlowerFactory = new (AsyncFlowerFactory as any)();
             mockAsyncFlowerFactory.cancelFlowerRequest = cancelFlowerRequest;

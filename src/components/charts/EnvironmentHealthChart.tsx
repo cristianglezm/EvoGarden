@@ -15,7 +15,7 @@ export const EnvironmentHealthChart: React.FC<EnvironmentHealthChartProps> = ({ 
         'Toxic Flowers': true,
         'Herbicide Planes': true,
         'Herbicide Smokes': true,
-        'Corpses': true,
+        Corpses: true,
     });
     const handleLegendChange = createLegendSelectHandler(setLegend);
 
@@ -28,7 +28,7 @@ export const EnvironmentHealthChart: React.FC<EnvironmentHealthChartProps> = ({ 
                 data: ['Total Flowers', 'Healing Flowers', 'Toxic Flowers', 'Herbicide Planes', 'Herbicide Smokes', 'Corpses'],
                 top: 35,
                 textStyle: { color: '#bbf7d0' },
-                selected: legend
+                selected: legend,
             },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
@@ -42,5 +42,5 @@ export const EnvironmentHealthChart: React.FC<EnvironmentHealthChartProps> = ({ 
         };
     }, [history, legend]);
 
-    return <Chart option={option} onEvents={{ 'legendselectchanged': handleLegendChange }} />;
+    return <Chart option={option} onEvents={{ legendselectchanged: handleLegendChange }} />;
 };

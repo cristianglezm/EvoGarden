@@ -29,8 +29,17 @@ beforeAll(async () => {
         { category: 'mostHealing', genome: champions[2], value: -0.4, imageData: 'png-2', sex: 'both' },
     ]);
     const row = (i: number): SpeciesSample => ({
-        id: `old-${i}`, cell: '0,0', x: 0, y: 0, d: 1, fp: 'an-older-classifier', kind: 'sample', founder: true,
-        records: [], sex: 'both', createdAt: 100 - i,
+        id: `old-${i}`,
+        cell: '0,0',
+        x: 0,
+        y: 0,
+        d: 1,
+        fp: 'an-older-classifier',
+        kind: 'sample',
+        founder: true,
+        records: [],
+        sex: 'both',
+        createdAt: 100 - i,
     });
     await database.speciesSamples.bulkPut(old.map((_, i) => row(i)));
     await database.speciesGenomes.bulkPut(old.map((genome, i) => ({ id: `old-${i}`, genome })));
@@ -38,7 +47,9 @@ beforeAll(async () => {
     (globalThis as any).self = globalThis;
     await import('./species.worker');
     const channel = new MessageChannel();
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
 }, 60_000);
 

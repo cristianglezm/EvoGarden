@@ -48,8 +48,10 @@ export function describeWorkers(workers: WorkersSummary, setup: WorkerSetup): st
     const species = workers.species;
     return [
         'Workers',
-        ...workers.flowerWorkers.map(w =>
-            `${w.name}: ${w.inFlight} in flight, ${w.produced} produced, ${w.failed} failed, ${w.avgMs === null ? 'no time yet' : `${formatMs(w.avgMs)} per flower`}`),
+        ...workers.flowerWorkers.map(
+            w =>
+                `${w.name}: ${w.inFlight} in flight, ${w.produced} produced, ${w.failed} failed, ${w.avgMs === null ? 'no time yet' : `${formatMs(w.avgMs)} per flower`}`
+        ),
         label === null
             ? 'Species work: no worker'
             : `${label}: ${species.waiting} waiting, ${species.answered} answered, ${species.byStatus.failed ?? 0} failed, ${species.avgMs === null ? 'no time yet' : `${formatMs(species.avgMs)} per flower`}`,

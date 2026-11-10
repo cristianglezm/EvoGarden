@@ -3,8 +3,7 @@ export const WORKERS_KEY = 'evoGarden-workers';
 
 export const MAX_WORKERS = 8;
 
-export const isWorkerCount = (n: unknown): n is number =>
-    typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= MAX_WORKERS;
+export const isWorkerCount = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= MAX_WORKERS;
 
 /**
  * How many workers to start when the player has not chosen. The page and the simulation take two threads and
