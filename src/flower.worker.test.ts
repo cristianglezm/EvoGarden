@@ -169,7 +169,7 @@ describe('the flower worker', () => {
         toWorker.postMessage(classifyRequest('j', '{"Flower":{}}'));
         await vi.waitFor(() => expect(types()).toEqual(['species-classified']), { timeout: 15_000 });
         // a flower that was classified says how long that took; what the answer is about is the rest of it
-        const { durationMs, tick, ...answer } = messages[0].payload;
+        const { durationMs, tick: _tick, ...answer } = messages[0].payload;
         expect(answer).toEqual({ flowerId: 'j', status: 'unclassified' });
         expect(durationMs).toBeGreaterThanOrEqual(0);
         expect(await database.speciesSamples.where('cell').equals('none').count()).toBe(1);

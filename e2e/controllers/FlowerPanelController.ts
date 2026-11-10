@@ -42,7 +42,7 @@ export class FlowerPanelController {
                 case 'cockroach':
                     // Use a stable internal element text as an identifier for all insect panels
                     panelText = /Flower Preferences \(Genome\)/;
-                    buttonNameRegex = /[🦋🐛🐌🐞🪲🦂🐝🐜🪳]/;
+                    buttonNameRegex = /[🦋🐛🐌🐞🪲🦂🐝🐜🪳]/u;
                     break;
                 case 'flower':
                     panelText = "Flower Details";
@@ -93,7 +93,7 @@ export class FlowerPanelController {
                         await expect(this.actorSelectionPanel).not.toBeVisible();
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Timeout means no panel appeared for this click (e.g., empty cell). The loop will continue.
             }
         }

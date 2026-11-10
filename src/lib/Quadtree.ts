@@ -86,7 +86,8 @@ export class Quadtree<T> {
 
         // Move existing points to the new children
         for (const p of this.points) {
-            this.northwest.insert(p) || this.northeast.insert(p) || this.southwest.insert(p) || this.southeast.insert(p);
+            // the first child that takes the point keeps it
+            [this.northwest, this.northeast, this.southwest, this.southeast].some(child => child.insert(p));
         }
         this.points = [];
     }
