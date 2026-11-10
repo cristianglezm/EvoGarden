@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../services/db';
 import type { SeedBankEntry } from '../types';
-import { LoaderIcon, SeedlingIcon, Trash2Icon } from './icons';
+import { LoaderIcon, Trash2Icon } from './icons';
 import { ConfirmationModal } from './ConfirmationModal';
 import { SeedBankCard } from './SeedBankCard';
 import { useFlower3DView } from '../hooks/useFlower3DView';
@@ -13,7 +13,7 @@ interface SeedBankPanelProps {
     setIsRunning: (running: boolean) => void;
     /** Where the species of the champions come from. */
     source?: SpeciesSource;
-    /** Opens the field guide, at a species ("x,y") or at none; without it the panel has no way to the guide. */
+    /** Opens the field guide at the species of a champion ("x,y"); without it the cards have no way to the guide. */
     onOpenGuide?: (cell: string | null) => void;
 }
 
@@ -74,16 +74,6 @@ export const SeedBankPanel: React.FC<SeedBankPanelProps> = ({ isRunning, setIsRu
         <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-secondary">Champions are saved here to repopulate the garden after a collapse.</p>
-                {onOpenGuide && (
-                    <button
-                        onClick={() => onOpenGuide(null)}
-                        className="flex items-center px-3 py-1.5 bg-surface-hover hover:bg-border/20 text-primary font-semibold rounded-md transition-colors text-sm"
-                        title="Browse every species found in the garden"
-                    >
-                        <SeedlingIcon className="w-4 h-4 mr-2" />
-                        Field Guide
-                    </button>
-                )}
                 <button 
                     onClick={() => setShowConfirmModal(true)}
                     className="flex items-center px-3 py-1.5 bg-accent-red/20 hover:bg-accent-red/40 text-accent-red font-semibold rounded-md transition-colors text-sm"
