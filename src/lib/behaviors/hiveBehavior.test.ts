@@ -14,8 +14,14 @@ describe('hiveBehavior', () => {
 
     beforeEach(() => {
         hive = {
-            id: 'hive1', type: 'hive', x: 5, y: 5, hiveId: '1',
-            honey: 50, pollen: 10, spawnCooldown: 0,
+            id: 'hive1',
+            type: 'hive',
+            x: 5,
+            y: 5,
+            hiveId: '1',
+            honey: 50,
+            pollen: 10,
+            spawnCooldown: 0,
             genome: Array(INSECT_GENOME_LENGTH).fill(0.5),
             storedBees: 0,
         };
@@ -61,7 +67,7 @@ describe('hiveBehavior', () => {
         hive.honey = params.hiveSpawnThreshold + 1;
         hive.pollen = 0; // Fix: No pollen to convert
         hive.spawnCooldown = 0;
-        
+
         // Mock Math.random to prevent mutation
         vi.spyOn(Math, 'random').mockReturnValue(params.mutationChance + 0.1);
 
@@ -70,13 +76,13 @@ describe('hiveBehavior', () => {
         expect(hive.honey).toBe(params.hiveSpawnThreshold + 1 - params.hiveSpawnCost);
         expect(hive.spawnCooldown).toBe(5);
         expect(newActorQueue.length).toBe(1);
-        
+
         const newBee = newActorQueue[0] as Insect;
         expect(newBee.type).toBe('insect');
         expect(newBee.emoji).toBe('🐝');
         expect(newBee.hiveId).toBe(hive.hiveId);
         expect(newBee.genome).toEqual(hive.genome); // Should be an exact copy
-        
+
         expect(events.some(e => e.message.includes('A new bee was born'))).toBe(true);
     });
 
@@ -111,7 +117,7 @@ describe('hiveBehavior', () => {
         hive.storedBees = 1;
 
         processHiveTick(hive, context);
-        
+
         expect(hive.storedBees).toBe(0);
         expect(newActorQueue.length).toBe(1);
         const releasedBee = newActorQueue[0] as Insect;
@@ -126,7 +132,7 @@ describe('hiveBehavior', () => {
         hive.storedBees = 1;
 
         processHiveTick(hive, context);
-        
+
         expect(hive.storedBees).toBe(1); // Bee remains stored
         expect(newActorQueue.length).toBe(0);
     });
@@ -138,7 +144,7 @@ describe('hiveBehavior', () => {
 
         // Block all adjacent cells
         vi.spyOn(simulationUtils, 'findEmptyCell').mockReturnValue(null);
-        
+
         processHiveTick(hive, context);
 
         expect(hive.storedBees).toBe(1); // Bee could not be released

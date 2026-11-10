@@ -1,11 +1,5 @@
 import type { Insect, SpiderWeb, Flower } from '../../../types';
-import { 
-    INSECT_DORMANCY_TEMP, 
-    INSECT_STAMINA_REGEN_PER_TICK,
-    INSECT_MOVE_COST,
-    CORPSE_DECAY_TIME,
-    FOOD_VALUE_CORPSE,
-} from '../../../constants';
+import { INSECT_DORMANCY_TEMP, INSECT_STAMINA_REGEN_PER_TICK, INSECT_MOVE_COST, CORPSE_DECAY_TIME, FOOD_VALUE_CORPSE } from '../../../constants';
 import { InsectBehavior } from '../base/InsectBehavior';
 import type { InsectBehaviorContext } from '../../../types';
 import { Rectangle } from '../../Quadtree';
@@ -24,7 +18,7 @@ export class SpiderBehavior extends InsectBehavior {
         if (insect.webStamina === undefined) insect.webStamina = context.params.spiderWebStamina;
         if (insect.behaviorState === undefined) insect.behaviorState = 'ambushing';
         if (insect.decisionCooldown === undefined) insect.decisionCooldown = 0;
-        
+
         // Regenerate web stamina (happens every tick)
         insect.webStamina = Math.min(context.params.spiderWebStamina, insect.webStamina + context.params.spiderWebStaminaRegen);
 
@@ -41,7 +35,7 @@ export class SpiderBehavior extends InsectBehavior {
         insect.decisionCooldown = SPIDER_DECISION_COOLDOWN + Math.floor(Math.random() * 5);
         this.executeCurrentState(insect, context);
     }
-    
+
     private decideNextAction(spider: Insect, context: InsectBehaviorContext): void {
         // --- High Priority Interruptions ---
         // 1. Check for trapped prey
@@ -53,7 +47,7 @@ export class SpiderBehavior extends InsectBehavior {
                 return;
             }
         }
-        
+
         // --- Strategic Decisions (when not consuming) ---
         const repairCost = context.params.spiderWebBuildCost / 2;
 
@@ -64,7 +58,7 @@ export class SpiderBehavior extends InsectBehavior {
             spider.targetPosition = undefined;
             return;
         }
-        
+
         // 2. Repair an old web
         const oldWeb = this.findOldWeb(spider, context);
         if (oldWeb && spider.webStamina! >= repairCost) {
@@ -84,7 +78,7 @@ export class SpiderBehavior extends InsectBehavior {
                 return;
             }
         }
-        
+
         // 4. Default: Ambush
         spider.behaviorState = 'ambushing';
         spider.targetId = undefined;
@@ -106,7 +100,7 @@ export class SpiderBehavior extends InsectBehavior {
                     spider.behaviorState = 'ambushing'; // Invalid state, reset
                 }
                 break;
-            
+
             case 'repairing':
                 if (spider.targetPosition) {
                     if (spider.x === spider.targetPosition.x && spider.y === spider.targetPosition.y) {
@@ -115,12 +109,12 @@ export class SpiderBehavior extends InsectBehavior {
                         hasActed = this.moveTowardsTarget(spider, spider.targetPosition, context);
                     }
                 } else {
-                     spider.behaviorState = 'ambushing'; // Invalid state, reset
+                    spider.behaviorState = 'ambushing'; // Invalid state, reset
                 }
                 break;
 
             case 'consuming':
-                const webToConsume = spider.targetId ? context.nextActorState.get(spider.targetId) as SpiderWeb : undefined;
+                const webToConsume = spider.targetId ? (context.nextActorState.get(spider.targetId) as SpiderWeb) : undefined;
                 if (webToConsume && webToConsume.trappedActorId) {
                     if (spider.x === webToConsume.x && spider.y === webToConsume.y) {
                         hasActed = this.consume(spider, webToConsume, context);
@@ -139,7 +133,7 @@ export class SpiderBehavior extends InsectBehavior {
                     const randomWebId = spider.webs![Math.floor(Math.random() * spider.webs!.length)];
                     const targetWeb = context.nextActorState.get(randomWebId);
                     if (targetWeb && (spider.x !== targetWeb.x || spider.y !== targetWeb.y)) {
-                         hasActed = this.moveTowardsTarget(spider, targetWeb, context);
+                        hasActed = this.moveTowardsTarget(spider, targetWeb, context);
                     }
                 } else {
                     // No webs, wander to find a spot.
@@ -149,11 +143,11 @@ export class SpiderBehavior extends InsectBehavior {
         }
 
         if (!hasActed) {
-             spider.stamina = Math.min(spider.maxStamina, spider.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+            spider.stamina = Math.min(spider.maxStamina, spider.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
 
-    private moveTowardsTarget(spider: Insect, target: { x: number, y: number } | null, context: InsectBehaviorContext): boolean {
+    private moveTowardsTarget(spider: Insect, target: { x: number; y: number } | null, context: InsectBehaviorContext): boolean {
         if (spider.stamina < INSECT_MOVE_COST) return false;
 
         let moved = false;
@@ -162,13 +156,13 @@ export class SpiderBehavior extends InsectBehavior {
         } else {
             moved = this.wander(spider, context);
         }
-        
+
         if (moved) {
             spider.stamina -= INSECT_MOVE_COST;
         }
         return moved;
     }
-    
+
     private findOldWeb(spider: Insect, context: InsectBehaviorContext): SpiderWeb | null {
         const { nextActorState, params } = context;
         const OLD_WEB_LIFESPAN_THRESHOLD = params.spiderWebLifespan * 0.25;
@@ -198,12 +192,12 @@ export class SpiderBehavior extends InsectBehavior {
     private findWebExpansionSpot(spider: Insect, context: InsectBehaviorContext): { x: number; y: number } | null {
         const { params, flowerQtree, qtree, nextActorState, claimedCellsThisTick } = context;
         const searchRadius = 3;
-        
+
         const possibleSpots: { x: number; y: number }[] = [];
 
         // Check spider's current location first
         possibleSpots.push({ x: spider.x, y: spider.y });
-        
+
         // Then check neighbors
         for (const [dx, dy] of neighborVectors) {
             const nx = spider.x + dx;
@@ -232,7 +226,7 @@ export class SpiderBehavior extends InsectBehavior {
             let score = 0;
             const vision = new Rectangle(spot.x, spot.y, searchRadius, searchRadius);
             const nearbyFlowers = flowerQtree.query(vision).map(p => p.data as Flower);
-            
+
             for (const flower of nearbyFlowers) {
                 score += scoreFlower(spider, flower);
             }
@@ -242,7 +236,7 @@ export class SpiderBehavior extends InsectBehavior {
                 bestSpot = spot;
             }
         }
-        
+
         // Only build if the spot is considered "good enough"
         if (highestScore > 0) {
             return bestSpot;
@@ -261,9 +255,14 @@ export class SpiderBehavior extends InsectBehavior {
 
             const webId = context.getNextId('spiderweb', spider.x, spider.y);
             const newWeb: SpiderWeb = {
-                id: webId, type: 'spiderweb', x: spider.x, y: spider.y,
-                ownerId: spider.id, strength: context.params.spiderWebStrength,
-                trappedActorId: null, lifespan: context.params.spiderWebLifespan,
+                id: webId,
+                type: 'spiderweb',
+                x: spider.x,
+                y: spider.y,
+                ownerId: spider.id,
+                strength: context.params.spiderWebStrength,
+                trappedActorId: null,
+                lifespan: context.params.spiderWebLifespan,
             };
             context.newActorQueue.push(newWeb);
             context.claimedCellsThisTick.add(claimKey); // Claim the cell for this tick
@@ -276,11 +275,11 @@ export class SpiderBehavior extends InsectBehavior {
         spider.behaviorState = 'ambushing';
         return false;
     }
-    
+
     private repairWeb(spider: Insect, context: InsectBehaviorContext): boolean {
         const { nextActorState, events, params } = context;
         const webOnCell = nextActorState.get(spider.targetId!) as SpiderWeb | undefined;
-        
+
         const repairCost = params.spiderWebBuildCost / 2;
 
         if (webOnCell && spider.webStamina! >= repairCost) {
@@ -302,17 +301,25 @@ export class SpiderBehavior extends InsectBehavior {
         const prey = context.nextActorState.get(web.trappedActorId!) as Insect;
         if (prey) {
             context.nextActorState.delete(prey.id);
-            
+
             const corpseId = context.getNextId('corpse', prey.x, prey.y);
             const preyBaseStats = INSECT_DATA.get(prey.emoji);
             const foodValue = preyBaseStats ? preyBaseStats.maxHealth : FOOD_VALUE_CORPSE;
-            context.newActorQueue.push({ id: corpseId, type: 'corpse', x: prey.x, y: prey.y, originalEmoji: prey.emoji, decayTimer: CORPSE_DECAY_TIME, foodValue });
+            context.newActorQueue.push({
+                id: corpseId,
+                type: 'corpse',
+                x: prey.x,
+                y: prey.y,
+                originalEmoji: prey.emoji,
+                decayTimer: CORPSE_DECAY_TIME,
+                foodValue,
+            });
 
             spider.health = Math.min(spider.maxHealth, spider.health + SPIDER_HEAL_FROM_PREY);
             spider.stamina = Math.min(spider.maxStamina, spider.stamina + SPIDER_HEAL_FROM_PREY);
-            
+
             context.events.push({ message: `🕷️ A spider consumed a trapped ${prey.emoji}.`, type: 'info', importance: 'low' });
-            
+
             web.trappedActorId = null;
             spider.targetId = undefined;
             spider.behaviorState = 'ambushing';

@@ -8,7 +8,10 @@ const INIT_TIMEOUT_MS = 15000;
 export function reportFatal(error: Error): void {
     const report = (globalThis as { reportError?: (error: unknown) => void }).reportError;
     if (typeof report === 'function') report.call(globalThis, error);
-    else setTimeout(() => { throw error; });
+    else
+        setTimeout(() => {
+            throw error;
+        });
 }
 
 /** Starts the wasm service of this thread; says whether it did, and never throws. */

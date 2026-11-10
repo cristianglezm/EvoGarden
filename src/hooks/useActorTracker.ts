@@ -15,23 +15,26 @@ export const useActorTracker = ({ actors, isRunning, setIsRunning, setSelectedAc
     const [trackedActorId, setTrackedActorId] = useState<string | null>(null);
     const wasRunningBeforeTrackingRef = useRef(false);
 
-    const handleTrackActor = useCallback((id: string, actorType: string = 'actor') => {
-        if (!id) {
-            eventService.dispatch({ message: `Please enter an ID to track.`, type: 'error', importance: 'high' });
-            return;
-        }
+    const handleTrackActor = useCallback(
+        (id: string, actorType: string = 'actor') => {
+            if (!id) {
+                eventService.dispatch({ message: `Please enter an ID to track.`, type: 'error', importance: 'high' });
+                return;
+            }
 
-        const actorToTrack = Array.from(actors.values()).find(a => a.id.toLowerCase().includes(id.toLowerCase()));
+            const actorToTrack = Array.from(actors.values()).find(a => a.id.toLowerCase().includes(id.toLowerCase()));
 
-        if (actorToTrack) {
-            wasRunningBeforeTrackingRef.current = isRunning;
-            setTrackedActorId(actorToTrack.id);
-            setIsRunning(true);
-            eventService.dispatch({ message: `Tracking ${actorType} #${getShortId(actorToTrack.id)}`, type: 'info', importance: 'high' });
-        } else {
-            eventService.dispatch({ message: `${actorType} ID containing "${id}" not found.`, type: 'error', importance: 'high' });
-        }
-    }, [actors, isRunning, setIsRunning]);
+            if (actorToTrack) {
+                wasRunningBeforeTrackingRef.current = isRunning;
+                setTrackedActorId(actorToTrack.id);
+                setIsRunning(true);
+                eventService.dispatch({ message: `Tracking ${actorType} #${getShortId(actorToTrack.id)}`, type: 'info', importance: 'high' });
+            } else {
+                eventService.dispatch({ message: `${actorType} ID containing "${id}" not found.`, type: 'error', importance: 'high' });
+            }
+        },
+        [actors, isRunning, setIsRunning]
+    );
 
     const handleStopTracking = useCallback(() => {
         if (trackedActorId) {
@@ -59,7 +62,6 @@ export const useActorTracker = ({ actors, isRunning, setIsRunning, setSelectedAc
             }
         }
     }, [actors, trackedActorId, selectedActor, setSelectedActor, handleStopTracking]);
-
 
     return {
         trackedActorId,

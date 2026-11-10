@@ -13,11 +13,13 @@ const FALLBACK_NUTRIENT_EFFICIENCY = 1.0;
  * It is now executed exclusively within the flower.worker.ts context.
  */
 export const createNewFlower = async (
-    flowerService: FEService, 
-    params: SimulationParams, 
-    x: number, y: number, 
-    genome?: string, parentGenome2?: string,
-    flowerId?: string,
+    flowerService: FEService,
+    params: SimulationParams,
+    x: number,
+    y: number,
+    genome?: string,
+    parentGenome2?: string,
+    flowerId?: string
 ): Promise<Flower | null> => {
     try {
         let newFlowerData: { genome: string; image: string };
@@ -30,19 +32,33 @@ export const createNewFlower = async (
         const stats: FlowerGenomeStats = await flowerService.getFlowerStats(newFlowerData.genome, humidity, temperature);
         const maxHealth = stats.health || FALLBACK_MAX_HEALTH;
         const maxStamina = stats.stamina || FALLBACK_MAX_STAMINA;
-        const nutrientEfficiency = 1.0 + ((stats.effects?.vitality || 0) / 100) || FALLBACK_NUTRIENT_EFFICIENCY;
+        const nutrientEfficiency = 1.0 + (stats.effects?.vitality || 0) / 100 || FALLBACK_NUTRIENT_EFFICIENCY;
         const maturationPeriod = stats.maturationPeriod || FALLBACK_MATURATION_AGE;
         const id = flowerId || `flower-${x}-${y}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
         return {
-            id, type: 'flower', x, y,
-            genome: newFlowerData.genome, imageData: newFlowerData.image, maxHealth, maxStamina,
-            nutrientEfficiency, minTemperature: stats.minTemperature, maxTemperature: stats.maxTemperature,
-            maturationPeriod, sex: stats.sex, toxicityRate: stats.toxicityRate, effects: stats.effects,
-            health: maxHealth, stamina: maxStamina, age: 0, isMature: false,
+            id,
+            type: 'flower',
+            x,
+            y,
+            genome: newFlowerData.genome,
+            imageData: newFlowerData.image,
+            maxHealth,
+            maxStamina,
+            nutrientEfficiency,
+            minTemperature: stats.minTemperature,
+            maxTemperature: stats.maxTemperature,
+            maturationPeriod,
+            sex: stats.sex,
+            toxicityRate: stats.toxicityRate,
+            effects: stats.effects,
+            health: maxHealth,
+            stamina: maxStamina,
+            age: 0,
+            isMature: false,
         };
     } catch (error) {
-        console.error("Flower Worker: Failed to create flower:", error);
+        console.error('Flower Worker: Failed to create flower:', error);
         return null;
     }
 };
@@ -59,20 +75,24 @@ export const createInitialMobileActors = (params: SimulationParams): CellContent
         const id = `insect-init-${i}`;
         // Exclude social insects from random initial spawn and respect the whitelist
         const emoji = getInsectEmoji(id, { allowed: allowedActors, exclude: ['🐝', '🐜', '🕷️'] });
-        
+
         if (emoji) {
             const baseStats = INSECT_DATA.get(emoji);
             if (baseStats) {
                 const typeName = (ACTOR_NAMES[emoji] || 'insect').toLowerCase();
                 const id = `insect-${typeName}-${-1}-${-1}-${Date.now() + i}`;
-                const newInsect: Insect = { 
-                    id, type: 'insect', x: -1, y: -1, 
-                    pollen: null, emoji, 
+                const newInsect: Insect = {
+                    id,
+                    type: 'insect',
+                    x: -1,
+                    y: -1,
+                    pollen: null,
+                    emoji,
                     genome: generateRandomInsectGenome(),
                     health: baseStats.maxHealth,
                     maxHealth: baseStats.maxHealth,
                     stamina: baseStats.maxStamina,
-                    maxStamina: baseStats.maxStamina
+                    maxStamina: baseStats.maxStamina,
                 };
                 actors.push(newInsect);
             }
@@ -107,7 +127,7 @@ export const initializeHivesAndBees = (actors: CellContent[], params: Simulation
                     x: hiveX,
                     y: hiveY,
                     hiveId: String(hiveCounter),
-                    honey: hiveSpawnThreshold + (2 * hiveSpawnCost),
+                    honey: hiveSpawnThreshold + 2 * hiveSpawnCost,
                     pollen: 0,
                     spawnCooldown: 0,
                     genome: generateRandomInsectGenome(),
@@ -119,7 +139,7 @@ export const initializeHivesAndBees = (actors: CellContent[], params: Simulation
             }
         }
     }
-    
+
     // Assign bees to the nearest hive. forEach is safe on an empty array.
     bees.forEach(bee => {
         let closestHive: Hive | null = null;
@@ -158,7 +178,7 @@ export const initializeAntColonies = (actors: CellContent[], params: SimulationP
                     x: colonyX,
                     y: colonyY,
                     colonyId: String(colonyCounter),
-                    foodReserves: antColonySpawnThreshold + (2 * antColonySpawnCost),
+                    foodReserves: antColonySpawnThreshold + 2 * antColonySpawnCost,
                     spawnCooldown: 0,
                     genome: generateRandomInsectGenome(), // For pollen preference
                     storedAnts: 0,
@@ -169,7 +189,7 @@ export const initializeAntColonies = (actors: CellContent[], params: SimulationP
             }
         }
     }
-    
+
     // Assign any pre-existing ants to the nearest colony.
     ants.forEach(ant => {
         let closestColony: AntColony | null = null;
@@ -199,11 +219,17 @@ export const initializeSpiders = (actors: CellContent[], params: SimulationParam
             if (spiderX < gridWidth && spiderY < gridHeight) {
                 const id = `insect-spider-${spiderX}-${spiderY}-${Date.now()}`;
                 const newSpider: Insect = {
-                    id, type: 'insect', x: spiderX, y: spiderY,
-                    pollen: null, emoji: '🕷️',
+                    id,
+                    type: 'insect',
+                    x: spiderX,
+                    y: spiderY,
+                    pollen: null,
+                    emoji: '🕷️',
                     genome: generateRandomInsectGenome(),
-                    health: baseStats.maxHealth, maxHealth: baseStats.maxHealth,
-                    stamina: baseStats.maxStamina, maxStamina: baseStats.maxStamina
+                    health: baseStats.maxHealth,
+                    maxHealth: baseStats.maxHealth,
+                    stamina: baseStats.maxStamina,
+                    maxStamina: baseStats.maxStamina,
                 };
                 actors.push(newSpider);
             }

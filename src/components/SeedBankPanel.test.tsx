@@ -28,8 +28,13 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-const champion = (category: 'longestLived' | 'mostToxic' | 'mostHealing', genome: string, value: number) =>
-    ({ category, genome, value, imageData: `png-${category}`, sex: 'female' as const });
+const champion = (category: 'longestLived' | 'mostToxic' | 'mostHealing', genome: string, value: number) => ({
+    category,
+    genome,
+    value,
+    imageData: `png-${category}`,
+    sex: 'female' as const,
+});
 
 function panel(props: Partial<React.ComponentProps<typeof SeedBankPanel>> = {}) {
     return render(<SeedBankPanel isRunning setIsRunning={vi.fn()} source={h.source} {...props} />);

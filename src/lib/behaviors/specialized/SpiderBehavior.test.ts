@@ -2,12 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SpiderBehavior } from './SpiderBehavior';
 import type { Insect, Flower, CellContent, SimulationParams, SpiderWeb, Corpse } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    DEFAULT_SIM_PARAMS, 
-    INSECT_HEALTH_DECAY_PER_TICK,
-    FLOWER_STAT_INDICES,
-} from '../../../constants';
+import { INSECT_DATA, DEFAULT_SIM_PARAMS, INSECT_HEALTH_DECAY_PER_TICK, FLOWER_STAT_INDICES } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 import { SPIDER_HEAL_FROM_PREY } from '../../../constants';
 
@@ -23,23 +18,30 @@ describe('SpiderBehavior', () => {
     let flowerQtree: Quadtree<CellContent>;
     let newActorQueue: CellContent[];
     const getNextId = vi.fn();
-    const params: SimulationParams = { 
-        ...DEFAULT_SIM_PARAMS, 
-        gridWidth: 20, 
+    const params: SimulationParams = {
+        ...DEFAULT_SIM_PARAMS,
+        gridWidth: 20,
         gridHeight: 20,
         spiderMaxWebs: 3,
         spiderWebBuildCost: 25,
         spiderWebStamina: 100,
         spiderWebStaminaRegen: 0.5,
     };
-    
+
     beforeEach(() => {
         behavior = new SpiderBehavior();
         spider = {
-            id: 'spider1', type: 'insect', x: 10, y: 10, emoji: '🕷️', pollen: null, 
+            id: 'spider1',
+            type: 'insect',
+            x: 10,
+            y: 10,
+            emoji: '🕷️',
+            pollen: null,
             genome: Array(Object.keys(FLOWER_STAT_INDICES).length).fill(1),
-            health: SPIDER_DATA.maxHealth, maxHealth: SPIDER_DATA.maxHealth,
-            stamina: SPIDER_DATA.maxStamina, maxStamina: SPIDER_DATA.maxStamina,
+            health: SPIDER_DATA.maxHealth,
+            maxHealth: SPIDER_DATA.maxHealth,
+            stamina: SPIDER_DATA.maxStamina,
+            maxStamina: SPIDER_DATA.maxStamina,
             webs: [],
             webStamina: params.spiderWebStamina,
             behaviorState: 'ambushing', // Use the new default/idle state
@@ -52,7 +54,7 @@ describe('SpiderBehavior', () => {
         newActorQueue = [];
         getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
-    
+
     const setupContext = (): any => ({
         params,
         qtree,
@@ -72,13 +74,13 @@ describe('SpiderBehavior', () => {
         const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
         const initialX = spider.x;
         const initialY = spider.y;
-        
+
         spider.decisionCooldown = 0; // Force a decision
-        
+
         behavior.update(spider, setupContext());
-        
+
         const moved = spider.x !== initialX || spider.y !== initialY;
-        expect(moved, "Spider should have moved from its initial position.").toBe(true);
+        expect(moved, 'Spider should have moved from its initial position.').toBe(true);
         const dx = Math.abs(spider.x - initialX);
         const dy = Math.abs(spider.y - initialY);
         expect(dx).toBeLessThanOrEqual(1);
@@ -88,11 +90,25 @@ describe('SpiderBehavior', () => {
 
     it('should decide to build a web and execute it when on a good spot', () => {
         const flower: Flower = {
-            id: 'f1', type: 'flower', x: 10, y: 10, health: 100, maxHealth: 100,
-            genome: 'g1', imageData: '', stamina: 100, maxStamina: 100,
-            age: 51, isMature: true, maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-            minTemperature: 10, maxTemperature: 30, toxicityRate: 0.0,
-            effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+            id: 'f1',
+            type: 'flower',
+            x: 10,
+            y: 10,
+            health: 100,
+            maxHealth: 100,
+            genome: 'g1',
+            imageData: '',
+            stamina: 100,
+            maxStamina: 100,
+            age: 51,
+            isMature: true,
+            maturationPeriod: 50,
+            nutrientEfficiency: 1.0,
+            sex: 'both',
+            minTemperature: 10,
+            maxTemperature: 30,
+            toxicityRate: 0.0,
+            effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
         };
         spider.x = 10;
         spider.y = 10;
@@ -100,7 +116,7 @@ describe('SpiderBehavior', () => {
         const context = setupContext();
         context.nextActorState.set(flower.id, flower);
         context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
-        
+
         behavior.update(spider, context);
 
         expect(context.newActorQueue.length).toBe(1);
@@ -118,7 +134,7 @@ describe('SpiderBehavior', () => {
         nextActorState.set(web.id, web);
         spider.behaviorState = 'ambushing';
         spider.decisionCooldown = 0; // Force decision
-        
+
         behavior.update(spider, setupContext());
 
         expect(spider.behaviorState).toBe('consuming');
@@ -151,7 +167,7 @@ describe('SpiderBehavior', () => {
         spider.behaviorState = 'consuming';
         spider.targetId = web.id;
         const context = setupContext();
-        
+
         // Set cooldown > 0 to ensure we only execute the current state
         spider.decisionCooldown = 1;
 

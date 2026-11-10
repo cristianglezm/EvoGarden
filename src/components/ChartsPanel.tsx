@@ -22,7 +22,7 @@ export const ChartsPanel: React.FC = () => {
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <PopulationDynamicsChart history={history} />
             </div>
-             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
+            <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <EventsChart history={history} />
             </div>
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
@@ -31,7 +31,7 @@ export const ChartsPanel: React.FC = () => {
             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <BaseEffectsChart history={history} />
             </div>
-             <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
+            <div className="bg-chart-background border-2 border-chart-border rounded-lg p-2">
                 <PerformanceChart history={history} />
             </div>
         </div>

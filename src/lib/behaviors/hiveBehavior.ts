@@ -11,15 +11,20 @@ interface HiveContext {
     getNextId: (type: string, x: number, y: number) => string;
 }
 
-function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params: SimulationParams, getNextId: (type: string, x: number, y: number) => string): Insect {
+function createBeeFromHive(
+    hive: Hive,
+    position: { x: number; y: number },
+    params: SimulationParams,
+    getNextId: (type: string, x: number, y: number) => string
+): Insect {
     const baseStats = INSECT_DATA.get('🐝')!;
     const newBeeId = getNextId('insect-honeybee', position.x, position.y);
-    
+
     // Inherit from hive, with mutation
     const newGenome = [...hive.genome];
     for (let i = 0; i < newGenome.length; i++) {
         if (Math.random() < params.mutationChance) {
-            newGenome[i] *= 1 + (Math.random() * params.mutationAmount * 2) - params.mutationAmount;
+            newGenome[i] *= 1 + Math.random() * params.mutationAmount * 2 - params.mutationAmount;
         }
     }
 
@@ -43,16 +48,14 @@ function createBeeFromHive(hive: Hive, position: {x: number, y: number}, params:
 
 export const processHiveTick = (hive: Hive, context: HiveContext) => {
     const { nextActorState, events, newActorQueue, params, currentTemperature, getNextId } = context;
-    
+
     // 1. Handle bees emerging from dormancy
     if (currentTemperature > params.beeDormancyTemp && hive.storedBees && hive.storedBees > 0) {
         const spawnSpot = findEmptyCell(
-            Array.from({ length: params.gridHeight }, (_, y) => 
-                Array.from({ length: params.gridWidth }, (_, x) => 
-                    Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y)
-                )
-            ), 
-            params, 
+            Array.from({ length: params.gridHeight }, (_, y) =>
+                Array.from({ length: params.gridWidth }, (_, x) => Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y))
+            ),
+            params,
             { x: hive.x, y: hive.y }
         );
 
@@ -73,12 +76,10 @@ export const processHiveTick = (hive: Hive, context: HiveContext) => {
     if (hive.honey >= params.hiveSpawnThreshold && hive.spawnCooldown === 0) {
         const spawnSpot = findEmptyCell(
             // A bit inefficient, but needed to find a spot for the bee
-            Array.from({ length: params.gridHeight }, (_, y) => 
-                Array.from({ length: params.gridWidth }, (_, x) => 
-                    Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y)
-                )
-            ), 
-            params, 
+            Array.from({ length: params.gridHeight }, (_, y) =>
+                Array.from({ length: params.gridWidth }, (_, x) => Array.from(nextActorState.values()).filter(a => a.x === x && a.y === y))
+            ),
+            params,
             { x: hive.x, y: hive.y }
         );
 

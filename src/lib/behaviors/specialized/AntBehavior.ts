@@ -1,5 +1,5 @@
 import type { Insect, Flower, PheromoneTrail, AntColony, Corpse, Egg, Cocoon } from '../../../types';
-import { 
+import {
     INSECT_MOVE_COST,
     FOOD_VALUE_EGG,
     FOOD_VALUE_COCOON,
@@ -33,7 +33,7 @@ export class AntBehavior extends InsectBehavior {
         if (!insect.behaviorState) insect.behaviorState = 'seeking_food';
 
         this.checkForSignals(insect, context);
-        
+
         this._handleEmergencyEat(insect, context);
 
         const hasInteracted = this.handleInteraction(insect, context);
@@ -43,7 +43,7 @@ export class AntBehavior extends InsectBehavior {
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
-    
+
     private handleDormancy(insect: Insect, context: InsectBehaviorContext) {
         const colony = this.findColony(insect, context);
         if (colony) {
@@ -51,7 +51,7 @@ export class AntBehavior extends InsectBehavior {
                 // At colony, enter it for safety.
                 if (colony.storedAnts === undefined) colony.storedAnts = 0;
                 colony.storedAnts++;
-                context.nextActorState.delete(insect.id); 
+                context.nextActorState.delete(insect.id);
                 context.events.push({ message: `🐜 An ant entered its colony to shelter from the cold.`, type: 'info', importance: 'low' });
             } else {
                 insect.behaviorState = 'returning_to_colony';
@@ -61,18 +61,13 @@ export class AntBehavior extends InsectBehavior {
     }
 
     private _handleEmergencyEat(insect: Insect, context: InsectBehaviorContext): void {
-        if (
-            insect.behaviorState === 'returning_to_colony' &&
-            insect.carriedItem &&
-            insect.carriedItem.value > 0 &&
-            insect.stamina < INSECT_MOVE_COST
-        ) {
+        if (insect.behaviorState === 'returning_to_colony' && insect.carriedItem && insect.carriedItem.value > 0 && insect.stamina < INSECT_MOVE_COST) {
             const amountToEat = Math.min(ANT_EAT_AMOUNT, insect.carriedItem.value);
-            
+
             insect.carriedItem.value -= amountToEat;
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + amountToEat);
             insect.health = Math.min(insect.maxHealth, insect.health + amountToEat);
-            
+
             context.events.push({ message: `🐜 An ant ate some of its carried food for energy.`, type: 'info', importance: 'low' });
 
             if (insect.carriedItem.value <= 0) {
@@ -81,7 +76,7 @@ export class AntBehavior extends InsectBehavior {
             }
         }
     }
-    
+
     private checkForSignals(insect: Insect, context: InsectBehaviorContext) {
         const trail = this.getPheromoneOnCell(insect.x, insect.y, context);
         if (trail && trail.signal && trail.colonyId === insect.colonyId) {
@@ -97,7 +92,9 @@ export class AntBehavior extends InsectBehavior {
         const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
         switch (insect.behaviorState) {
             case 'seeking_food': {
-                const enemyOnCell = actorsOnCell.find((a: any) => a.type === 'insect' && (a as Insect).emoji === '🐜' && (a as Insect).colonyId !== insect.colonyId) as Insect | undefined;
+                const enemyOnCell = actorsOnCell.find(
+                    (a: any) => a.type === 'insect' && (a as Insect).emoji === '🐜' && (a as Insect).colonyId !== insect.colonyId
+                ) as Insect | undefined;
                 if (enemyOnCell) {
                     insect.behaviorState = 'hunting';
                     this.createSignal(insect, 'UNDER_ATTACK', context);
@@ -126,16 +123,24 @@ export class AntBehavior extends InsectBehavior {
                         insect.stamina -= INSECT_ATTACK_COST;
                         const attackPower = INSECT_DATA.get('🐜')!.attack;
                         enemy.health -= attackPower;
-                        context.events.push({ message: `An 🐜 from colony ${insect.colonyId} attacked an ant from colony ${enemy.colonyId}.`, type: 'info', importance: 'low' });
+                        context.events.push({
+                            message: `An 🐜 from colony ${insect.colonyId} attacked an ant from colony ${enemy.colonyId}.`,
+                            type: 'info',
+                            importance: 'low',
+                        });
 
                         if (enemy.health <= 0) {
                             context.nextActorState.delete(enemy.id);
                             const corpseId = context.getNextId('corpse', enemy.x, enemy.y);
                             const foodValue = INSECT_DATA.get(enemy.emoji)?.maxHealth || FOOD_VALUE_CORPSE;
-                            const newCorpse: Corpse = { 
-                                id: corpseId, type: 'corpse', x: enemy.x, y: enemy.y, 
-                                originalEmoji: enemy.emoji, decayTimer: CORPSE_DECAY_TIME,
-                                foodValue: foodValue 
+                            const newCorpse: Corpse = {
+                                id: corpseId,
+                                type: 'corpse',
+                                x: enemy.x,
+                                y: enemy.y,
+                                originalEmoji: enemy.emoji,
+                                decayTimer: CORPSE_DECAY_TIME,
+                                foodValue: foodValue,
                             };
                             context.nextActorState.set(corpseId, newCorpse);
                             context.qtree.insert({ x: newCorpse.x, y: newCorpse.y, data: newCorpse });
@@ -151,21 +156,21 @@ export class AntBehavior extends InsectBehavior {
         }
         return false;
     }
-    
-    private findBestPheromoneTrail(insect: Insect, context: InsectBehaviorContext): { x: number, y: number, strength: number } | null {
+
+    private findBestPheromoneTrail(insect: Insect, context: InsectBehaviorContext): { x: number; y: number; strength: number } | null {
         const { params } = context;
-        let bestTrail: { x: number, y: number, strength: number } | null = null;
-        
+        let bestTrail: { x: number; y: number; strength: number } | null = null;
+
         const currentTrail = this.getPheromoneOnCell(insect.x, insect.y, context);
-        let highestStrength = (currentTrail && currentTrail.colonyId === insect.colonyId) ? currentTrail.strength : -1;
-    
+        let highestStrength = currentTrail && currentTrail.colonyId === insect.colonyId ? currentTrail.strength : -1;
+
         for (const [dx, dy] of neighborVectors) {
             const nx = insect.x + dx;
             const ny = insect.y + dy;
-    
+
             if (nx >= 0 && nx < params.gridWidth && ny >= 0 && ny < params.gridHeight) {
                 const trailOnCell = this.getPheromoneOnCell(nx, ny, context);
-    
+
                 if (trailOnCell && trailOnCell.colonyId === insect.colonyId) {
                     if (insect.lastPheromonePosition && nx === insect.lastPheromonePosition.x && ny === insect.lastPheromonePosition.y) {
                         continue;
@@ -239,7 +244,7 @@ export class AntBehavior extends InsectBehavior {
                 }
             }
         }
-        
+
         if (moved) {
             insect.stamina -= INSECT_MOVE_COST;
             if (insect.behaviorState === 'returning_to_colony' && insect.carriedItem) {
@@ -249,7 +254,7 @@ export class AntBehavior extends InsectBehavior {
                 this.createSignal(insect, 'UNDER_ATTACK', context);
             }
         }
-    
+
         return moved;
     }
 
@@ -263,36 +268,40 @@ export class AntBehavior extends InsectBehavior {
             });
             if (food) return food as Corpse | Egg | Cocoon;
         }
-        return actorsOnCell.find((a: any) => a.type === 'flower') as Flower || null;
+        return (actorsOnCell.find((a: any) => a.type === 'flower') as Flower) || null;
     }
-    
+
     private findNearestFood(insect: Insect, context: InsectBehaviorContext): Corpse | Egg | Cocoon | Flower | null {
         const vision = new Rectangle(insect.x, insect.y, ANT_VISION_RANGE, ANT_VISION_RANGE);
-        
+
         for (const type of PREY_PRIORITY) {
-            const potentialTargets = context.qtree.query(vision)
+            const potentialTargets = context.qtree
+                .query(vision)
                 .map(p => p.data)
                 .filter((a: any) => {
                     if (a?.type !== type || !context.nextActorState.has(a.id)) return false;
                     if (a.type === 'corpse') return (a as Corpse).foodValue > 0;
                     return true;
                 });
-            
+
             if (potentialTargets.length > 0) {
-                return potentialTargets.reduce((closest, current) => {
-                    const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
-                    return dist < closest.dist ? { item: current, dist } : closest;
-                }, { item: null as any, dist: Infinity }).item;
+                return potentialTargets.reduce(
+                    (closest, current) => {
+                        const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
+                        return dist < closest.dist ? { item: current, dist } : closest;
+                    },
+                    { item: null as any, dist: Infinity }
+                ).item;
             }
         }
 
         return this.findBestFlowerTarget(insect, context);
     }
-    
+
     private handleCollectFood(insect: Insect, food: Corpse | Egg | Cocoon | Flower, context: InsectBehaviorContext) {
         let itemType: 'corpse' | 'egg' | 'cocoon' | 'pollen' | null = null;
         let totalHarvestedValue = 0;
-    
+
         if (food.type === 'corpse') {
             const corpse = food as Corpse;
             const amountToHarvest = Math.min(ANT_CARRY_CAPACITY, corpse.foodValue);
@@ -321,21 +330,21 @@ export class AntBehavior extends InsectBehavior {
                 totalHarvestedValue = pollenValue;
             }
         }
-    
+
         if (itemType && totalHarvestedValue > 0) {
             const amountToEat = Math.min(ANT_EAT_AMOUNT, totalHarvestedValue);
             insect.health = Math.min(insect.maxHealth, insect.health + amountToEat);
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + amountToEat);
-            
+
             const amountToCarry = totalHarvestedValue - amountToEat;
-    
+
             if (amountToCarry > 0) {
                 insect.carriedItem = { type: itemType as 'corpse' | 'egg' | 'cocoon' | 'pollen', value: amountToCarry };
             }
             insect.behaviorState = 'returning_to_colony';
         }
     }
-    
+
     private handleDepositFood(insect: Insect, colony: AntColony, context: InsectBehaviorContext) {
         if (insect.carriedItem) {
             insect.stamina = insect.maxStamina;
@@ -355,9 +364,11 @@ export class AntBehavior extends InsectBehavior {
             if (colony) return colony;
         }
         // Fallback for old saves or if colony moved (it doesn't, but good practice)
-        return Array.from(context.nextActorState.values()).find((a: any) => a.type === 'antColony' && (a as AntColony).colonyId === insect.colonyId) as AntColony | undefined;
+        return Array.from(context.nextActorState.values()).find((a: any) => a.type === 'antColony' && (a as AntColony).colonyId === insect.colonyId) as
+            | AntColony
+            | undefined;
     }
-    
+
     private getPheromoneOnCell(x: number, y: number, context: InsectBehaviorContext): PheromoneTrail | undefined {
         const trailId = context.getNextId('pheromoneTrail', x, y);
         const trail = context.nextActorState.get(trailId);
@@ -366,7 +377,7 @@ export class AntBehavior extends InsectBehavior {
         }
         return undefined;
     }
-    
+
     private leavePheromoneTrail(insect: Insect, context: InsectBehaviorContext) {
         const strength = insect.carriedItem?.value || 1;
         const trailId = context.getNextId('pheromoneTrail', insect.x, insect.y);
@@ -389,9 +400,13 @@ export class AntBehavior extends InsectBehavior {
         } else {
             // No trail exists, create a new one.
             const newTrail: PheromoneTrail = {
-                id: trailId, type: 'pheromoneTrail', x: insect.x, y: insect.y,
-                colonyId: insect.colonyId!, lifespan: context.params.pheromoneLifespan,
-                strength: strength
+                id: trailId,
+                type: 'pheromoneTrail',
+                x: insect.x,
+                y: insect.y,
+                colonyId: insect.colonyId!,
+                lifespan: context.params.pheromoneLifespan,
+                strength: strength,
             };
             context.nextActorState.set(trailId, newTrail);
             // This actor is new this tick, so it won't be in the original qtree.
@@ -401,17 +416,20 @@ export class AntBehavior extends InsectBehavior {
         }
     }
 
-    private createSignal(insect: Insect, type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND', context: InsectBehaviorContext, origin?: { x: number, y: number }) {
+    private createSignal(insect: Insect, type: 'UNDER_ATTACK' | 'HIGH_VALUE_FLOWER_FOUND', context: InsectBehaviorContext, origin?: { x: number; y: number }) {
         const trailId = context.getNextId('pheromoneTrail', insect.x, insect.y);
         let trail = context.nextActorState.get(trailId) as PheromoneTrail | undefined;
 
         if (!trail || trail.colonyId !== insect.colonyId) {
             const newTrail: PheromoneTrail = {
-                id: trailId, type: 'pheromoneTrail', x: insect.x, y: insect.y,
-                colonyId: insect.colonyId!, 
+                id: trailId,
+                type: 'pheromoneTrail',
+                x: insect.x,
+                y: insect.y,
+                colonyId: insect.colonyId!,
                 lifespan: context.params.signalTTL + 5,
                 strength: 1,
-                signal: { type, origin: origin || { x: insect.x, y: insect.y }, ttl: context.params.signalTTL }
+                signal: { type, origin: origin || { x: insect.x, y: insect.y }, ttl: context.params.signalTTL },
             };
             context.nextActorState.set(trailId, newTrail);
         } else {
@@ -421,15 +439,22 @@ export class AntBehavior extends InsectBehavior {
 
     private findNearestEnemy(insect: Insect, context: InsectBehaviorContext): Insect | null {
         const vision = new Rectangle(insect.x, insect.y, ANT_VISION_RANGE, ANT_VISION_RANGE);
-        const nearbyAnts = context.qtree.query(vision)
+        const nearbyAnts = context.qtree
+            .query(vision)
             .map(p => p.data)
-            .filter((a: any) => a.type === 'insect' && (a as Insect).emoji === '🐜' && (a as Insect).colonyId !== insect.colonyId && context.nextActorState.has(a.id)) as Insect[];
+            .filter(
+                (a: any) =>
+                    a.type === 'insect' && (a as Insect).emoji === '🐜' && (a as Insect).colonyId !== insect.colonyId && context.nextActorState.has(a.id)
+            ) as Insect[];
 
         if (nearbyAnts.length === 0) return null;
 
-        return nearbyAnts.reduce((closest, current) => {
-            const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
-            return dist < closest.dist ? { ant: current, dist } : closest;
-        }, { ant: null as Insect | null, dist: Infinity }).ant;
+        return nearbyAnts.reduce(
+            (closest, current) => {
+                const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
+                return dist < closest.dist ? { ant: current, dist } : closest;
+            },
+            { ant: null as Insect | null, dist: Infinity }
+        ).ant;
     }
 }

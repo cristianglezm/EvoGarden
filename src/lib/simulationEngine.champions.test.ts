@@ -18,9 +18,25 @@ const service = {
 } as unknown as FEService;
 
 const flower = (over: Partial<Flower> = {}): Flower => ({
-    id: 'flower-1-1', type: 'flower', x: 1, y: 1, genome: 'g', imageData: '', health: 100, stamina: 100,
-    age: 10, isMature: true, maxHealth: 100, maxStamina: 100, maturationPeriod: 5, nutrientEfficiency: 1,
-    sex: 'both', minTemperature: 10, maxTemperature: 30, toxicityRate: 0, effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
+    id: 'flower-1-1',
+    type: 'flower',
+    x: 1,
+    y: 1,
+    genome: 'g',
+    imageData: '',
+    health: 100,
+    stamina: 100,
+    age: 10,
+    isMature: true,
+    maxHealth: 100,
+    maxStamina: 100,
+    maturationPeriod: 5,
+    nutrientEfficiency: 1,
+    sex: 'both',
+    minTemperature: 10,
+    maxTemperature: 30,
+    toxicityRate: 0,
+    effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
     ...over,
 });
 

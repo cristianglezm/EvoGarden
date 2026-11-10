@@ -32,7 +32,16 @@ const downloadSpecimen = (genome: string, id: string) => {
  * species), the 3D view of a flower and the download of a genome. It lives above the panels so any of them can open it:
  * the Seed Bank, a champion card or the details of a flower.
  */
-export const FieldGuideHost: React.FC<FieldGuideHostProps> = ({ isOpen, onClose, cell, isRunning, setIsRunning, onPlant, source = defaultSpeciesSource, waiting }) => {
+export const FieldGuideHost: React.FC<FieldGuideHostProps> = ({
+    isOpen,
+    onClose,
+    cell,
+    isRunning,
+    setIsRunning,
+    onPlant,
+    source = defaultSpeciesSource,
+    waiting,
+}) => {
     const [champions, setChampions] = useState<SeedBankEntry[]>([]);
     const { view, modal } = useFlower3DView({ isRunning, setIsRunning });
 
@@ -41,16 +50,25 @@ export const FieldGuideHost: React.FC<FieldGuideHostProps> = ({ isOpen, onClose,
         if (!isOpen) return;
         let current = true;
         db.seedBank.toArray().then(
-            found => { if (current) setChampions(found); },
-            error => { console.error('Failed to fetch from seed bank:', error); },
+            found => {
+                if (current) setChampions(found);
+            },
+            error => {
+                console.error('Failed to fetch from seed bank:', error);
+            }
         );
-        return () => { current = false; };
+        return () => {
+            current = false;
+        };
     }, [isOpen]);
 
-    const plant = useCallback((genome: string, sex: 'male' | 'female' | 'both') => {
-        onClose();
-        onPlant?.(genome, sex);
-    }, [onClose, onPlant]);
+    const plant = useCallback(
+        (genome: string, sex: 'male' | 'female' | 'both') => {
+            onClose();
+            onPlant?.(genome, sex);
+        },
+        [onClose, onPlant]
+    );
 
     return (
         <>

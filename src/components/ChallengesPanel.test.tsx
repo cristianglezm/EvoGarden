@@ -8,8 +8,26 @@ import type { Challenge } from '../types';
 
 // Initial state for the store before each test
 const initialChallenges: Challenge[] = [
-    { id: 'survival-1', title: 'Budding Survivor', description: 'Survive 100 ticks.', goal: 100, progress: 50, completed: false, metric: 'maxFlowerAge', aggregator: 'max' },
-    { id: 'predation-1', title: 'First Hunt', description: 'Eat 10 insects.', goal: 10, progress: 10, completed: true, metric: 'totalInsectsEaten', aggregator: 'sum' },
+    {
+        id: 'survival-1',
+        title: 'Budding Survivor',
+        description: 'Survive 100 ticks.',
+        goal: 100,
+        progress: 50,
+        completed: false,
+        metric: 'maxFlowerAge',
+        aggregator: 'max',
+    },
+    {
+        id: 'predation-1',
+        title: 'First Hunt',
+        description: 'Eat 10 insects.',
+        goal: 10,
+        progress: 10,
+        completed: true,
+        metric: 'totalInsectsEaten',
+        aggregator: 'sum',
+    },
 ];
 
 describe('ChallengesPanel', () => {
@@ -22,7 +40,7 @@ describe('ChallengesPanel', () => {
 
     it('renders all challenges from the store', () => {
         render(<ChallengesPanel />);
-        
+
         expect(screen.getByText('Budding Survivor')).toBeInTheDocument();
         expect(screen.getByText('Survive 100 ticks.')).toBeInTheDocument();
 
@@ -32,7 +50,7 @@ describe('ChallengesPanel', () => {
 
     it('displays a progress bar and text for an incomplete challenge', () => {
         render(<ChallengesPanel />);
-        
+
         const progressBar = screen.getByRole('progressbar', { name: /Progress for Budding Survivor/i });
         expect(progressBar).toBeInTheDocument();
         expect(progressBar).toHaveAttribute('aria-valuenow', '50');
@@ -50,13 +68,13 @@ describe('ChallengesPanel', () => {
 
         const completedChallengeContainer = screen.getByText('First Hunt').closest('div');
         expect(completedChallengeContainer).toBeInTheDocument();
-        
+
         expect(within(completedChallengeContainer!).getByTestId('CheckIcon')).toBeInTheDocument();
         expect(within(completedChallengeContainer!).queryByRole('progressbar')).not.toBeInTheDocument();
-        
+
         expect(screen.getByText('10 / 10')).toBeInTheDocument();
     });
-    
+
     it('renders nothing inside the main div if there are no challenges', () => {
         act(() => {
             useChallengeStore.setState({ challenges: [] });

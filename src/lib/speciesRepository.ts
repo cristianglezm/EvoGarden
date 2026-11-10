@@ -30,8 +30,7 @@ export interface SpeciesCandidate {
 
 export type OfferResult =
     // 'typical': not farther from its species than what it would replace. 'full': nothing in the way is allowed to be replaced.
-    | { stored: false; reason: 'duplicate' | 'typical' | 'full' }
-    | { stored: true; kind: SampleKind; discovered: boolean; evicted: string[] };
+    { stored: false; reason: 'duplicate' | 'typical' | 'full' } | { stored: true; kind: SampleKind; discovered: boolean; evicted: string[] };
 
 export interface RecordResult {
     /** the records the flower holds now that it did not before */
@@ -47,9 +46,12 @@ const isProtected = (sample: SpeciesSample) => sample.founder || sample.records.
 // to be toxic or to be healing (a negative toxicity) before it can hold a record.
 function canHold(category: SeedBankCategory, flower: Pick<SpeciesCandidate, 'age' | 'toxicity'>): boolean {
     switch (category) {
-        case 'longestLived': return flower.age !== undefined && flower.age > 0;
-        case 'mostToxic': return flower.toxicity !== undefined && flower.toxicity > 0;
-        case 'mostHealing': return flower.toxicity !== undefined && flower.toxicity < 0;
+        case 'longestLived':
+            return flower.age !== undefined && flower.age > 0;
+        case 'mostToxic':
+            return flower.toxicity !== undefined && flower.toxicity > 0;
+        case 'mostHealing':
+            return flower.toxicity !== undefined && flower.toxicity < 0;
     }
 }
 
@@ -57,9 +59,12 @@ function canHold(category: SeedBankCategory, flower: Pick<SpeciesCandidate, 'age
 function beats(category: SeedBankCategory, flower: Pick<SpeciesCandidate, 'age' | 'toxicity'>, holder: SpeciesSample | undefined): boolean {
     if (!holder) return true;
     switch (category) {
-        case 'longestLived': return holder.age === undefined || flower.age! > holder.age;
-        case 'mostToxic': return holder.toxicity === undefined || flower.toxicity! > holder.toxicity;
-        case 'mostHealing': return holder.toxicity === undefined || flower.toxicity! < holder.toxicity;
+        case 'longestLived':
+            return holder.age === undefined || flower.age! > holder.age;
+        case 'mostToxic':
+            return holder.toxicity === undefined || flower.toxicity! > holder.toxicity;
+        case 'mostHealing':
+            return holder.toxicity === undefined || flower.toxicity! < holder.toxicity;
     }
 }
 
@@ -89,7 +94,7 @@ export class SpeciesRepository {
     constructor(
         private readonly store: SpeciesStore,
         limits: Partial<SpeciesLimits> = {},
-        private readonly now: () => number = Date.now,
+        private readonly now: () => number = Date.now
     ) {
         this.current = validateLimits({ ...DEFAULT_SPECIES_LIMITS, ...limits });
     }
@@ -146,7 +151,12 @@ export class SpeciesRepository {
                 if (match === 'gone') await tx.remove([id]);
                 else if (match) {
                     await tx.update({
-                        ...sample, cell: cellKey(match), x: match.x, y: match.y, d: match.distance, fp,
+                        ...sample,
+                        cell: cellKey(match),
+                        x: match.x,
+                        y: match.y,
+                        d: match.distance,
+                        fp,
                         kind: sample.kind === 'unclassified' ? 'sample' : sample.kind,
                     });
                 } else {
@@ -207,7 +217,13 @@ export class SpeciesRepository {
             if (stats && match.distance > stats.above) {
                 return this.offerReplacing(tx, { ...sample, kind: 'atypical' }, candidate, await tx.ofKind('atypical'), this.limits.atypicalCap);
             }
-            return this.offerReplacing(tx, sample, candidate, inCell.filter(s => s.kind === 'sample'), this.limits.cap);
+            return this.offerReplacing(
+                tx,
+                sample,
+                candidate,
+                inCell.filter(s => s.kind === 'sample'),
+                this.limits.cap
+            );
         });
     }
 
@@ -232,7 +248,13 @@ export class SpeciesRepository {
             const cell = existing ? existing.cell : cellKey(candidate.match);
             const inCell = await tx.inCell(cell);
 
-            const won = eligible.filter(category => beats(category, candidate, inCell.find(s => s.id !== id && s.records.includes(category))));
+            const won = eligible.filter(category =>
+                beats(
+                    category,
+                    candidate,
+                    inCell.find(s => s.id !== id && s.records.includes(category))
+                )
+            );
             if (won.length === 0) return nothing;
 
             for (const previous of inCell) {
@@ -256,8 +278,18 @@ export class SpeciesRepository {
             const match = candidate.match!;
             const founder = inCell.length === 0;
             const row: SpeciesSample = {
-                id, cell, x: match.x, y: match.y, d: match.distance, fp: candidate.fp, kind: 'sample', founder,
-                records: won, sex: candidate.sex, createdAt: this.now(), ...values,
+                id,
+                cell,
+                x: match.x,
+                y: match.y,
+                d: match.distance,
+                fp: candidate.fp,
+                kind: 'sample',
+                founder,
+                records: won,
+                sex: candidate.sex,
+                createdAt: this.now(),
+                ...values,
             };
             await tx.put(row, candidate.genome, candidate.image);
 
@@ -276,9 +308,7 @@ export class SpeciesRepository {
 
     // At the cap a flower takes the place of the most typical one it is allowed to replace,
     // and only if it is farther from its species.
-    private async offerReplacing(
-        tx: SpeciesTx, sample: SpeciesSample, candidate: SpeciesCandidate, kept: SpeciesSample[], cap: number,
-    ): Promise<OfferResult> {
+    private async offerReplacing(tx: SpeciesTx, sample: SpeciesSample, candidate: SpeciesCandidate, kept: SpeciesSample[], cap: number): Promise<OfferResult> {
         const evicted: string[] = [];
         if (kept.length >= cap) {
             const replaceable = kept.filter(s => !isProtected(s)).sort(farthestLast);

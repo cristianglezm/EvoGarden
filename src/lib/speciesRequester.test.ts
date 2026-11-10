@@ -3,10 +3,25 @@ import { SpeciesRequester } from './speciesRequester';
 import type { CellContent, Flower, SpeciesResult } from '../types';
 
 const flower = (id: string, extra: Partial<Flower> = {}): Flower => ({
-    id, type: 'flower', x: 1, y: 1, genome: `genome-${id}`, imageData: `image-${id}`,
-    health: 10, stamina: 10, age: 70, isMature: true, maxHealth: 10, maxStamina: 10,
-    maturationPeriod: 50, nutrientEfficiency: 1, sex: 'female', minTemperature: 5, maxTemperature: 30,
-    toxicityRate: 0.3, effects: { vitality: 0, agility: 0, strength: 0, intelligence: 0, luck: 0 },
+    id,
+    type: 'flower',
+    x: 1,
+    y: 1,
+    genome: `genome-${id}`,
+    imageData: `image-${id}`,
+    health: 10,
+    stamina: 10,
+    age: 70,
+    isMature: true,
+    maxHealth: 10,
+    maxStamina: 10,
+    maturationPeriod: 50,
+    nutrientEfficiency: 1,
+    sex: 'female',
+    minTemperature: 5,
+    maxTemperature: 30,
+    toxicityRate: 0.3,
+    effects: { vitality: 0, agility: 0, strength: 0, intelligence: 0, luck: 0 },
     ...extra,
 });
 
@@ -31,7 +46,9 @@ describe('SpeciesRequester', () => {
 
         it('are the different species of the living mature flowers that were classified, once the tick has seen them', () => {
             const { requester } = setup();
-            const a = flower('a'), b = flower('b'), c = flower('c');
+            const a = flower('a'),
+                b = flower('b'),
+                c = flower('c');
             classified(requester, a, 1, 2);
             classified(requester, b, 3, 4);
             classified(requester, c, 5, 6);
@@ -42,7 +59,8 @@ describe('SpeciesRequester', () => {
 
         it('count a species once, however many flowers are of it', () => {
             const { requester } = setup();
-            const a = flower('a'), b = flower('b');
+            const a = flower('a'),
+                b = flower('b');
             classified(requester, a, 1, 2);
             classified(requester, b, 1, 2);
             requester.requestMature([a, b], 2);
@@ -51,7 +69,9 @@ describe('SpeciesRequester', () => {
 
         it('tell the species by both coordinates of the cell', () => {
             const { requester } = setup();
-            const a = flower('a'), b = flower('b'), c = flower('c');
+            const a = flower('a'),
+                b = flower('b'),
+                c = flower('c');
             classified(requester, a, 1, 2);
             classified(requester, b, 2, 1);
             classified(requester, c, 1, 3);
@@ -61,7 +81,9 @@ describe('SpeciesRequester', () => {
 
         it('do not count a flower that is gone, nor one that is not mature, nor what is not a flower', () => {
             const { requester } = setup();
-            const a = flower('a'), b = flower('b'), c = flower('c');
+            const a = flower('a'),
+                b = flower('b'),
+                c = flower('c');
             classified(requester, a, 1, 2);
             classified(requester, b, 3, 4);
             classified(requester, c, 5, 6);
@@ -83,7 +105,8 @@ describe('SpeciesRequester', () => {
 
         it('follow the flowers that live: a species goes when its last flower does', () => {
             const { requester } = setup();
-            const a = flower('a'), b = flower('b');
+            const a = flower('a'),
+                b = flower('b');
             classified(requester, a, 1, 2);
             classified(requester, b, 1, 2);
             requester.requestMature([a, b], 2);
@@ -108,9 +131,18 @@ describe('SpeciesRequester', () => {
             const { requester, post } = setup();
             requester.requestMature([flower('a'), flower('b', { sex: 'male', age: 90, toxicityRate: 0.9 })], 42);
             expect(post).toHaveBeenCalledTimes(2);
-            expect(post).toHaveBeenNthCalledWith(1, { type: 'classify-flower', payload: {
-                flowerId: 'a', genome: 'genome-a', image: 'image-a', sex: 'female', age: 70, toxicity: 0.3, tick: 42,
-            } });
+            expect(post).toHaveBeenNthCalledWith(1, {
+                type: 'classify-flower',
+                payload: {
+                    flowerId: 'a',
+                    genome: 'genome-a',
+                    image: 'image-a',
+                    sex: 'female',
+                    age: 70,
+                    toxicity: 0.3,
+                    tick: 42,
+                },
+            });
             expect(post.mock.calls[1][0].payload).toMatchObject({ flowerId: 'b', sex: 'male', age: 90, toxicity: 0.9 });
         });
 
@@ -166,9 +198,18 @@ describe('SpeciesRequester', () => {
             post.mockClear();
 
             requester.reportDeath({ ...bloom, age: 140, toxicityRate: -0.2 }, 80);
-            expect(post).toHaveBeenCalledExactlyOnceWith({ type: 'record-flower', payload: {
-                flowerId: 'a', genome: 'genome-a', image: 'image-a', sex: 'female', age: 140, toxicity: -0.2, tick: 80,
-            } });
+            expect(post).toHaveBeenCalledExactlyOnceWith({
+                type: 'record-flower',
+                payload: {
+                    flowerId: 'a',
+                    genome: 'genome-a',
+                    image: 'image-a',
+                    sex: 'female',
+                    age: 140,
+                    toxicity: -0.2,
+                    tick: 80,
+                },
+            });
         });
 
         it('is not reported if it never matured, so it was never asked for', () => {
@@ -244,7 +285,8 @@ describe('SpeciesRequester', () => {
 });
 
 describe('SpeciesRequester stats', () => {
-    const flower = (id: string, genome = `g-${id}`) => ({ type: 'flower', id, genome, isMature: true, sex: 'both', age: 1, toxicityRate: 0, imageData: 'png' }) as any;
+    const flower = (id: string, genome = `g-${id}`) =>
+        ({ type: 'flower', id, genome, isMature: true, sex: 'both', age: 1, toxicityRate: 0, imageData: 'png' }) as any;
 
     it('has the requests it made and nobody answered as waiting', () => {
         const requester = new SpeciesRequester(vi.fn());
@@ -305,8 +347,13 @@ describe('SpeciesRequester stats', () => {
 });
 
 describe('SpeciesRequester remembers the species of the flowers it asked about', () => {
-    const flower = (id: string, genome: string) => ({ type: 'flower', id, genome, isMature: true, sex: 'both', age: 3, toxicityRate: 0.2, imageData: 'png' }) as any;
-    const recordOf = (post: ReturnType<typeof vi.fn>) => post.mock.calls.map(c => c[0]).filter(m => m.type === 'record-flower').map(m => m.payload);
+    const flower = (id: string, genome: string) =>
+        ({ type: 'flower', id, genome, isMature: true, sex: 'both', age: 3, toxicityRate: 0.2, imageData: 'png' }) as any;
+    const recordOf = (post: ReturnType<typeof vi.fn>) =>
+        post.mock.calls
+            .map(c => c[0])
+            .filter(m => m.type === 'record-flower')
+            .map(m => m.payload);
     const answer = (requester: SpeciesRequester, flowerId: string, tick: number, x = 4) =>
         requester.receive({ flowerId, status: 'stored', tick, fp: 'fp1', match: { x, y: 1, distance: 0.3 } });
 

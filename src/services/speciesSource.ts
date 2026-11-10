@@ -46,7 +46,7 @@ const browserStorage = async () => {
 export function createSpeciesSource(
     database: EvoGardenDB,
     classifier: () => SpeciesClassifier,
-    storage: SpeciesSource['storage'] = browserStorage,
+    storage: SpeciesSource['storage'] = browserStorage
 ): SpeciesSource {
     const settings = createSpeciesSettings(database);
     let cached: SpeciesGrid | null = null;
@@ -68,7 +68,9 @@ export function createSpeciesSource(
         async images(ids) {
             const rows = await database.speciesGenomes.bulkGet(ids);
             const images: Record<string, string> = {};
-            rows.forEach(row => { if (row?.image) images[row.id] = row.image; });
+            rows.forEach(row => {
+                if (row?.image) images[row.id] = row.image;
+            });
             return images;
         },
         genome: id => database.speciesGenomes.get(id),
@@ -80,7 +82,9 @@ export function createSpeciesSource(
         async genomes(ids) {
             const rows = await database.speciesGenomes.bulkGet(ids);
             const genomes: Record<string, string> = {};
-            rows.forEach(row => { if (row) genomes[row.id] = row.genome; });
+            rows.forEach(row => {
+                if (row) genomes[row.id] = row.genome;
+            });
             return genomes;
         },
         version: () => classifier().version,

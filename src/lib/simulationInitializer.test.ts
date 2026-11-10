@@ -23,8 +23,13 @@ const mockFlowerService: FEService = {
 
 const mockFlowerData = { genome: 'test-genome', image: 'test-image-data' };
 const mockFlowerStats: FlowerGenomeStats = {
-    health: 100, stamina: 100, maturationPeriod: 50, sex: 'both',
-    minTemperature: 10, maxTemperature: 30, toxicityRate: 0.1,
+    health: 100,
+    stamina: 100,
+    maturationPeriod: 50,
+    sex: 'both',
+    minTemperature: 10,
+    maxTemperature: 30,
+    toxicityRate: 0.1,
     effects: { vitality: 10, agility: 5, strength: 5, intelligence: 5, luck: 5 },
 };
 
@@ -83,7 +88,7 @@ describe('simulationInitializer', () => {
 
             const insects = actors.filter(c => c.type === 'insect') as Insect[];
             const birds = actors.filter(c => c.type === 'bird');
-            
+
             expect(actors.length).toBe(5);
             expect(insects.length).toBe(3);
             expect(birds.length).toBe(2);

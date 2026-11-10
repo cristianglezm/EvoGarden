@@ -1,11 +1,11 @@
 import type { Flower, SimulationParams, Grid, CellContent, FlowerSeed } from '../../types';
-import { 
-    FLOWER_TICK_COST_MULTIPLIER, 
-    FLOWER_STAMINA_COST_PER_TICK, 
+import {
+    FLOWER_TICK_COST_MULTIPLIER,
+    FLOWER_STAMINA_COST_PER_TICK,
     FLOWER_HEALTH_COST_PER_TICK,
     PROXIMITY_POLLINATION_CHANCE,
     FLOWER_EXPANSION_CHANCE,
-    WIND_POLLINATION_CHANCE
+    WIND_POLLINATION_CHANCE,
 } from '../../constants';
 import { findCellForFlowerSpawn, neighborVectors, windVectors } from '../simulationUtils';
 import type { AsyncFlowerFactory } from '../asyncFlowerFactory';
@@ -20,11 +20,7 @@ export interface FlowerContext {
     getNextId: (type: string, x: number, y: number) => string;
 }
 
-export const processFlowerTick = (
-    flower: Flower,
-    context: FlowerContext,
-    newActorQueue: CellContent[]
-) => {
+export const processFlowerTick = (flower: Flower, context: FlowerContext, newActorQueue: CellContent[]) => {
     const { params, grid, asyncFlowerFactory, currentTemperature, nextActorState, claimedCellsThisTick, getNextId } = context;
     const { gridWidth, gridHeight, windDirection, windStrength } = params;
 
@@ -35,7 +31,7 @@ export const processFlowerTick = (
 
     let staminaCost = FLOWER_STAMINA_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER;
     const healthCost = FLOWER_HEALTH_COST_PER_TICK * FLOWER_TICK_COST_MULTIPLIER;
-    
+
     // Apply environmental stress
     if (currentTemperature < flower.minTemperature || currentTemperature > flower.maxTemperature) {
         staminaCost *= 2; // Double stamina cost if outside optimal temperature range
@@ -49,13 +45,13 @@ export const processFlowerTick = (
 
     if (flower.health <= 0) {
         nextActorState.delete(flower.id);
-        return; 
+        return;
     }
-    
+
     // Reproduction and expansion
     if (flower.isMature) {
         let hasReproducedThisTick = false;
-        
+
         // 1. Asexual Expansion (one check per flower)
         if (Math.random() < FLOWER_EXPANSION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(grid, params, { x: flower.x, y: flower.y }, claimedCellsThisTick);
@@ -98,16 +94,23 @@ export const processFlowerTick = (
                 const targetX = flower.x + i * dx;
                 const targetY = flower.y + i * dy;
                 if (targetX < 0 || targetX >= gridWidth || targetY < 0 || targetY >= gridHeight) break;
-                
+
                 const targetFlower = grid[targetY][targetX]?.find(c => c.type === 'flower') as Flower | undefined;
                 if (targetFlower?.isMature) {
-                    const spawnSpot = findCellForFlowerSpawn(grid, params, {x: targetX, y: targetY}, claimedCellsThisTick);
+                    const spawnSpot = findCellForFlowerSpawn(grid, params, { x: targetX, y: targetY }, claimedCellsThisTick);
                     if (spawnSpot) {
-                         const seed = asyncFlowerFactory.requestNewFlower(nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, targetFlower.genome, getNextId);
-                         if(seed) {
+                        const seed = asyncFlowerFactory.requestNewFlower(
+                            nextActorState,
+                            spawnSpot.x,
+                            spawnSpot.y,
+                            flower.genome,
+                            targetFlower.genome,
+                            getNextId
+                        );
+                        if (seed) {
                             newActorQueue.push(seed);
                             claimedCellsThisTick.add(`flower-${spawnSpot.x}-${spawnSpot.y}`);
-                         }
+                        }
                     }
                     break; // Stop after first potential pollination
                 }
@@ -118,10 +121,7 @@ export const processFlowerTick = (
     }
 };
 
-export const processFlowerSeedTick = (
-    seed: FlowerSeed,
-    context: FlowerContext
-) => {
+export const processFlowerSeedTick = (seed: FlowerSeed, context: FlowerContext) => {
     const { nextActorState, asyncFlowerFactory } = context;
 
     seed.age++;

@@ -39,7 +39,7 @@ describe('toastStore', () => {
             useToastStore.getState().addToast(toast1);
             useToastStore.getState().addToast(toast2);
         });
-        
+
         let toasts = useToastStore.getState().toasts;
         expect(toasts).toHaveLength(2);
 
@@ -57,7 +57,7 @@ describe('toastStore', () => {
 
     it('removeToast should do nothing if id does not exist', () => {
         const toast: AppEvent = { message: 'My Toast', type: 'info', importance: 'low' };
-        
+
         act(() => {
             useToastStore.getState().addToast(toast);
         });

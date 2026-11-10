@@ -26,7 +26,7 @@ describe('checkBuildAssets', () => {
         const broken = [...good.filter(f => !f.startsWith('flower')), 'flower.worker-xtHi_pOc.ts'];
         expect(checkBuildAssets(broken)).toEqual([
             'There is no compiled flower worker (flower.worker-*.js).',
-            'A TypeScript file was copied as it is, not compiled: flower.worker-xtHi_pOc.ts. A worker is compiled only when it is created as new Worker(new URL(\'./x.ts\', import.meta.url)) with the URL written inside the call.',
+            "A TypeScript file was copied as it is, not compiled: flower.worker-xtHi_pOc.ts. A worker is compiled only when it is created as new Worker(new URL('./x.ts', import.meta.url)) with the URL written inside the call.",
         ]);
     });
 

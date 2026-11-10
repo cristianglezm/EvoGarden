@@ -11,7 +11,13 @@ const workers = (over: Partial<WorkersSummary> = {}): WorkersSummary => ({
     ],
     speciesWorker: 'Species worker',
     species: { waiting: 3, answered: 80, dropped: 4, byStatus: { stored: 70, discovered: 3, failed: 1, skipped: 6 }, avgMs: 26.4 },
-    produced: 238, failed: 2, flowersPerSecond: 3.44, seedsDiscarded: 5, seedsCancelled: 40, discardedAfterCancel: 3, queued: 12,
+    produced: 238,
+    failed: 2,
+    flowersPerSecond: 3.44,
+    seedsDiscarded: 5,
+    seedsCancelled: 40,
+    discardedAfterCancel: 3,
+    queued: 12,
     ...over,
 });
 const summaryOf = (pending: number, w?: WorkersSummary) => ({ pendingFlowerRequests: pending, workers: w }) as unknown as TickSummary;
@@ -46,7 +52,15 @@ describe('WorkerStatusDisplay', () => {
         });
 
         it('calls a worker with one request in flight busy', () => {
-            render(<WorkerStatusDisplay summary={summaryOf(1, workers({ flowerWorkers: [{ name: 'Flower worker 1', inFlight: 1, produced: 0, failed: 0, avgMs: null }], speciesWorker: null }))} environment={environment} />);
+            render(
+                <WorkerStatusDisplay
+                    summary={summaryOf(
+                        1,
+                        workers({ flowerWorkers: [{ name: 'Flower worker 1', inFlight: 1, produced: 0, failed: 0, avgMs: null }], speciesWorker: null })
+                    )}
+                    environment={environment}
+                />
+            );
             expect(screen.getByTestId('worker-dot')).toHaveAttribute('data-state', 'busy');
         });
 
@@ -83,7 +97,8 @@ describe('WorkerStatusDisplay', () => {
 
         it('close when the bar is clicked again', () => {
             render(<WorkerStatusDisplay summary={summaryOf(7, workers())} environment={environment} />);
-            open(); open();
+            open();
+            open();
             expect(screen.queryByRole('region', { name: 'Worker details' })).not.toBeInTheDocument();
         });
 
@@ -91,23 +106,44 @@ describe('WorkerStatusDisplay', () => {
             render(<WorkerStatusDisplay summary={summaryOf(7, workers())} environment={environment} />);
             open();
             const row1 = within(details()).getByRole('row', { name: /Flower worker 1/ });
-            expect(within(row1).getAllByRole('cell').map(c => c.textContent)).toEqual(['Flower worker 1', '7', '120', '0', '48 ms']);
+            expect(
+                within(row1)
+                    .getAllByRole('cell')
+                    .map(c => c.textContent)
+            ).toEqual(['Flower worker 1', '7', '120', '0', '48 ms']);
             const row2 = within(details()).getByRole('row', { name: /Flower worker 2/ });
-            expect(within(row2).getAllByRole('cell').map(c => c.textContent)).toEqual(['Flower worker 2', '0', '118', '2', '–']);
+            expect(
+                within(row2)
+                    .getAllByRole('cell')
+                    .map(c => c.textContent)
+            ).toEqual(['Flower worker 2', '0', '118', '2', '–']);
         });
 
         it('have a row for the species worker', () => {
             render(<WorkerStatusDisplay summary={summaryOf(7, workers())} environment={environment} />);
             open();
             const row = within(details()).getByRole('row', { name: /Species worker/ });
-            expect(within(row).getAllByRole('cell').map(c => c.textContent)).toEqual(['Species worker', '3', '80', '1', '26 ms']);
+            expect(
+                within(row)
+                    .getAllByRole('cell')
+                    .map(c => c.textContent)
+            ).toEqual(['Species worker', '3', '80', '1', '26 ms']);
         });
 
         it('have a dash for the species until one was classified', () => {
-            render(<WorkerStatusDisplay summary={summaryOf(7, workers({ species: { waiting: 0, dropped: 0, answered: 0, byStatus: {}, avgMs: null } }))} environment={environment} />);
+            render(
+                <WorkerStatusDisplay
+                    summary={summaryOf(7, workers({ species: { waiting: 0, dropped: 0, answered: 0, byStatus: {}, avgMs: null } }))}
+                    environment={environment}
+                />
+            );
             open();
             const row = within(details()).getByRole('row', { name: /Species worker/ });
-            expect(within(row).getAllByRole('cell').map(c => c.textContent)).toEqual(['Species worker', '0', '0', '0', '–']);
+            expect(
+                within(row)
+                    .getAllByRole('cell')
+                    .map(c => c.textContent)
+            ).toEqual(['Species worker', '0', '0', '0', '–']);
         });
 
         it('give the totals and the species by status', () => {
@@ -116,7 +152,9 @@ describe('WorkerStatusDisplay', () => {
             expect(within(details()).getByText('Flowers produced: 238 (3.4 per second, last 10 s)')).toBeInTheDocument();
             expect(within(details()).getByText('Flowers waiting for a worker: 12')).toBeInTheDocument();
             expect(within(details()).getByText('Seeds discarded: 5')).toBeInTheDocument();
-            expect(within(details()).getByText('Seeds: 40 cancelled, 5 flowers thrown away (3 after a cancel came too late, 2 with no cancel)')).toBeInTheDocument();
+            expect(
+                within(details()).getByText('Seeds: 40 cancelled, 5 flowers thrown away (3 after a cancel came too late, 2 with no cancel)')
+            ).toBeInTheDocument();
             expect(within(details()).getByText('Species: discovered 3, stored 70, skipped 6, failed 1')).toBeInTheDocument();
             expect(within(details()).getByText('Species dropped from the queue (too many waiting): 4')).toBeInTheDocument();
         });
@@ -149,7 +187,12 @@ describe('WorkerStatusDisplay', () => {
         });
 
         it('close when the player clicks anywhere else, but not when they click inside', () => {
-            render(<div><span>elsewhere</span><WorkerStatusDisplay summary={summaryOf(7, workers())} environment={environment} /></div>);
+            render(
+                <div>
+                    <span>elsewhere</span>
+                    <WorkerStatusDisplay summary={summaryOf(7, workers())} environment={environment} />
+                </div>
+            );
             open();
             fireEvent.mouseDown(details());
             expect(details()).toBeInTheDocument();
@@ -164,7 +207,9 @@ describe('WorkerStatusDisplay', () => {
         });
 
         it('say the plan with the address and the setting in it, and with one worker, no species worker', () => {
-            const { unmount } = render(<WorkerStatusDisplay summary={summaryOf(0)} environment={{ hardwareConcurrency: 8, search: '?creationWorkers=2', workers: 5 }} />);
+            const { unmount } = render(
+                <WorkerStatusDisplay summary={summaryOf(0)} environment={{ hardwareConcurrency: 8, search: '?creationWorkers=2', workers: 5 }} />
+            );
             open();
             expect(within(details()).getByText('Setup: 8 cores, 2 flower workers (address), species worker on (setting)')).toBeInTheDocument();
             unmount();

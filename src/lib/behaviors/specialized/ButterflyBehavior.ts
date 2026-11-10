@@ -1,7 +1,7 @@
 import type { Insect, Flower } from '../../../types';
-import { 
-    INSECT_POLLINATION_CHANCE, 
-    INSECT_DORMANCY_TEMP, 
+import {
+    INSECT_POLLINATION_CHANCE,
+    INSECT_DORMANCY_TEMP,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     INSECT_WANDER_CHANCE,
@@ -24,7 +24,7 @@ export class ButterflyBehavior extends InsectBehavior {
         if (this.handleHealthAndDeath(insect, context)) {
             return; // Butterfly died
         }
-        
+
         if (insect.reproductionCooldown && insect.reproductionCooldown > 0) {
             insect.reproductionCooldown--;
         }
@@ -34,13 +34,13 @@ export class ButterflyBehavior extends InsectBehavior {
         }
 
         let hasInteracted = false;
-        
+
         const flowerOnCurrentCell = this.findFlowerOnCell(insect.x, insect.y, context);
         if (flowerOnCurrentCell) {
             this.handleInteraction(insect, flowerOnCurrentCell, context);
             hasInteracted = true;
         }
-        
+
         this.handleMovement(insect, hasInteracted, context);
 
         if (hasInteracted) {
@@ -51,22 +51,20 @@ export class ButterflyBehavior extends InsectBehavior {
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
-    
+
     protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
-            (actor) => actor.type === 'flower'
-        ) as Flower | undefined;
+        return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(actor => actor.type === 'flower') as Flower | undefined;
     }
-    
+
     private handleInteraction(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         // Butterflies don't eat or damage flowers, they only interact for pollination.
         // Add stamina regeneration upon pollinating to prevent getting stuck
         insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_GAIN_FROM_EATING);
-        
+
         // Apply healing or toxicity from the flower
         if (flower.toxicityRate < 0) {
             // Healing flower
-            insect.health = Math.min(insect.maxHealth, insect.health + (INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate)));
+            insect.health = Math.min(insect.maxHealth, insect.health + INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate));
         } else {
             // Toxic or neutral flower
             const damageToInsect = INSECT_DAMAGE_FROM_TOXIC_FLOWER * flower.toxicityRate;
@@ -77,20 +75,27 @@ export class ButterflyBehavior extends InsectBehavior {
         const pollenScore = scoreFlower(insect, flower);
         insect.pollen = { genome: flower.genome, sourceFlowerId: flower.id, score: pollenScore };
     }
-    
+
     protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const { pollen } = insect;
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y });
             if (spawnSpot) {
-                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
+                const seed = context.asyncFlowerFactory.requestNewFlower(
+                    context.nextActorState,
+                    spawnSpot.x,
+                    spawnSpot.y,
+                    flower.genome,
+                    pollen.genome,
+                    context.getNextId
+                );
                 if (seed) {
                     context.newActorQueue.push(seed);
                 }
             }
         }
     }
-    
+
     private handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext): boolean {
         if (insect.stamina < INSECT_MOVE_COST) return false;
 
@@ -105,7 +110,7 @@ export class ButterflyBehavior extends InsectBehavior {
                     moved = this.moveTowards(insect, targetFlower, context);
                 }
             }
-            
+
             if (!moved) {
                 moved = this.wander(insect, context);
             }

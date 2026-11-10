@@ -9,22 +9,22 @@ interface PopulationDynamicsChartProps {
 }
 
 export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = ({ history }) => {
-    const [legend, setLegend] = useState<Record<string, boolean>>({ 
+    const [legend, setLegend] = useState<Record<string, boolean>>({
         'Total Insects': true,
-        'Birds': true, 
-        'Eagles': true, 
-        'Eggs': true, 
-        'Cocoons': true,
-        'Butterflies': true,
-        'Caterpillars': true,
-        'Beetles': true,
-        'Ladybugs': true,
-        'Cockroaches': true,
-        'Snails': true,
-        'Bees': true,
-        'Scorpions': true,
-        'Ants': true,
-        'Spiders': true,
+        Birds: true,
+        Eagles: true,
+        Eggs: true,
+        Cocoons: true,
+        Butterflies: true,
+        Caterpillars: true,
+        Beetles: true,
+        Ladybugs: true,
+        Cockroaches: true,
+        Snails: true,
+        Bees: true,
+        Scorpions: true,
+        Ants: true,
+        Spiders: true,
     });
     const handleLegendChange = createLegendSelectHandler(setLegend);
 
@@ -33,11 +33,27 @@ export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = (
         return {
             ...baseChartOptions,
             title: { text: 'Population Dynamics & Food Web', left: 'center', textStyle: { color: '#bbf7d0', fontWeight: 'bold' }, top: 0 },
-            legend: { 
-                data: ['Total Insects', 'Birds', 'Eagles', 'Eggs', 'Cocoons', 'Butterflies', 'Caterpillars', 'Beetles', 'Ladybugs', 'Cockroaches', 'Snails', 'Bees', 'Scorpions', 'Ants', 'Spiders'], 
-                top: 35, 
-                textStyle: { color: '#bbf7d0' }, 
-                selected: legend 
+            legend: {
+                data: [
+                    'Total Insects',
+                    'Birds',
+                    'Eagles',
+                    'Eggs',
+                    'Cocoons',
+                    'Butterflies',
+                    'Caterpillars',
+                    'Beetles',
+                    'Ladybugs',
+                    'Cockroaches',
+                    'Snails',
+                    'Bees',
+                    'Scorpions',
+                    'Ants',
+                    'Spiders',
+                ],
+                top: 35,
+                textStyle: { color: '#bbf7d0' },
+                selected: legend,
             },
             xAxis: { ...baseChartOptions.xAxis, data: ticks },
             series: [
@@ -60,5 +76,5 @@ export const PopulationDynamicsChart: React.FC<PopulationDynamicsChartProps> = (
         };
     }, [history, legend]);
 
-    return <Chart option={option} onEvents={{ 'legendselectchanged': handleLegendChange }} />;
+    return <Chart option={option} onEvents={{ legendselectchanged: handleLegendChange }} />;
 };

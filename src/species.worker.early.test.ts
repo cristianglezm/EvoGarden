@@ -20,7 +20,9 @@ beforeAll(async () => {
     await import('./species.worker');
     const channel = new MessageChannel();
     toWorker = channel.port2;
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     // not awaited: the messages go in while the service starts
     started = (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
     for (const [i, flowerId] of ['x', 'y', 'z'].entries()) {

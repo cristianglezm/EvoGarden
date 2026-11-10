@@ -28,8 +28,13 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-const champion = (category: 'longestLived' | 'mostToxic' | 'mostHealing', genome: string, value: number) =>
-    ({ category, genome, value, imageData: `png-${category}`, sex: 'female' as const });
+const champion = (category: 'longestLived' | 'mostToxic' | 'mostHealing', genome: string, value: number) => ({
+    category,
+    genome,
+    value,
+    imageData: `png-${category}`,
+    sex: 'female' as const,
+});
 
 function host(props: Partial<React.ComponentProps<typeof FieldGuideHost>> = {}) {
     return render(<FieldGuideHost isOpen cell={null} onClose={vi.fn()} isRunning setIsRunning={vi.fn()} source={h.source} {...props} />);
@@ -132,7 +137,9 @@ describe('FieldGuideHost', () => {
 
         it('downloads the genome as a species file, not as a champion', async () => {
             const clicked: HTMLAnchorElement[] = [];
-            vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { clicked.push(this); });
+            vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+                clicked.push(this);
+            });
             const { item } = await openRecord();
             fireEvent.click(within(item).getByRole('button', { name: /Download/ }));
             await waitFor(() => expect(clicked).toHaveLength(1));

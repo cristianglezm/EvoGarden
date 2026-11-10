@@ -22,7 +22,7 @@ export class GlobalSearchController {
         await expect(suggestion).toBeVisible();
         await suggestion.click();
     }
-    
+
     async clickTrackButton() {
         await expect(this.trackButton).toBeEnabled();
         // Use dispatchEvent to bypass some of Playwright's checks that might fail

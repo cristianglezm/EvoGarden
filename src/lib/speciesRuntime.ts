@@ -10,7 +10,12 @@ import { SpeciesJobs, championRequest, type SpeciesJobsOptions } from './species
  * the wasm service to be started), and what goes in at start. The flower worker has it when it
  * does the species itself, the species worker always.
  */
-export function createSpeciesRuntime(service: { readonly speciesClassifier: SpeciesClassifier }, database: EvoGardenDB, workerName: string, options?: SpeciesJobsOptions) {
+export function createSpeciesRuntime(
+    service: { readonly speciesClassifier: SpeciesClassifier },
+    database: EvoGardenDB,
+    workerName: string,
+    options?: SpeciesJobsOptions
+) {
     let jobs: SpeciesJobs | null = null;
 
     const getJobs = (): SpeciesJobs | null => {

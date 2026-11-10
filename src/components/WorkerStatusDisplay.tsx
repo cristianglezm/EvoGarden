@@ -81,11 +81,21 @@ const WorkerDetails: React.FC<{ id: string; workers: WorkersSummary | undefined;
                     <table className="w-full text-left">
                         <thead>
                             <tr className="text-primary-light">
-                                <th scope="col" className="pr-3 font-semibold">Worker</th>
-                                <th scope="col" className="pr-3 font-semibold">In flight (waiting)</th>
-                                <th scope="col" className="pr-3 font-semibold">Produced (answered)</th>
-                                <th scope="col" className="pr-3 font-semibold">Failed</th>
-                                <th scope="col" className="font-semibold">Per flower</th>
+                                <th scope="col" className="pr-3 font-semibold">
+                                    Worker
+                                </th>
+                                <th scope="col" className="pr-3 font-semibold">
+                                    In flight (waiting)
+                                </th>
+                                <th scope="col" className="pr-3 font-semibold">
+                                    Produced (answered)
+                                </th>
+                                <th scope="col" className="pr-3 font-semibold">
+                                    Failed
+                                </th>
+                                <th scope="col" className="font-semibold">
+                                    Per flower
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -109,7 +119,9 @@ const WorkerDetails: React.FC<{ id: string; workers: WorkersSummary | undefined;
                             )}
                         </tbody>
                     </table>
-                    <p>Flowers produced: {workers.produced} ({workers.flowersPerSecond.toFixed(1)} per second, last 10 s)</p>
+                    <p>
+                        Flowers produced: {workers.produced} ({workers.flowersPerSecond.toFixed(1)} per second, last 10 s)
+                    </p>
                     <p>Flowers waiting for a worker: {workers.queued}</p>
                     <p>Seeds discarded: {workers.seedsDiscarded}</p>
                     <p>{seedsLine(workers)}</p>
@@ -117,8 +129,12 @@ const WorkerDetails: React.FC<{ id: string; workers: WorkersSummary | undefined;
                     <p>Species dropped from the queue (too many waiting): {workers.species.dropped}</p>
                     <p>Setup: {setupLine(workers, setup)}</p>
                     <div className="flex items-center gap-2">
-                        <button type="button" onClick={copy} className="px-2 py-1 rounded bg-surface-hover text-primary-light hover:bg-background">Copy</button>
-                        <span role="status" aria-label="Copy result">{copied}</span>
+                        <button type="button" onClick={copy} className="px-2 py-1 rounded bg-surface-hover text-primary-light hover:bg-background">
+                            Copy
+                        </button>
+                        <span role="status" aria-label="Copy result">
+                            {copied}
+                        </span>
                     </div>
                 </>
             )}
@@ -158,7 +174,11 @@ export const WorkerStatusDisplay: React.FC<WorkerStatusDisplayProps> = ({ summar
         };
     }, [open]);
 
-    const speciesName = !workers?.speciesWorker ? null : workers.speciesWorker === 'Species worker' ? 'Species worker' : `Species work in ${workers.speciesWorker}`;
+    const speciesName = !workers?.speciesWorker
+        ? null
+        : workers.speciesWorker === 'Species worker'
+          ? 'Species worker'
+          : `Species work in ${workers.speciesWorker}`;
 
     return (
         <div ref={wrapper} className="relative">
@@ -169,7 +189,7 @@ export const WorkerStatusDisplay: React.FC<WorkerStatusDisplayProps> = ({ summar
                 aria-controls={open ? detailsId : undefined}
                 onClick={() => setOpen(o => !o)}
                 className="bg-background px-3 py-1.5 rounded-md text-xs text-secondary font-mono flex items-center gap-2 hover:bg-surface-hover"
-                title={hasPendingRequests ? `${pendingRequests} genetics tasks are queued for processing.` : "Genetics worker is idle."}
+                title={hasPendingRequests ? `${pendingRequests} genetics tasks are queued for processing.` : 'Genetics worker is idle.'}
             >
                 {workers && (
                     <span className="flex items-center gap-2">
@@ -177,7 +197,11 @@ export const WorkerStatusDisplay: React.FC<WorkerStatusDisplayProps> = ({ summar
                             <Cell key={w.name} busy={w.inFlight > 0} short={String(w.inFlight)} words={`${w.name}: ${w.inFlight} in flight`} />
                         ))}
                         {speciesName && (
-                            <Cell busy={workers.species.waiting > 0} short={`sp ${workers.species.waiting}`} words={`${speciesName}: ${workers.species.waiting} waiting`} />
+                            <Cell
+                                busy={workers.species.waiting > 0}
+                                short={`sp ${workers.species.waiting}`}
+                                words={`${speciesName}: ${workers.species.waiting} waiting`}
+                            />
                         )}
                     </span>
                 )}

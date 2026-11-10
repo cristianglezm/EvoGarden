@@ -1,11 +1,5 @@
 import type { Insect, SlimeTrail } from '../../../types';
-import { 
-    INSECT_DORMANCY_TEMP, 
-    INSECT_STAMINA_REGEN_PER_TICK,
-    INSECT_MOVE_COST,
-    SNAIL_MOVE_COOLDOWN,
-    SLIME_TRAIL_LIFESPAN,
-} from '../../../constants';
+import { INSECT_DORMANCY_TEMP, INSECT_STAMINA_REGEN_PER_TICK, INSECT_MOVE_COST, SNAIL_MOVE_COOLDOWN, SLIME_TRAIL_LIFESPAN } from '../../../constants';
 import { DefaultInsectBehavior } from './DefaultInsectBehavior';
 import type { InsectBehaviorContext } from '../../../types';
 
@@ -53,7 +47,7 @@ export class SnailBehavior extends DefaultInsectBehavior {
             this.handleInteraction(insect, flowerOnCurrentCell, context);
             hasInteracted = true;
         }
-        
+
         const hasMoved = this.handleMovement(insect, hasInteracted, context);
 
         if (!hasInteracted && !hasMoved) {
@@ -70,7 +64,7 @@ export class SnailBehavior extends DefaultInsectBehavior {
 
         // Use the parent's movement logic
         const movedByParent = super.handleMovement(insect, hasInteracted, context);
-        
+
         if (movedByParent) {
             // Leave a slime trail at the old position
             const trailId = context.getNextId('slime', oldX, oldY);

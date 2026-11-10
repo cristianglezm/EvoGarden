@@ -1,6 +1,6 @@
 import type { Insect, Flower, Cocoon } from '../../../types';
-import { 
-    INSECT_DORMANCY_TEMP, 
+import {
+    INSECT_DORMANCY_TEMP,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     INSECT_DATA,
@@ -50,38 +50,36 @@ export class CaterpillarBehavior extends InsectBehavior {
 
         // 3. Regenerate stamina if idle
         if (!flowerOnCurrentCell) {
-             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
     }
-    
+
     protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-         return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
-            (actor) => actor.type === 'flower'
-        ) as Flower | undefined;
+        return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(actor => actor.type === 'flower') as Flower | undefined;
     }
-    
+
     private handleInteraction(insect: Insect, flower: Flower) {
         const baseStats = INSECT_DATA.get(insect.emoji)!;
         const damageDealt = baseStats.attack;
-        
+
         flower.health = Math.max(0, flower.health - damageDealt);
         insect.healthEaten = (insect.healthEaten || 0) + damageDealt;
 
         // Apply healing or toxicity from the flower
         if (flower.toxicityRate < 0) {
             // Healing flower
-            insect.health = Math.min(insect.maxHealth, insect.health + (INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate)));
+            insect.health = Math.min(insect.maxHealth, insect.health + INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(flower.toxicityRate));
         } else {
             // Toxic or neutral flower
             const damageToInsect = INSECT_DAMAGE_FROM_TOXIC_FLOWER * flower.toxicityRate;
             insect.health = Math.max(0, insect.health - damageToInsect);
         }
     }
-    
+
     private metamorphose(insect: Insect, context: InsectBehaviorContext) {
         const { nextActorState, events, getNextId } = context;
         nextActorState.delete(insect.id);
-        
+
         const cocoonId = getNextId('cocoon', insect.x, insect.y);
         const newCocoon: Cocoon = {
             id: cocoonId,
@@ -94,7 +92,7 @@ export class CaterpillarBehavior extends InsectBehavior {
         nextActorState.set(cocoonId, newCocoon);
         events.push({ message: `🐛 A caterpillar has formed a cocoon!`, type: 'info', importance: 'low' });
     }
-    
+
     private handleMovement(insect: Insect, hasInteracted: boolean, context: InsectBehaviorContext) {
         if (insect.stamina < INSECT_MOVE_COST) return;
 
@@ -105,7 +103,7 @@ export class CaterpillarBehavior extends InsectBehavior {
             this.wander(insect, context);
             return;
         }
-        
+
         // Find the best flower target (caterpillars are not picky, but this finds the closest)
         const targetFlower = this.findBestFlowerTarget(insect, context);
         if (targetFlower) {

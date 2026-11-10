@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Quadtree, Rectangle, Point } from './Quadtree';
 
@@ -52,9 +51,9 @@ describe('Quadtree', () => {
                 { x: 60, y: 60, data: { id: 4 } }, // Southeast
             ];
             points.forEach(p => qt.insert(p));
-            
+
             // This point will trigger the subdivision
-            qt.insert({ x: 5, y: 5, data: { id: 5 } }); 
+            qt.insert({ x: 5, y: 5, data: { id: 5 } });
 
             expect(qt.divided).toBe(true);
             expect(qt.northeast).toBeDefined();
@@ -100,9 +99,9 @@ describe('Quadtree', () => {
             const found = qt.query(range);
             expect(found.length).toBe(5);
         });
-        
+
         it('should not query from quadrants that do not intersect the range', () => {
-             // Create spies on the children's query methods
+            // Create spies on the children's query methods
             const nwSpy = vi.spyOn(qt.northwest, 'query');
             const neSpy = vi.spyOn(qt.northeast, 'query');
             const swSpy = vi.spyOn(qt.southwest, 'query');
@@ -117,7 +116,7 @@ describe('Quadtree', () => {
             expect(swSpy).not.toHaveBeenCalled();
             expect(seSpy).toHaveBeenCalled();
         });
-        
+
         it('should handle range that perfectly matches a sub-quadrant', () => {
             const range = new Rectangle(25, 25, 25, 25); // Matches the northwest quadrant
             const found = qt.query(range);
@@ -125,7 +124,7 @@ describe('Quadtree', () => {
             expect(found.map(p => p.data.id)).toEqual(expect.arrayContaining([1, 2]));
         });
     });
-    
+
     describe('Rectangle Helpers', () => {
         it('contains() should correctly identify if a point is inside', () => {
             const rect = new Rectangle(50, 50, 10, 10);

@@ -2,14 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AntBehavior } from './AntBehavior';
 import type { Insect, Corpse, AntColony, PheromoneTrail, CellContent, SimulationParams, AppEvent } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { 
-    INSECT_DATA, 
-    DEFAULT_SIM_PARAMS, 
-    INSECT_MOVE_COST,
-    FOOD_VALUE_CORPSE,
-    ANT_CARRY_CAPACITY,
-    ANT_EAT_AMOUNT
-} from '../../../constants';
+import { INSECT_DATA, DEFAULT_SIM_PARAMS, INSECT_MOVE_COST, FOOD_VALUE_CORPSE, ANT_CARRY_CAPACITY, ANT_EAT_AMOUNT } from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
 const ANT_DATA = INSECT_DATA.get('🐜')!;
@@ -24,23 +17,42 @@ describe('AntBehavior', () => {
     let newActorQueue: CellContent[];
     const getNextId = vi.fn();
     const params: SimulationParams = { ...DEFAULT_SIM_PARAMS, gridWidth: 20, gridHeight: 20 };
-    
+
     const createMockCorpse = (id: string, x: number, y: number): Corpse => ({
-        id, type: 'corpse', x, y, originalEmoji: '🦋', decayTimer: 10, foodValue: FOOD_VALUE_CORPSE,
+        id,
+        type: 'corpse',
+        x,
+        y,
+        originalEmoji: '🦋',
+        decayTimer: 10,
+        foodValue: FOOD_VALUE_CORPSE,
     });
-    
+
     const createMockColony = (colonyId: string, x: number, y: number): AntColony => ({
-        id: `colony-actor-${colonyId}`, type: 'antColony', x, y, colonyId,
-        foodReserves: 50, spawnCooldown: 0, genome: [],
+        id: `colony-actor-${colonyId}`,
+        type: 'antColony',
+        x,
+        y,
+        colonyId,
+        foodReserves: 50,
+        spawnCooldown: 0,
+        genome: [],
     });
 
     beforeEach(() => {
         behavior = new AntBehavior();
         ant = {
-            id: 'ant1', type: 'insect', x: 10, y: 10, emoji: '🐜', pollen: null, 
+            id: 'ant1',
+            type: 'insect',
+            x: 10,
+            y: 10,
+            emoji: '🐜',
+            pollen: null,
             genome: [],
-            health: ANT_DATA.maxHealth, maxHealth: ANT_DATA.maxHealth,
-            stamina: ANT_DATA.maxStamina, maxStamina: ANT_DATA.maxStamina,
+            health: ANT_DATA.maxHealth,
+            maxHealth: ANT_DATA.maxHealth,
+            stamina: ANT_DATA.maxStamina,
+            maxStamina: ANT_DATA.maxStamina,
             colonyId: '1',
             behaviorState: 'seeking_food',
         };
@@ -56,7 +68,7 @@ describe('AntBehavior', () => {
             return `${type}-${x}-${y}-${Math.random()}`;
         });
     });
-    
+
     const setupContext = (): any => ({
         params,
         qtree,
@@ -64,7 +76,7 @@ describe('AntBehavior', () => {
         newActorQueue,
         events: [] as AppEvent[],
         grid: Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => [])),
-        flowerQtree: new Quadtree(new Rectangle(10,10,10,10), 4),
+        flowerQtree: new Quadtree(new Rectangle(10, 10, 10, 10), 4),
         asyncFlowerFactory: new (AsyncFlowerFactory as any)(),
         incrementInsectsDiedOfOldAge: vi.fn(),
         currentTemperature: params.temperature,
@@ -75,7 +87,7 @@ describe('AntBehavior', () => {
         const corpse = createMockCorpse('c1', 13, 13);
         nextActorState.set(corpse.id, corpse);
         qtree.insert({ x: corpse.x, y: corpse.y, data: corpse });
-        
+
         behavior.update(ant, setupContext());
 
         // Ant at (10,10) moves towards (13,13). Speed is 2.
@@ -95,7 +107,7 @@ describe('AntBehavior', () => {
         context.qtree.insert({ x: corpse.x, y: corpse.y, data: corpse });
 
         behavior.update(ant, context);
-        
+
         expect(nextActorState.has(corpse.id)).toBe(true); // Corpse is NOT picked up, but harvested
         const updatedCorpse = nextActorState.get(corpse.id) as Corpse;
         const harvestedAmount = Math.min(ANT_CARRY_CAPACITY, initialFoodValue);
@@ -136,13 +148,13 @@ describe('AntBehavior', () => {
         expect(ant.behaviorState).toBe('seeking_food');
         expect(ant.stamina).toBe(ant.maxStamina - INSECT_MOVE_COST); // Check that stamina is restored
     });
-    
+
     it('should leave a pheromone trail when returning to colony with food', () => {
         const colony = createMockColony('1', 5, 5);
         nextActorState.set(colony.id, colony);
         ant.behaviorState = 'returning_to_colony';
         ant.carriedItem = { type: 'corpse', value: FOOD_VALUE_CORPSE };
-        
+
         const context = setupContext();
         behavior.update(ant, context);
 
@@ -170,7 +182,7 @@ describe('AntBehavior', () => {
         context.qtree.insert({ x: weakTrail.x, y: weakTrail.y, data: weakTrail });
 
         behavior.update(ant, context);
-        
+
         expect(ant.x).toBe(11);
         expect(ant.y).toBe(11);
     });
@@ -178,66 +190,93 @@ describe('AntBehavior', () => {
     describe('AntBehavior - Warfare', () => {
         it('should switch to hunting and create a signal upon encountering an enemy', () => {
             const enemyAnt: Insect = {
-                id: 'enemyAnt1', type: 'insect', x: 10, y: 10, emoji: '🐜', pollen: null,
-                genome: [], health: 100, maxHealth: 100, stamina: 100, maxStamina: 100,
+                id: 'enemyAnt1',
+                type: 'insect',
+                x: 10,
+                y: 10,
+                emoji: '🐜',
+                pollen: null,
+                genome: [],
+                health: 100,
+                maxHealth: 100,
+                stamina: 100,
+                maxStamina: 100,
                 colonyId: '2', // Different colony
             };
             nextActorState.set(enemyAnt.id, enemyAnt);
             const context = setupContext();
             context.qtree.insert({ x: enemyAnt.x, y: enemyAnt.y, data: enemyAnt });
-    
+
             behavior.update(ant, context);
-    
+
             expect(ant.behaviorState).toBe('hunting');
-            
+
             // Check that a signal was created. The modified createSignal will create a trail if needed.
-            const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail' && a.x === ant.x && a.y === ant.y) as PheromoneTrail | undefined;
-            
+            const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail' && a.x === ant.x && a.y === ant.y) as
+                | PheromoneTrail
+                | undefined;
+
             expect(trail).toBeDefined();
             expect(trail!.signal).toBeDefined();
             expect(trail!.signal!.type).toBe('UNDER_ATTACK');
             expect(trail!.colonyId).toBe(ant.colonyId);
         });
-    
+
         it('should leave an UNDER_ATTACK signal when moving while hunting', () => {
             const enemyAnt: Insect = {
-                id: 'enemyAnt1', type: 'insect', x: 13, y: 13, emoji: '🐜', pollen: null,
-                genome: [], health: 100, maxHealth: 100, stamina: 100, maxStamina: 100,
+                id: 'enemyAnt1',
+                type: 'insect',
+                x: 13,
+                y: 13,
+                emoji: '🐜',
+                pollen: null,
+                genome: [],
+                health: 100,
+                maxHealth: 100,
+                stamina: 100,
+                maxStamina: 100,
                 colonyId: '2',
             };
             nextActorState.set(enemyAnt.id, enemyAnt);
             qtree.insert({ x: enemyAnt.x, y: enemyAnt.y, data: enemyAnt });
-    
+
             ant.behaviorState = 'hunting'; // Start in hunting state
             const context = setupContext();
-    
+
             behavior.update(ant, context);
-    
+
             // Ant should move from (10,10) to (11,11)
             expect(ant.x).toBe(11);
             expect(ant.y).toBe(11);
-    
+
             // A new trail with a signal should exist at the new location
-            const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail' && a.x === ant.x && a.y === ant.y) as PheromoneTrail | undefined;
-            
+            const trail = Array.from(context.nextActorState.values()).find((a: any) => a.type === 'pheromoneTrail' && a.x === ant.x && a.y === ant.y) as
+                | PheromoneTrail
+                | undefined;
+
             expect(trail).toBeDefined();
             expect(trail!.signal).toBeDefined();
             expect(trail!.signal!.type).toBe('UNDER_ATTACK');
         });
-    
+
         it('should read a signal and switch to hunting, without consuming the signal', () => {
             const trailId = getNextId('pheromoneTrail', 10, 10);
             const trailWithSignal: PheromoneTrail = {
-                id: trailId, type: 'pheromoneTrail', x: 10, y: 10,
-                colonyId: '1', lifespan: 10, strength: 1,
-                signal: { type: 'UNDER_ATTACK', origin: { x: 12, y: 12 }, ttl: 5 }
+                id: trailId,
+                type: 'pheromoneTrail',
+                x: 10,
+                y: 10,
+                colonyId: '1',
+                lifespan: 10,
+                strength: 1,
+                signal: { type: 'UNDER_ATTACK', origin: { x: 12, y: 12 }, ttl: 5 },
             };
             nextActorState.set(trailWithSignal.id, trailWithSignal);
             const context = setupContext();
             context.qtree.insert({ x: trailWithSignal.x, y: trailWithSignal.y, data: trailWithSignal });
-    
+
             behavior.update(ant, context);
-            
+
             expect(ant.behaviorState).toBe('hunting');
             const updatedTrail = nextActorState.get(trailWithSignal.id) as PheromoneTrail;
             expect(updatedTrail.signal).toBeDefined(); // Signal should still be there

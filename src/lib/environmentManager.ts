@@ -1,14 +1,17 @@
 import type { AppEvent, EnvironmentState, Season, SimulationParams, WeatherEventType } from '../types';
 
-export function updateEnvironment(
-    tick: number,
-    params: SimulationParams,
-    currentEnvironmentState: EnvironmentState,
-    events: AppEvent[]
-): EnvironmentState {
+export function updateEnvironment(tick: number, params: SimulationParams, currentEnvironmentState: EnvironmentState, events: AppEvent[]): EnvironmentState {
     const { seasonLengthInTicks, temperature, temperatureAmplitude, humidity, humidityAmplitude } = params;
-    const { weatherEventChance, weatherEventMinDuration, weatherEventMaxDuration, heatwaveTempIncrease, coldsnapTempDecrease, heavyRainHumidityIncrease, droughtHumidityDecrease } = params;
-    
+    const {
+        weatherEventChance,
+        weatherEventMinDuration,
+        weatherEventMaxDuration,
+        heatwaveTempIncrease,
+        coldsnapTempDecrease,
+        heavyRainHumidityIncrease,
+        droughtHumidityDecrease,
+    } = params;
+
     // Create a new state object to avoid mutations
     const newEnvironmentState = { ...currentEnvironmentState, currentWeatherEvent: { ...currentEnvironmentState.currentWeatherEvent } };
 
@@ -18,13 +21,13 @@ export function updateEnvironment(
 
     let seasonalTemp = temperature + Math.sin(angle) * temperatureAmplitude;
     let seasonalHumidity = humidity + Math.sin(angle) * humidityAmplitude;
-    
+
     let season: Season;
     if (seasonalProgress < 0.25) season = 'Spring';
     else if (seasonalProgress < 0.5) season = 'Summer';
     else if (seasonalProgress < 0.75) season = 'Autumn';
     else season = 'Winter';
-    
+
     newEnvironmentState.season = season;
 
     // 2. Update weather events

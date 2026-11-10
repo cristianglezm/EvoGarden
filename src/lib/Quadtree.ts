@@ -28,12 +28,7 @@ export class Rectangle {
      * Checks if a point is contained within this rectangle.
      */
     contains(point: Point<any>): boolean {
-        return (
-            point.x >= this.x - this.hw &&
-            point.x < this.x + this.hw &&
-            point.y >= this.y - this.hh &&
-            point.y < this.y + this.hh
-        );
+        return point.x >= this.x - this.hw && point.x < this.x + this.hw && point.y >= this.y - this.hh && point.y < this.y + this.hh;
     }
 
     /**
@@ -81,7 +76,7 @@ export class Quadtree<T> {
         this.southwest = new Quadtree<T>(sw, this.capacity);
         const se = new Rectangle(x + newHw, y + newHh, newHw, newHh);
         this.southeast = new Quadtree<T>(se, this.capacity);
-        
+
         this.divided = true;
 
         // Move existing points to the new children
@@ -105,17 +100,12 @@ export class Quadtree<T> {
             this.points.push(point);
             return true;
         }
-        
+
         if (!this.divided) {
             this.subdivide();
         }
 
-        return (
-            this.northwest.insert(point) ||
-            this.northeast.insert(point) ||
-            this.southwest.insert(point) ||
-            this.southeast.insert(point)
-        );
+        return this.northwest.insert(point) || this.northeast.insert(point) || this.southwest.insert(point) || this.southeast.insert(point);
     }
 
     /**
@@ -139,19 +129,19 @@ export class Quadtree<T> {
             // Recursively query children only if the range intersects their boundaries.
             // This is a key optimization that the test is designed to verify.
             if (this.northwest.boundary.intersects(range)) {
-                 this.northwest.query(range, found);
+                this.northwest.query(range, found);
             }
             if (this.northeast.boundary.intersects(range)) {
-                 this.northeast.query(range, found);
+                this.northeast.query(range, found);
             }
             if (this.southwest.boundary.intersects(range)) {
-                 this.southwest.query(range, found);
+                this.southwest.query(range, found);
             }
             if (this.southeast.boundary.intersects(range)) {
-                 this.southeast.query(range, found);
+                this.southeast.query(range, found);
             }
         }
-        
+
         return found;
     }
 }

@@ -14,7 +14,16 @@ describe('initializeWasm', () => {
 
     it('says it did not, and why, when the service fails: it never throws', async () => {
         const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        await expect(initializeWasm({ initialize: async () => { throw new Error('no wasm'); } }, 'Test Worker')).resolves.toBe(false);
+        await expect(
+            initializeWasm(
+                {
+                    initialize: async () => {
+                        throw new Error('no wasm');
+                    },
+                },
+                'Test Worker'
+            )
+        ).resolves.toBe(false);
         expect(error.mock.calls[0][0]).toContain('Test Worker');
     });
 
@@ -24,7 +33,9 @@ describe('initializeWasm', () => {
         const result = initializeWasm({ initialize: () => new Promise(() => undefined) }, 'Test Worker');
         await vi.advanceTimersByTimeAsync(14_999);
         let settled = false;
-        result.then(() => { settled = true; });
+        result.then(() => {
+            settled = true;
+        });
         await vi.advanceTimersByTimeAsync(0);
         expect(settled).toBe(false);
         await vi.advanceTimersByTimeAsync(2);
@@ -33,7 +44,7 @@ describe('initializeWasm', () => {
 });
 
 describe('reportFatal', () => {
-    it('reports the error as the worker\'s own, so the page hears it', () => {
+    it("reports the error as the worker's own, so the page hears it", () => {
         const reportError = vi.fn();
         vi.stubGlobal('reportError', reportError);
         const error = new Error('cannot work');

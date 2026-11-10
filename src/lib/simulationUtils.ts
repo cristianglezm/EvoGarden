@@ -2,11 +2,26 @@ import type { Coord, Grid, SimulationParams, CellContent, WindDirection, Insect,
 import { POPULATION_TREND_WINDOW, FLOWER_STAT_INDICES, FLOWER_SPAWN_SEARCH_RADIUS } from '../constants';
 import { Quadtree, Rectangle } from './Quadtree';
 
-export const windVectors: Record<WindDirection, {dx: number, dy: number}> = {
-    'N': {dx: 0, dy: -1}, 'NE': {dx: 1, dy: -1}, 'E': {dx: 1, dy: 0}, 'SE': {dx: 1, dy: 1},
-    'S': {dx: 0, dy: 1}, 'SW': {dx: -1, dy: 1}, 'W': {dx: -1, dy: 0}, 'NW': {dx: -1, dy: -1},
+export const windVectors: Record<WindDirection, { dx: number; dy: number }> = {
+    N: { dx: 0, dy: -1 },
+    NE: { dx: 1, dy: -1 },
+    E: { dx: 1, dy: 0 },
+    SE: { dx: 1, dy: 1 },
+    S: { dx: 0, dy: 1 },
+    SW: { dx: -1, dy: 1 },
+    W: { dx: -1, dy: 0 },
+    NW: { dx: -1, dy: -1 },
 };
-export const neighborVectors = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+export const neighborVectors = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, -1],
+    [0, 1],
+    [1, -1],
+    [1, 0],
+    [1, 1],
+];
 
 export const getActorsOnCell = (qtree: Quadtree<CellContent>, nextActorState: Map<string, CellContent>, x: number, y: number): CellContent[] => {
     const range = new Rectangle(x + 0.5, y + 0.5, 0.5, 0.5); // Center on cell
@@ -26,16 +41,15 @@ export const getActorsOnCell = (qtree: Quadtree<CellContent>, nextActorState: Ma
     return foundActors;
 };
 
-
 export const findEmptyCell = (grid: Grid, params: SimulationParams, origin?: Coord): Coord | null => {
-    if(origin) {
+    if (origin) {
         const emptyNeighbors = neighborVectors
             .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
             .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && grid[p.y][p.x].length === 0)
             .sort(() => 0.5 - Math.random());
         if (emptyNeighbors.length > 0) return emptyNeighbors[0];
     }
-    
+
     // Fallback to find any empty cell on the grid
     const emptyCells: Coord[] = [];
     for (let y = 0; y < params.gridHeight; y++) {
@@ -90,31 +104,32 @@ export const findCellForFlowerSpawn = (grid: Grid, params: SimulationParams, ori
         const j = Math.floor(Math.random() * (i + 1));
         [potentialCoords[i], potentialCoords[j]] = [potentialCoords[j], potentialCoords[i]];
     }
-    
+
     // Find the first suitable spot in the shuffled list
     for (const coord of potentialCoords) {
         if (isSuitable(coord.x, coord.y)) {
             return coord;
         }
     }
-    
+
     // No suitable spot found within the radius.
     return null;
 };
 
-export const findCellForStationaryActor = (grid: Grid, params: SimulationParams, type: 'nutrient' | 'egg' | 'bird' | 'eagle' | 'cockroach', origin?: Coord, claimedCells?: Set<string>): Coord | null => {
+export const findCellForStationaryActor = (
+    grid: Grid,
+    params: SimulationParams,
+    type: 'nutrient' | 'egg' | 'bird' | 'eagle' | 'cockroach',
+    origin?: Coord,
+    claimedCells?: Set<string>
+): Coord | null => {
     const isSuitable = (cell: CellContent[], x: number, y: number) =>
-        (!claimedCells || !claimedCells.has(`${type}-${x}-${y}`)) &&
-        !cell.some(c => c.type === type);
+        (!claimedCells || !claimedCells.has(`${type}-${x}-${y}`)) && !cell.some(c => c.type === type);
 
     if (origin) {
         const validNeighbors = neighborVectors
             .map(([dx, dy]) => ({ x: origin.x + dx, y: origin.y + dy }))
-            .filter(p => 
-                p.x >= 0 && p.x < params.gridWidth && 
-                p.y >= 0 && p.y < params.gridHeight && 
-                isSuitable(grid[p.y][p.x], p.x, p.y)
-            )
+            .filter(p => p.x >= 0 && p.x < params.gridWidth && p.y >= 0 && p.y < params.gridHeight && isSuitable(grid[p.y][p.x], p.x, p.y))
             .sort(() => 0.5 - Math.random());
         if (validNeighbors.length > 0) return validNeighbors[0];
     }
@@ -144,7 +159,7 @@ export const cloneActor = <T extends CellContent>(actor: T): T => {
     if (actor.type === 'insect' && 'pollen' in newActor && newActor.pollen) {
         newActor.pollen = { ...(newActor.pollen as NonNullable<Insect['pollen']>) };
     }
-    
+
     // If the actor is a bird/eagle and has a target, deep-copy the target object.
     if ('target' in newActor && newActor.target) {
         newActor.target = { ...(newActor.target as NonNullable<Bird['target']>) };
@@ -185,18 +200,21 @@ export const calculatePopulationTrend = (history: number[], growthThreshold: num
     }
 
     const weightedAvg = totalWeight > 0 ? weightedSum / totalWeight : 0;
-    
+
     if (weightedAvg > growthThreshold) return 'growing';
     if (weightedAvg < -declineThreshold) return 'declining';
     return 'stable';
 };
 
-export const buildQuadtrees = (actors: CellContent[], params: { gridWidth: number, gridHeight: number }): { qtree: Quadtree<CellContent>, flowerQtree: Quadtree<CellContent> } => {
+export const buildQuadtrees = (
+    actors: CellContent[],
+    params: { gridWidth: number; gridHeight: number }
+): { qtree: Quadtree<CellContent>; flowerQtree: Quadtree<CellContent> } => {
     const { gridWidth, gridHeight } = params;
     const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
     const qtree = new Quadtree<CellContent>(boundary, 4);
     const flowerQtree = new Quadtree<CellContent>(boundary, 4);
-    
+
     for (const actor of actors) {
         qtree.insert({ x: actor.x, y: actor.y, data: actor });
         if (actor.type === 'flower') {

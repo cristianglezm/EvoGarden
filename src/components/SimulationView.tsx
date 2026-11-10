@@ -17,7 +17,16 @@ interface SimulationViewProps {
     onCanvasesReady?: (bg: HTMLCanvasElement, fg: HTMLCanvasElement) => void;
 }
 
-export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellClick, selectedActorId, actors, onFrameRendered, plantingInfo, onPlantOnCell, onCanvasesReady }) => {
+export const SimulationView: React.FC<SimulationViewProps> = ({
+    params,
+    onCellClick,
+    selectedActorId,
+    actors,
+    onFrameRendered,
+    plantingInfo,
+    onPlantOnCell,
+    onCanvasesReady,
+}) => {
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const fgCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const engineRef = useRef<RenderingEngine | null>(null);
@@ -34,21 +43,20 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
             setIsEngineReady(true);
         }
     }, [params]);
-    
+
     // Notify parent about available canvases
     useEffect(() => {
         if (isEngineReady && bgCanvasRef.current && fgCanvasRef.current) {
             onCanvasesReady?.(bgCanvasRef.current, fgCanvasRef.current);
         }
     }, [isEngineReady, onCanvasesReady]);
-    
+
     // Update engine with new params
     useEffect(() => {
         if (isEngineReady && engineRef.current) {
             engineRef.current.updateParams(params);
         }
     }, [params, isEngineReady]);
-
 
     // Main draw loop
     useEffect(() => {
@@ -60,48 +68,47 @@ export const SimulationView: React.FC<SimulationViewProps> = ({ params, onCellCl
         }
     }, [actors, selectedActorId, isEngineReady, onFrameRendered]);
 
+    const handleClick = useCallback(
+        (event: React.MouseEvent<HTMLCanvasElement>) => {
+            const canvas = fgCanvasRef.current;
+            if (!canvas) return;
 
-    const handleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-        const canvas = fgCanvasRef.current;
-        if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
 
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+            const gridX = Math.floor(x / CELL_SIZE_PX);
+            const gridY = Math.floor(y / CELL_SIZE_PX);
 
-        const gridX = Math.floor(x / CELL_SIZE_PX);
-        const gridY = Math.floor(y / CELL_SIZE_PX);
-
-        if (plantingInfo) {
-            // The engine decides in the end (the cell may change before it hears of this click); this is the quick answer, and it
-            // leaves the player planting.
-            if (hasPlantAt(actors.values(), gridX, gridY)) {
-                eventService.dispatch({ message: "Can't plant there: a flower or a seed is already in that cell.", type: 'error', importance: 'high' });
-            } else {
-                onPlantOnCell({ x: gridX, y: gridY });
+            if (plantingInfo) {
+                // The engine decides in the end (the cell may change before it hears of this click); this is the quick answer, and it
+                // leaves the player planting.
+                if (hasPlantAt(actors.values(), gridX, gridY)) {
+                    eventService.dispatch({ message: "Can't plant there: a flower or a seed is already in that cell.", type: 'error', importance: 'high' });
+                } else {
+                    onPlantOnCell({ x: gridX, y: gridY });
+                }
+                return;
             }
-            return;
-        }
-        
-        const actorsInCell: CellContent[] = [];
-        for (const actor of actors.values()) {
-            if (actor.x === gridX && actor.y === gridY) {
-                actorsInCell.push(actor);
+
+            const actorsInCell: CellContent[] = [];
+            for (const actor of actors.values()) {
+                if (actor.x === gridX && actor.y === gridY) {
+                    actorsInCell.push(actor);
+                }
             }
-        }
-        
-        onCellClick(actorsInCell);
-    }, [actors, onCellClick, plantingInfo, onPlantOnCell]);
+
+            onCellClick(actorsInCell);
+        },
+        [actors, onCellClick, plantingInfo, onPlantOnCell]
+    );
 
     const canvasWidth = params.gridWidth * CELL_SIZE_PX;
     const canvasHeight = params.gridHeight * CELL_SIZE_PX;
 
     return (
         <div className="grow bg-surface rounded-lg overflow-auto flex items-center justify-center p-4">
-            <div
-                style={{ width: canvasWidth, height: canvasHeight, position: 'relative' }}
-                className="bg-surface/50 rounded-lg shadow-inner"
-            >
+            <div style={{ width: canvasWidth, height: canvasHeight, position: 'relative' }} className="bg-surface/50 rounded-lg shadow-inner">
                 <canvas
                     ref={bgCanvasRef}
                     className="absolute top-0 left-0"

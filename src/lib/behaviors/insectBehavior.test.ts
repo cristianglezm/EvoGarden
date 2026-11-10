@@ -91,7 +91,7 @@ describe('insectBehavior dispatcher', () => {
         const { HoneybeeBehavior } = await import('./specialized/HoneybeeBehavior');
         const { AntBehavior } = await import('./specialized/AntBehavior');
         const { SpiderBehavior } = await import('./specialized/SpiderBehavior');
-        
+
         mockDefaultBehaviorUpdate = new (DefaultInsectBehavior as any)().update;
         mockCockroachBehaviorUpdate = new (CockroachBehavior as any)().update;
         mockCaterpillarBehaviorUpdate = new (CaterpillarBehavior as any)().update;
@@ -105,10 +105,17 @@ describe('insectBehavior dispatcher', () => {
         mockSpiderBehaviorUpdate = new (SpiderBehavior as any)().update;
 
         allMocks.push(
-            mockDefaultBehaviorUpdate, mockCockroachBehaviorUpdate, mockCaterpillarBehaviorUpdate,
-            mockButterflyBehaviorUpdate, mockSnailBehaviorUpdate, mockBeetleBehaviorUpdate,
-            mockLadybugBehaviorUpdate, mockScorpionBehaviorUpdate, mockHoneybeeBehaviorUpdate,
-            mockAntBehaviorUpdate, mockSpiderBehaviorUpdate
+            mockDefaultBehaviorUpdate,
+            mockCockroachBehaviorUpdate,
+            mockCaterpillarBehaviorUpdate,
+            mockButterflyBehaviorUpdate,
+            mockSnailBehaviorUpdate,
+            mockBeetleBehaviorUpdate,
+            mockLadybugBehaviorUpdate,
+            mockScorpionBehaviorUpdate,
+            mockHoneybeeBehaviorUpdate,
+            mockAntBehaviorUpdate,
+            mockSpiderBehaviorUpdate
         );
     });
 
@@ -116,7 +123,7 @@ describe('insectBehavior dispatcher', () => {
         vi.clearAllMocks();
     });
 
-    const testCases: { emoji: string, mockUpdate: () => any, type?: 'cockroach' }[] = [
+    const testCases: { emoji: string; mockUpdate: () => any; type?: 'cockroach' }[] = [
         { emoji: '🦋', mockUpdate: () => mockButterflyBehaviorUpdate },
         { emoji: '🐛', mockUpdate: () => mockCaterpillarBehaviorUpdate },
         { emoji: '🐌', mockUpdate: () => mockSnailBehaviorUpdate },
@@ -138,30 +145,32 @@ describe('insectBehavior dispatcher', () => {
             expect(expectedMock).toHaveBeenCalledWith(actor, mockContext);
 
             // Ensure no other behavior was called
-            allMocks.filter(m => m !== expectedMock).forEach(m => {
-                expect(m).not.toHaveBeenCalled();
-            });
+            allMocks
+                .filter(m => m !== expectedMock)
+                .forEach(m => {
+                    expect(m).not.toHaveBeenCalled();
+                });
         });
     }
 
     it('should warn for unknown emoji and not call any behavior', () => {
         const unknownInsect: Insect = { emoji: '❓' } as Insect;
         const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        
+
         processInsectTick(unknownInsect, mockContext);
 
         allMocks.forEach(m => {
             expect(m).not.toHaveBeenCalled();
         });
-        
+
         expect(consoleWarnSpy).toHaveBeenCalledWith('No behavior defined for insect emoji: ❓');
-        
+
         consoleWarnSpy.mockRestore();
     });
 
     it('should do nothing if the insect is trapped', () => {
         const trappedInsect: Insect = { emoji: '🐛', isTrapped: true } as Insect;
-        
+
         processInsectTick(trappedInsect, mockContext);
 
         allMocks.forEach(m => {

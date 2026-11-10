@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CaterpillarBehavior } from './CaterpillarBehavior';
 import type { Insect, Flower, Grid, CellContent, Cocoon, AppEvent } from '../../../types';
 import { Quadtree, Rectangle } from '../../Quadtree';
-import { DEFAULT_SIM_PARAMS, INSECT_DATA, CATERPILLAR_EAT_AMOUNT_FOR_COCOON, COCOON_HATCH_TIME, INSECT_HEALTH_DECAY_PER_TICK, INSECT_HEAL_FROM_HEALING_FLOWER, INSECT_DAMAGE_FROM_TOXIC_FLOWER } from '../../../constants';
+import {
+    DEFAULT_SIM_PARAMS,
+    INSECT_DATA,
+    CATERPILLAR_EAT_AMOUNT_FOR_COCOON,
+    COCOON_HATCH_TIME,
+    INSECT_HEALTH_DECAY_PER_TICK,
+    INSECT_HEAL_FROM_HEALING_FLOWER,
+    INSECT_DAMAGE_FROM_TOXIC_FLOWER,
+} from '../../../constants';
 import { AsyncFlowerFactory } from '../../asyncFlowerFactory';
 
 vi.mock('../../asyncFlowerFactory');
@@ -19,18 +27,36 @@ describe('CaterpillarBehavior', () => {
     const CATERPILLAR_DATA = INSECT_DATA.get('🐛')!;
 
     const mockFlower: Flower = {
-        id: 'flower1', type: 'flower', x: 5, y: 5,
-        genome: 'g1', imageData: '', health: 100, stamina: 100,
-        age: 51, isMature: true, maxHealth: 100, maxStamina: 100,
-        maturationPeriod: 50, nutrientEfficiency: 1.0, sex: 'both',
-        minTemperature: 10, maxTemperature: 30, toxicityRate: 0.0,
-        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 }
+        id: 'flower1',
+        type: 'flower',
+        x: 5,
+        y: 5,
+        genome: 'g1',
+        imageData: '',
+        health: 100,
+        stamina: 100,
+        age: 51,
+        isMature: true,
+        maxHealth: 100,
+        maxStamina: 100,
+        maturationPeriod: 50,
+        nutrientEfficiency: 1.0,
+        sex: 'both',
+        minTemperature: 10,
+        maxTemperature: 30,
+        toxicityRate: 0.0,
+        effects: { vitality: 1, agility: 1, strength: 1, intelligence: 1, luck: 1 },
     };
 
     beforeEach(() => {
         behavior = new CaterpillarBehavior();
-        caterpillar = { 
-            id: 'caterpillar1', type: 'insect', x: 5, y: 5, pollen: null, emoji: '🐛', 
+        caterpillar = {
+            id: 'caterpillar1',
+            type: 'insect',
+            x: 5,
+            y: 5,
+            pollen: null,
+            emoji: '🐛',
             health: CATERPILLAR_DATA.maxHealth,
             maxHealth: CATERPILLAR_DATA.maxHealth,
             stamina: CATERPILLAR_DATA.maxStamina,
@@ -42,14 +68,14 @@ describe('CaterpillarBehavior', () => {
         grid[5][5].push(caterpillar);
         nextActorState = new Map();
         nextActorState.set(caterpillar.id, caterpillar);
-        
+
         const boundary = new Rectangle(7.5, 7.5, 7.5, 7.5);
         qtree = new Quadtree(boundary, 4);
         flowerQtree = new Quadtree(boundary, 4);
         events = [];
         getNextId.mockClear().mockImplementation((type, x, y) => `${type}-${x}-${y}-${Math.random()}`);
     });
-    
+
     const setupContext = (): any => ({
         grid,
         params: DEFAULT_SIM_PARAMS,
@@ -75,7 +101,7 @@ describe('CaterpillarBehavior', () => {
         context.flowerQtree.insert({ x: flower.x, y: flower.y, data: flower });
 
         behavior.update(caterpillar, context);
-        
+
         const flowerState = nextActorState.get(flower.id) as Flower;
         expect(flowerState.health).toBe(initialFlowerHealth - CATERPILLAR_DATA.attack);
         expect(caterpillar.healthEaten).toBe(CATERPILLAR_DATA.attack);
@@ -95,7 +121,7 @@ describe('CaterpillarBehavior', () => {
         expect(caterpillar.x).toBe(6);
         expect(caterpillar.y).toBe(6);
     });
-    
+
     it('should metamorphose into a cocoon when healthEaten reaches the threshold', () => {
         caterpillar.healthEaten = CATERPILLAR_EAT_AMOUNT_FOR_COCOON - CATERPILLAR_DATA.attack; // One bite away
         const flower = { ...mockFlower, x: 5, y: 5 };
@@ -108,7 +134,7 @@ describe('CaterpillarBehavior', () => {
         behavior.update(caterpillar, context);
 
         expect(nextActorState.has(caterpillar.id)).toBe(false); // Caterpillar is gone
-        
+
         const cocoon = Array.from(nextActorState.values()).find(a => a.type === 'cocoon') as Cocoon | undefined;
         expect(cocoon).toBeDefined();
         expect(cocoon?.x).toBe(caterpillar.x);
@@ -144,9 +170,9 @@ describe('CaterpillarBehavior', () => {
 
         const context = setupContext();
         context.qtree.insert({ x: healingFlower.x, y: healingFlower.y, data: healingFlower });
-        
+
         behavior.update(caterpillar, context);
-        
+
         const expectedHeal = INSECT_HEAL_FROM_HEALING_FLOWER * Math.abs(healingFlower.toxicityRate);
         const expectedHealth = Math.min(caterpillar.maxHealth, initialHealth - INSECT_HEALTH_DECAY_PER_TICK + expectedHeal);
         expect(caterpillar.health).toBeCloseTo(expectedHealth);
@@ -161,9 +187,9 @@ describe('CaterpillarBehavior', () => {
 
         const context = setupContext();
         context.qtree.insert({ x: toxicFlower.x, y: toxicFlower.y, data: toxicFlower });
-        
+
         behavior.update(caterpillar, context);
-        
+
         const expectedDamage = INSECT_DAMAGE_FROM_TOXIC_FLOWER * toxicFlower.toxicityRate;
         const expectedHealth = Math.max(0, initialHealth - INSECT_HEALTH_DECAY_PER_TICK - expectedDamage);
         expect(caterpillar.health).toBeCloseTo(expectedHealth);
@@ -178,9 +204,9 @@ describe('CaterpillarBehavior', () => {
 
         const context = setupContext();
         context.qtree.insert({ x: neutralFlower.x, y: neutralFlower.y, data: neutralFlower });
-        
+
         behavior.update(caterpillar, context);
-        
+
         const expectedHealth = initialHealth - INSECT_HEALTH_DECAY_PER_TICK;
         expect(caterpillar.health).toBeCloseTo(expectedHealth);
     });

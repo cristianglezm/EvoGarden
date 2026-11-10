@@ -15,8 +15,18 @@ let fingerprint = '';
 let toWorker: MessagePort;
 
 const row = (i: number, extra: Partial<SpeciesSample> = {}): SpeciesSample => ({
-    id: `s${i}`, cell: '30,30', x: 30, y: 30, d: i, fp: fingerprint, kind: 'sample', founder: i === 1,
-    records: [], sex: 'both', createdAt: i, ...extra,
+    id: `s${i}`,
+    cell: '30,30',
+    x: 30,
+    y: 30,
+    d: i,
+    fp: fingerprint,
+    kind: 'sample',
+    founder: i === 1,
+    records: [],
+    sex: 'both',
+    createdAt: i,
+    ...extra,
 });
 
 beforeAll(async () => {
@@ -35,7 +45,9 @@ beforeAll(async () => {
     await import('./flower.worker');
     const channel = new MessageChannel();
     toWorker = channel.port2;
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
 }, 60_000);
 

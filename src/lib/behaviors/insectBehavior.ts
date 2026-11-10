@@ -30,10 +30,7 @@ const behaviorMap: Map<string, InsectBehavior> = new Map<string, InsectBehavior>
  * This function acts as a dispatcher, looking up the appropriate behavior
  * strategy for the given insect type and executing it.
  */
-export const processInsectTick = (
-    insect: Insect | Cockroach,
-    context: InsectBehaviorContext
-) => {
+export const processInsectTick = (insect: Insect | Cockroach, context: InsectBehaviorContext) => {
     // Universal check: if an insect is trapped, it can't do anything else.
     if ('isTrapped' in insect && insect.isTrapped) {
         return;

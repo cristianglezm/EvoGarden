@@ -22,7 +22,9 @@ export async function createGuideHarness() {
     const repository = new SpeciesRepository(createDexieSpeciesStore(db));
 
     return {
-        classifier, source, repository,
+        classifier,
+        source,
+        repository,
         reset: () => Promise.all([db.speciesSamples.clear(), db.speciesGenomes.clear(), db.speciesMeta.clear(), db.seedBank.clear()]),
         /** A flower of the species (x, y), as the flower worker would keep it. */
         offer: (genome: string, x: number, y: number, extra: Partial<SpeciesCandidate> = {}) =>

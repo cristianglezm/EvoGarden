@@ -41,11 +41,13 @@ const KIND_ORDER = { sample: 0, atypical: 1, unclassified: 2 } as const;
  */
 export function orderForExport(rows: SpeciesSample[], width: number): SpeciesSample[] {
     const position = (s: SpeciesSample) => (s.x === null || s.y === null ? Infinity : s.y * width + s.x);
-    return [...rows].sort((a, b) =>
-        KIND_ORDER[a.kind] - KIND_ORDER[b.kind]
-        || (a.kind === 'atypical' ? (b.d ?? 0) - (a.d ?? 0) : position(a) - position(b))
-        || a.createdAt - b.createdAt
-        || (a.id < b.id ? -1 : 1));
+    return [...rows].sort(
+        (a, b) =>
+            KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
+            (a.kind === 'atypical' ? (b.d ?? 0) - (a.d ?? 0) : position(a) - position(b)) ||
+            a.createdAt - b.createdAt ||
+            (a.id < b.id ? -1 : 1)
+    );
 }
 
 /**
@@ -59,7 +61,10 @@ export async function collectSamples(source: SpeciesSource, options: CollectOpti
     const grid = source.grid();
     const all = await source.samples();
     const current = all.filter(r => r.fp === grid.fp);
-    const wanted = orderForExport(current.filter(r => options.includeUnclassified || r.cell !== NO_CELL), grid.w);
+    const wanted = orderForExport(
+        current.filter(r => options.includeUnclassified || r.cell !== NO_CELL),
+        grid.w
+    );
 
     const entries: string[] = [];
     const described: Array<Record<string, unknown>> = [];

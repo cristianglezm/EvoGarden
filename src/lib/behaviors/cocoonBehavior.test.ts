@@ -11,7 +11,7 @@ describe('cocoonBehavior', () => {
     const mockGetNextId = vi.fn();
 
     beforeEach(() => {
-        cocoon = { id: 'cocoon1', type: 'cocoon', x: 1, y: 1, hatchTimer: 1, butterflyGenome: [1,2,3] };
+        cocoon = { id: 'cocoon1', type: 'cocoon', x: 1, y: 1, hatchTimer: 1, butterflyGenome: [1, 2, 3] };
         nextActorState = new Map();
         nextActorState.set(cocoon.id, cocoon);
         events = [];
@@ -38,11 +38,11 @@ describe('cocoonBehavior', () => {
 
         expect(nextActorState.has(cocoon.id)).toBe(false);
         const newButterfly = nextActorState.get('new-butterfly-id') as Insect | undefined;
-        
+
         expect(newButterfly).toBeDefined();
         expect(newButterfly?.emoji).toBe('🦋');
-        expect(newButterfly?.genome).toEqual([1,2,3]);
-        
+        expect(newButterfly?.genome).toEqual([1, 2, 3]);
+
         const baseStats = INSECT_DATA.get('🦋')!;
         expect(newButterfly?.health).toBe(baseStats.maxHealth);
         expect(newButterfly?.stamina).toBe(baseStats.maxStamina);

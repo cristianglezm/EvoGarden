@@ -17,24 +17,27 @@ export function useFlower3DView({ isRunning, setIsRunning }: { isRunning: boolea
     const [title, setTitle] = useState('');
     const wasRunning = useRef(false);
 
-    const view = useCallback(async (genome: string, sex: Sex) => {
-        wasRunning.current = isRunning;
-        setIsRunning(false);
-        setIsLoading(true);
-        setGltfString(null);
-        setIsOpen(true);
-        setTitle('Generating 3D Model...');
-        try {
-            setGltfString(await flowerService.draw3DFlower(genome, sex));
-            setTitle('Champion Flower 3D Model');
-        } catch (error) {
-            console.error('Failed to generate 3D model:', error);
-            setIsOpen(false);
-            setIsRunning(wasRunning.current);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [isRunning, setIsRunning]);
+    const view = useCallback(
+        async (genome: string, sex: Sex) => {
+            wasRunning.current = isRunning;
+            setIsRunning(false);
+            setIsLoading(true);
+            setGltfString(null);
+            setIsOpen(true);
+            setTitle('Generating 3D Model...');
+            try {
+                setGltfString(await flowerService.draw3DFlower(genome, sex));
+                setTitle('Champion Flower 3D Model');
+            } catch (error) {
+                console.error('Failed to generate 3D model:', error);
+                setIsOpen(false);
+                setIsRunning(wasRunning.current);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [isRunning, setIsRunning]
+    );
 
     const close = useCallback(() => {
         setIsOpen(false);

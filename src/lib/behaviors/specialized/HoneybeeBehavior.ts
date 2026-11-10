@@ -31,13 +31,13 @@ export class HoneybeeBehavior extends InsectBehavior {
         if (insect.reproductionCooldown && insect.reproductionCooldown > 0) insect.reproductionCooldown--;
 
         this.checkForSignals(insect, context);
-        
+
         let hasInteracted = false;
         let hasMoved = false;
 
         hasInteracted = this.handleInteraction(insect, context);
         hasMoved = this.handleMovement(insect, hasInteracted, context);
-        
+
         if (!hasInteracted && !hasMoved) {
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
         }
@@ -63,8 +63,12 @@ export class HoneybeeBehavior extends InsectBehavior {
         } else {
             // No mark exists, create a new one and add it directly to the state
             const newMark: TerritoryMark = {
-                id: markId, type: 'territoryMark', x: insect.x, y: insect.y,
-                hiveId: insect.hiveId!, lifespan: params.territoryMarkLifespan,
+                id: markId,
+                type: 'territoryMark',
+                x: insect.x,
+                y: insect.y,
+                hiveId: insect.hiveId!,
+                lifespan: params.territoryMarkLifespan,
             };
             nextActorState.set(markId, newMark);
             // This new actor won't be in the original qtree, but that's okay for signaling
@@ -76,7 +80,7 @@ export class HoneybeeBehavior extends InsectBehavior {
             mark.signal = {
                 type: insect.signalToSend.type,
                 origin: insect.signalToSend.origin || { x: insect.x, y: insect.y },
-                ttl: params.signalTTL
+                ttl: params.signalTTL,
             };
             propagateSignal(mark, qtree, nextActorState, params);
         }
@@ -96,10 +100,14 @@ export class HoneybeeBehavior extends InsectBehavior {
                 context.nextActorState.delete(target.id);
                 const corpseId = context.getNextId('corpse', target.x, target.y);
                 const foodValue = INSECT_DATA.get(target.emoji)?.maxHealth || FOOD_VALUE_CORPSE;
-                const newCorpse: Corpse = { 
-                    id: corpseId, type: 'corpse', x: target.x, y: target.y, 
-                    originalEmoji: target.emoji, decayTimer: CORPSE_DECAY_TIME,
-                    foodValue: foodValue 
+                const newCorpse: Corpse = {
+                    id: corpseId,
+                    type: 'corpse',
+                    x: target.x,
+                    y: target.y,
+                    originalEmoji: target.emoji,
+                    decayTimer: CORPSE_DECAY_TIME,
+                    foodValue: foodValue,
                 };
                 context.nextActorState.set(corpseId, newCorpse);
                 context.qtree.insert({ x: newCorpse.x, y: newCorpse.y, data: newCorpse });
@@ -125,7 +133,6 @@ export class HoneybeeBehavior extends InsectBehavior {
                 hive.storedBees++;
                 context.nextActorState.delete(insect.id); // Bee is now safe inside the hive.
                 context.events.push({ message: `🐝 A bee entered its hive to shelter from the cold.`, type: 'info', importance: 'low' });
-
             } else {
                 // Not at hive, set state to return and move
                 insect.behaviorState = 'returning_to_hive';
@@ -149,12 +156,14 @@ export class HoneybeeBehavior extends InsectBehavior {
             }
         }
     }
-    
+
     private handleInteraction(insect: Insect, context: InsectBehaviorContext): boolean {
         switch (insect.behaviorState) {
             case 'seeking_food': {
                 const actorsOnCell = getActorsOnCell(context.qtree, context.nextActorState, insect.x, insect.y);
-                const enemyOnCell = actorsOnCell.find((a: any) => a.type === 'insect' && (a as Insect).emoji === '🐝' && (a as Insect).hiveId !== insect.hiveId) as Insect | undefined;
+                const enemyOnCell = actorsOnCell.find(
+                    (a: any) => a.type === 'insect' && (a as Insect).emoji === '🐝' && (a as Insect).hiveId !== insect.hiveId
+                ) as Insect | undefined;
 
                 if (enemyOnCell) {
                     insect.behaviorState = 'hunting';
@@ -163,7 +172,7 @@ export class HoneybeeBehavior extends InsectBehavior {
                     this._handleAttack(insect, enemyOnCell, context);
                     return true;
                 }
-                
+
                 const flowerOnCell = this.findFlowerOnCell(insect.x, insect.y, context);
                 if (flowerOnCell) {
                     this.handleCollectPollen(insect, flowerOnCell, context);
@@ -204,7 +213,7 @@ export class HoneybeeBehavior extends InsectBehavior {
 
         let moved = false;
         if (hasInteracted) {
-             moved = this.wander(insect, context);
+            moved = this.wander(insect, context);
         } else {
             switch (insect.behaviorState) {
                 case 'seeking_food': {
@@ -219,11 +228,11 @@ export class HoneybeeBehavior extends InsectBehavior {
                 case 'returning_to_hive': {
                     const hive = this.findHive(insect, context);
                     if (hive) {
-                         if (Math.random() < context.params.beePollinationWanderChance) {
-                             moved = this.wander(insect, context);
-                         } else {
-                             moved = this.moveTowards(insect, hive, context);
-                         }
+                        if (Math.random() < context.params.beePollinationWanderChance) {
+                            moved = this.wander(insect, context);
+                        } else {
+                            moved = this.moveTowards(insect, hive, context);
+                        }
                     } else {
                         insect.behaviorState = 'seeking_food';
                         moved = this.wander(insect, context);
@@ -251,7 +260,7 @@ export class HoneybeeBehavior extends InsectBehavior {
                 }
             }
         }
-        
+
         if (moved) {
             insect.stamina -= INSECT_MOVE_COST;
             if (insect.behaviorState === 'hunting') {
@@ -270,19 +279,24 @@ export class HoneybeeBehavior extends InsectBehavior {
         }
         return Array.from(context.nextActorState.values()).find((a: any) => a.type === 'hive' && (a as Hive).hiveId === insect.hiveId) as Hive | undefined;
     }
-    
+
     protected findFlowerOnCell(x: number, y: number, context: InsectBehaviorContext): Flower | undefined {
-        return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(
-           (actor) => actor.type === 'flower'
-       ) as Flower | undefined;
-   }
+        return getActorsOnCell(context.qtree, context.nextActorState, x, y).find(actor => actor.type === 'flower') as Flower | undefined;
+    }
 
     protected handlePollination(insect: Insect, flower: Flower, context: InsectBehaviorContext) {
         const { pollen } = insect;
         if (pollen && pollen.sourceFlowerId !== flower.id && flower.isMature && Math.random() < INSECT_POLLINATION_CHANCE) {
             const spawnSpot = findCellForFlowerSpawn(context.grid, context.params, { x: flower.x, y: flower.y }, context.claimedCellsThisTick);
             if (spawnSpot) {
-                const seed = context.asyncFlowerFactory.requestNewFlower(context.nextActorState, spawnSpot.x, spawnSpot.y, flower.genome, pollen.genome, context.getNextId);
+                const seed = context.asyncFlowerFactory.requestNewFlower(
+                    context.nextActorState,
+                    spawnSpot.x,
+                    spawnSpot.y,
+                    flower.genome,
+                    pollen.genome,
+                    context.getNextId
+                );
                 if (seed) {
                     context.newActorQueue.push(seed);
                     context.claimedCellsThisTick.add(`flower-${spawnSpot.x}-${spawnSpot.y}`);
@@ -305,7 +319,7 @@ export class HoneybeeBehavior extends InsectBehavior {
     private handleDepositPollen(insect: Insect, hive: Hive, context: InsectBehaviorContext) {
         if (insect.pollen !== null) {
             const score = Number(insect.pollen?.score);
-            if(score > 0){
+            if (score > 0) {
                 hive.pollen += score;
                 const learningRate = Math.min(0.05, score / 500);
                 if (hive.genome && hive.genome.length === insect.genome.length) {
@@ -321,7 +335,7 @@ export class HoneybeeBehavior extends InsectBehavior {
             context.events.push({ message: `🐝 A bee delivered pollen and rested at its hive.`, type: 'info', importance: 'low' });
         }
     }
-    
+
     private getMarkOnCell(x: number, y: number, context: InsectBehaviorContext): TerritoryMark | undefined {
         const markId = context.getNextId('territoryMark', x, y);
         const mark = context.nextActorState.get(markId);
@@ -330,18 +344,24 @@ export class HoneybeeBehavior extends InsectBehavior {
         }
         return undefined;
     }
-    
+
     private findNearestEnemy(insect: Insect, context: InsectBehaviorContext): Insect | null {
         const vision = new Rectangle(insect.x, insect.y, BEE_VISION_RANGE, BEE_VISION_RANGE);
-        const nearbyBees = context.qtree.query(vision)
+        const nearbyBees = context.qtree
+            .query(vision)
             .map(p => p.data)
-            .filter((a: any) => a.type === 'insect' && (a as Insect).emoji === '🐝' && (a as Insect).hiveId !== insect.hiveId && context.nextActorState.has(a.id)) as Insect[];
+            .filter(
+                (a: any) => a.type === 'insect' && (a as Insect).emoji === '🐝' && (a as Insect).hiveId !== insect.hiveId && context.nextActorState.has(a.id)
+            ) as Insect[];
 
         if (nearbyBees.length === 0) return null;
 
-        return nearbyBees.reduce((closest, current) => {
-            const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
-            return dist < closest.dist ? { bee: current, dist } : closest;
-        }, { bee: null as Insect | null, dist: Infinity }).bee;
+        return nearbyBees.reduce(
+            (closest, current) => {
+                const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
+                return dist < closest.dist ? { bee: current, dist } : closest;
+            },
+            { bee: null as Insect | null, dist: Infinity }
+        ).bee;
     }
 }

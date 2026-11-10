@@ -18,7 +18,9 @@ export function checkBuildAssets(fileNames) {
         }
     }
     for (const file of fileNames.filter(f => /\.tsx?$/.test(f))) {
-        problems.push(`A TypeScript file was copied as it is, not compiled: ${file}. A worker is compiled only when it is created as new Worker(new URL('./x.ts', import.meta.url)) with the URL written inside the call.`);
+        problems.push(
+            `A TypeScript file was copied as it is, not compiled: ${file}. A worker is compiled only when it is created as new Worker(new URL('./x.ts', import.meta.url)) with the URL written inside the call.`
+        );
     }
     return problems;
 }

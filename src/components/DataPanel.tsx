@@ -29,15 +29,13 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose, isRunning
             ></div>
 
             {/* Panel Content */}
-            <aside className={`fixed top-0 left-0 h-full bg-surface z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-full max-w-sm`}>
+            <aside
+                className={`fixed top-0 left-0 h-full bg-surface z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-full max-w-sm`}
+            >
                 <div className="h-full flex flex-col">
                     <header className="flex items-center justify-between p-2 bg-background text-primary-light">
                         <h2 className="text-xl font-bold ml-2">Data & Records</h2>
-                        <button
-                            onClick={onClose}
-                            className="p-1 hover:bg-black/20 rounded-full"
-                            aria-label="Close data panel"
-                        >
+                        <button onClick={onClose} className="p-1 hover:bg-black/20 rounded-full" aria-label="Close data panel">
                             <XIcon className="w-6 h-6" />
                         </button>
                     </header>
@@ -75,7 +73,9 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose, isRunning
                     <div className="grow overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                         {activeTab === 'challenges' && <ChallengesPanel />}
                         {activeTab === 'analytics' && <ChartsPanel />}
-                        {activeTab === 'seedBank' && <SeedBankPanel isRunning={isRunning} setIsRunning={setIsRunning} onOpenGuide={onOpenGuide} onCleared={onSeedBankCleared} />}
+                        {activeTab === 'seedBank' && (
+                            <SeedBankPanel isRunning={isRunning} setIsRunning={setIsRunning} onOpenGuide={onOpenGuide} onCleared={onSeedBankCleared} />
+                        )}
                     </div>
                 </div>
             </aside>

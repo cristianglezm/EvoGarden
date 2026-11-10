@@ -46,7 +46,7 @@ export interface GuideSummary {
 export function summarizeCollection(
     rows: SpeciesSample[],
     grid: { w: number; h: number; fp: string },
-    championIds: Partial<Record<SeedBankCategory, string>> = {},
+    championIds: Partial<Record<SeedBankCategory, string>> = {}
 ): GuideSummary {
     const current = rows.filter(r => r.fp === grid.fp);
     const byCell = new Map<string, SpeciesSample[]>();
@@ -65,11 +65,21 @@ export function summarizeCollection(
             for (const category of RECORD_CATEGORIES) {
                 const holder = members.find(r => r.records.includes(category));
                 if (!holder) continue;
-                holders.push({ category, id: holder.id, sex: holder.sex, ...(holder.age !== undefined && { age: holder.age }), ...(holder.toxicity !== undefined && { toxicity: holder.toxicity }) });
+                holders.push({
+                    category,
+                    id: holder.id,
+                    sex: holder.sex,
+                    ...(holder.age !== undefined && { age: holder.age }),
+                    ...(holder.toxicity !== undefined && { toxicity: holder.toxicity }),
+                });
             }
             const oldest = [...members].sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1))[0];
             cells.push({
-                key, x, y, name: speciesName(x, y, grid.w), discovered: members.length > 0,
+                key,
+                x,
+                y,
+                name: speciesName(x, y, grid.w),
+                discovered: members.length > 0,
                 samples: members.filter(r => r.kind === 'sample').length,
                 atypical: members.filter(r => r.kind === 'atypical').length,
                 representativeId: holders.find(h => h.category === 'longestLived')?.id ?? members.find(r => r.founder)?.id ?? oldest?.id ?? null,

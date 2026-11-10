@@ -26,7 +26,7 @@ export const processHerbicidePlaneTick = (plane: HerbicidePlane, context: Herbic
     if (!Array.from(nextActorState.values()).some(a => a.x === x && a.y === y && a.type === 'herbicideSmoke')) {
         nextActorState.set(smokeId, newSmoke);
     }
-    
+
     // 2. Calculate next position
     let newX = x + dx;
     let newY = y + dy;
@@ -41,7 +41,7 @@ export const processHerbicidePlaneTick = (plane: HerbicidePlane, context: Herbic
         plane.dx = -dx;
         plane.dy = -dy;
     }
-    
+
     // 4. Update plane position
     plane.x = newX;
     plane.y = newY;

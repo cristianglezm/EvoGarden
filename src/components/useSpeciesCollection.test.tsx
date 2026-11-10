@@ -28,7 +28,9 @@ describe('useSpeciesCollection', () => {
     it('reads the collection once when it is enabled, and nothing while it is not', async () => {
         const samples = vi.spyOn(h.source, 'samples');
         const { result, rerender } = renderHook(({ enabled }) => useSpeciesCollection(h.source, [], enabled, LONG), { initialProps: { enabled: false } });
-        await act(async () => { await Promise.resolve(); });
+        await act(async () => {
+            await Promise.resolve();
+        });
         expect(samples).not.toHaveBeenCalled();
         rerender({ enabled: true });
         await waitFor(() => expect(result.current.collection.status).toBe('ready'));
@@ -38,7 +40,9 @@ describe('useSpeciesCollection', () => {
     it('reads again when the champions change, without waiting for the next poll', async () => {
         const samples = vi.spyOn(h.source, 'samples');
         const championIds = vi.spyOn(h.source, 'championIds');
-        const { result, rerender } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, LONG), { initialProps: { champions: [] as SeedBankEntry[] } });
+        const { result, rerender } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, LONG), {
+            initialProps: { champions: [] as SeedBankEntry[] },
+        });
         await waitFor(() => expect(result.current.collection.status).toBe('ready'));
         rerender({ champions: [champion('g1')] });
         await waitFor(() => expect(samples).toHaveBeenCalledTimes(2));
@@ -52,7 +56,9 @@ describe('useSpeciesCollection', () => {
         await waitFor(() => expect(result.current.collection.status).toBe('ready'));
         rerender();
         rerender();
-        await act(async () => { await Promise.resolve(); });
+        await act(async () => {
+            await Promise.resolve();
+        });
         expect(samples).toHaveBeenCalledTimes(1);
     });
 
@@ -63,27 +69,42 @@ describe('useSpeciesCollection', () => {
         await waitFor(() => expect(result.current.collection.status).toBe('ready'));
         rerender();
         rerender();
-        await act(async () => { await Promise.resolve(); });
+        await act(async () => {
+            await Promise.resolve();
+        });
         expect(samples).toHaveBeenCalledTimes(1);
     });
 
     it('does not read for a change of champions while it is not enabled', async () => {
         const samples = vi.spyOn(h.source, 'samples');
-        const { rerender } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, false, LONG), { initialProps: { champions: [] as SeedBankEntry[] } });
+        const { rerender } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, false, LONG), {
+            initialProps: { champions: [] as SeedBankEntry[] },
+        });
         rerender({ champions: [champion('g1')] });
-        await act(async () => { await Promise.resolve(); });
+        await act(async () => {
+            await Promise.resolve();
+        });
         expect(samples).not.toHaveBeenCalled();
     });
 
     it('reads once more after a read that was asked for while another was under way, and not before it ends', async () => {
         let release!: () => void;
-        const first = new Promise<void>(resolve => { release = resolve; });
+        const first = new Promise<void>(resolve => {
+            release = resolve;
+        });
         const real = h.source.samples.bind(h.source);
-        const samples = vi.spyOn(h.source, 'samples').mockImplementationOnce(async () => { await first; return real(); });
-        const { result, rerender } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, LONG), { initialProps: { champions: [] as SeedBankEntry[] } });
+        const samples = vi.spyOn(h.source, 'samples').mockImplementationOnce(async () => {
+            await first;
+            return real();
+        });
+        const { result, rerender } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, LONG), {
+            initialProps: { champions: [] as SeedBankEntry[] },
+        });
         await waitFor(() => expect(samples).toHaveBeenCalledTimes(1));
         rerender({ champions: [champion('g1')] });
-        await act(async () => { await Promise.resolve(); });
+        await act(async () => {
+            await Promise.resolve();
+        });
         expect(samples).toHaveBeenCalledTimes(1);
         await act(async () => release());
         await waitFor(() => expect(samples).toHaveBeenCalledTimes(2));
@@ -92,10 +113,17 @@ describe('useSpeciesCollection', () => {
 
     it('does not make the read it kept waiting for when it went away in the meantime', async () => {
         let release!: () => void;
-        const first = new Promise<void>(resolve => { release = resolve; });
+        const first = new Promise<void>(resolve => {
+            release = resolve;
+        });
         const real = h.source.samples.bind(h.source);
-        const samples = vi.spyOn(h.source, 'samples').mockImplementationOnce(async () => { await first; return real(); });
-        const { rerender, unmount } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, LONG), { initialProps: { champions: [] as SeedBankEntry[] } });
+        const samples = vi.spyOn(h.source, 'samples').mockImplementationOnce(async () => {
+            await first;
+            return real();
+        });
+        const { rerender, unmount } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, LONG), {
+            initialProps: { champions: [] as SeedBankEntry[] },
+        });
         await waitFor(() => expect(samples).toHaveBeenCalledTimes(1));
         rerender({ champions: [champion('g1')] });
         unmount();
@@ -106,7 +134,9 @@ describe('useSpeciesCollection', () => {
 
     it('stops reading when it is disabled or goes away', async () => {
         const samples = vi.spyOn(h.source, 'samples');
-        const { result, rerender, unmount } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, 30), { initialProps: { champions: [] as SeedBankEntry[] } });
+        const { result, rerender, unmount } = renderHook(({ champions }) => useSpeciesCollection(h.source, champions, true, 30), {
+            initialProps: { champions: [] as SeedBankEntry[] },
+        });
         await waitFor(() => expect(result.current.collection.status).toBe('ready'));
         unmount();
         const after = samples.mock.calls.length;

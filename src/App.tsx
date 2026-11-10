@@ -45,75 +45,94 @@ const rehydrateGrid = async (metadata: any): Promise<Grid> => {
 
     const hasFlowerPlaceholders = metadata.grid.flat(2).some((a: any) => a.type === 'flower' && a.genome === undefined);
     if (flowers.length === 0 && hasFlowerPlaceholders) {
-        throw new Error("Metadata found, but no flowers in the database. Save file may be corrupt.");
+        throw new Error('Metadata found, but no flowers in the database. Save file may be corrupt.');
     }
-    
+
     const hasInsectPlaceholders = metadata.grid.flat(2).some((a: any) => a.type === 'insect' && a.lifespan === undefined);
     if (insects.length === 0 && hasInsectPlaceholders) {
-        throw new Error("Metadata found, but no insects in the database. Save file may be corrupt.");
+        throw new Error('Metadata found, but no insects in the database. Save file may be corrupt.');
     }
 
     const actorMap = new Map<string, CellContent>([
         ...flowers.map((f): [string, CellContent] => [f.id, f]),
-        ...insects.map((i): [string, CellContent] => [i.id, i])
+        ...insects.map((i): [string, CellContent] => [i.id, i]),
     ]);
 
-    return metadata.grid.map((row: CellContent[][]) => 
-        row.map((cell: CellContent[]) => 
-            cell.map((actor: CellContent) => {
-                // Only rehydrate placeholders to maintain compatibility with old saves
-                if ((actor.type === 'flower' && (actor as Flower).genome === undefined) || (actor.type === 'insect' && (actor as Insect).lifespan === undefined)) {
-                    return actorMap.get(actor.id) || null;
-                }
-                return actor;
-            }).filter((actor): actor is CellContent => actor !== null)
+    return metadata.grid.map((row: CellContent[][]) =>
+        row.map((cell: CellContent[]) =>
+            cell
+                .map((actor: CellContent) => {
+                    // Only rehydrate placeholders to maintain compatibility with old saves
+                    if (
+                        (actor.type === 'flower' && (actor as Flower).genome === undefined) ||
+                        (actor.type === 'insect' && (actor as Insect).lifespan === undefined)
+                    ) {
+                        return actorMap.get(actor.id) || null;
+                    }
+                    return actor;
+                })
+                .filter((actor): actor is CellContent => actor !== null)
         )
     );
 };
 
-
 export default function App(): React.ReactNode {
-  const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
-  const [selectedActor, setSelectedActor] = useState<CellContent | null>(null);
-  const [actorsInSelectedCell, setActorsInSelectedCell] = useState<CellContent[]>([]);
-  const [isControlsOpen, setIsControlsOpen] = useState(false);
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
-  // One field guide for the whole game: the Seed Bank, a champion card and the details of a flower open it
-  const [guide, setGuide] = useState<{ isOpen: boolean; cell: string | null }>({ isOpen: false, cell: null });
-  const openGuide = useCallback((cell: string | null) => setGuide({ isOpen: true, cell }), []);
-  const closeGuide = useCallback(() => setGuide(previous => ({ ...previous, isOpen: false })), []);
-  const [isFullLogOpen, setIsFullLogOpen] = useState(false);
-  const [isCommentaryOpen, setIsCommentaryOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState('Initializing EvoGarden...');
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasSavedState, setHasSavedState] = useState(false);
-  const [isServiceInitialized, setIsServiceInitialized] = useState(false);
-  const [plantingInfo, setPlantingInfo] = useState<{ genome: string; sex: 'male' | 'female' | 'both' } | null>(null);
-  const [canvases, setCanvases] = useState<{ bg: HTMLCanvasElement; fg: HTMLCanvasElement } | null>(null);
-  const wasRunningBeforeSelectionRef = useRef(false);
-  const wasRunningBeforeLogRef = useRef(false);
+    const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
+    const [selectedActor, setSelectedActor] = useState<CellContent | null>(null);
+    const [actorsInSelectedCell, setActorsInSelectedCell] = useState<CellContent[]>([]);
+    const [isControlsOpen, setIsControlsOpen] = useState(false);
+    const [isToolsOpen, setIsToolsOpen] = useState(false);
+    const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
+    // One field guide for the whole game: the Seed Bank, a champion card and the details of a flower open it
+    const [guide, setGuide] = useState<{ isOpen: boolean; cell: string | null }>({ isOpen: false, cell: null });
+    const openGuide = useCallback((cell: string | null) => setGuide({ isOpen: true, cell }), []);
+    const closeGuide = useCallback(() => setGuide(previous => ({ ...previous, isOpen: false })), []);
+    const [isFullLogOpen, setIsFullLogOpen] = useState(false);
+    const [isCommentaryOpen, setIsCommentaryOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadingMessage, setLoadingMessage] = useState('Initializing EvoGarden...');
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [hasSavedState, setHasSavedState] = useState(false);
+    const [isServiceInitialized, setIsServiceInitialized] = useState(false);
+    const [plantingInfo, setPlantingInfo] = useState<{ genome: string; sex: 'male' | 'female' | 'both' } | null>(null);
+    const [canvases, setCanvases] = useState<{ bg: HTMLCanvasElement; fg: HTMLCanvasElement } | null>(null);
+    const wasRunningBeforeSelectionRef = useRef(false);
+    const wasRunningBeforeLogRef = useRef(false);
 
-  // Refs for "click outside" logic
-  const detailsPanelRef = useRef<HTMLDivElement>(null);
-  const controlsButtonRef = useRef<HTMLButtonElement>(null);
-  const controlsPanelRef = useRef<HTMLDivElement>(null);
-  const toolsButtonRef = useRef<HTMLButtonElement>(null);
-  const toolsPanelRef = useRef<HTMLDivElement>(null);
-  const simulationViewRef = useRef<HTMLDivElement>(null);
-  const paramsRef = useRef(params);
+    // Refs for "click outside" logic
+    const detailsPanelRef = useRef<HTMLDivElement>(null);
+    const controlsButtonRef = useRef<HTMLButtonElement>(null);
+    const controlsPanelRef = useRef<HTMLDivElement>(null);
+    const toolsButtonRef = useRef<HTMLButtonElement>(null);
+    const toolsPanelRef = useRef<HTMLDivElement>(null);
+    const simulationViewRef = useRef<HTMLDivElement>(null);
+    const paramsRef = useRef(params);
 
-  useEffect(() => {
-    paramsRef.current = params;
-  }, [params]);
+    useEffect(() => {
+        paramsRef.current = params;
+    }, [params]);
 
-
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed, reloadChampions } = useSimulation({ setIsLoading });
-  // the challenges about the species collection, which the simulation does not count
-  useSpeciesChallenges(latestSummary);
-  const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
+    const {
+        actors,
+        isRunning,
+        setIsRunning,
+        workerRef,
+        resetWithNewParams,
+        updateLiveParams,
+        isWorkerInitialized,
+        latestSummaryRef,
+        workerError,
+        latestSummary,
+        triggerWeatherEvent,
+        introduceSpecies,
+        introduceStationary,
+        plantChampionSeed,
+        reloadChampions,
+    } = useSimulation({ setIsLoading });
+    // the challenges about the species collection, which the simulation does not count
+    useSpeciesChallenges(latestSummary);
+    const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
 
     const handleEnterPlantingMode = (genome: string, sex: 'male' | 'female' | 'both') => {
         setPlantingInfo({ genome, sex });
@@ -135,546 +154,562 @@ export default function App(): React.ReactNode {
         setCanvases({ bg, fg });
     }, []);
 
-  useEffect(() => {
-    if (workerError) {
-        setError(workerError.message);
-    }
-  }, [workerError]);
+    useEffect(() => {
+        if (workerError) {
+            setError(workerError.message);
+        }
+    }, [workerError]);
 
-  // Initialize the main-thread event service
-  useEffect(() => {
-    eventService.initialize(() => paramsRef.current);
-  }, []);
+    // Initialize the main-thread event service
+    useEffect(() => {
+        eventService.initialize(() => paramsRef.current);
+    }, []);
 
-  // Check for a saved state on initial load
-  useEffect(() => {
-    setHasSavedState(!!localStorage.getItem(META_SAVE_KEY));
-  }, []);
-  
-  // Effect for one-time WASM initialization and auto-loading/initialization.
-  useEffect(() => {
-    if (!isWorkerInitialized) return;
+    // Check for a saved state on initial load
+    useEffect(() => {
+        setHasSavedState(!!localStorage.getItem(META_SAVE_KEY));
+    }, []);
 
-    const initAndLoad = async () => {
-        try {
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Initialization timed out.")), INIT_TIMEOUT_MS)
-            );
+    // Effect for one-time WASM initialization and auto-loading/initialization.
+    useEffect(() => {
+        if (!isWorkerInitialized) return;
 
-            // Race the main thread WASM initialization against the timeout
-            await Promise.race([flowerService.initialize(), timeoutPromise]);
-            setIsServiceInitialized(true);
-            
-            const metadataJSON = localStorage.getItem(META_SAVE_KEY);
-            if (metadataJSON) {
-                setLoadingMessage('Loading saved garden...');
-                const metadata = JSON.parse(metadataJSON);
-                const rehydratedGrid = await rehydrateGrid(metadata);
+        const initAndLoad = async () => {
+            try {
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Initialization timed out.')), INIT_TIMEOUT_MS));
 
-                const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
-                workerRef.current!.postMessage({ type: 'load-state', payload: fullStateToLoad });
-                
-                // Sync main thread state, merging with defaults to handle new params
-                const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
-                setParams(loadedParams);
-                setIsRunning(false);
-                setSelectedActor(null);
-                eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
-            } else {
-                // Initialize with default params
-                setLoadingMessage('Creating a new garden...');
-                workerRef.current!.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
-                setParams(DEFAULT_SIM_PARAMS);
+                // Race the main thread WASM initialization against the timeout
+                await Promise.race([flowerService.initialize(), timeoutPromise]);
+                setIsServiceInitialized(true);
+
+                const metadataJSON = localStorage.getItem(META_SAVE_KEY);
+                if (metadataJSON) {
+                    setLoadingMessage('Loading saved garden...');
+                    const metadata = JSON.parse(metadataJSON);
+                    const rehydratedGrid = await rehydrateGrid(metadata);
+
+                    const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
+                    workerRef.current!.postMessage({ type: 'load-state', payload: fullStateToLoad });
+
+                    // Sync main thread state, merging with defaults to handle new params
+                    const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
+                    setParams(loadedParams);
+                    setIsRunning(false);
+                    setSelectedActor(null);
+                    eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
+                } else {
+                    // Initialize with default params
+                    setLoadingMessage('Creating a new garden...');
+                    workerRef.current!.postMessage({ type: 'update-params', payload: DEFAULT_SIM_PARAMS });
+                    setParams(DEFAULT_SIM_PARAMS);
+                }
+            } catch (err) {
+                console.error('Failed to initialize or load on main thread:', err);
+                setError(
+                    'Failed to load core simulation components. This could be due to a network issue, a corrupt save file, or an unsupported browser. Please refresh the page to try again.'
+                );
+                // Clear potentially corrupt state
+                localStorage.removeItem(META_SAVE_KEY);
+                await db.savedFlowers.clear();
+                await db.savedInsects.clear();
+                setIsLoading(false);
             }
-        } catch (err) {
-            console.error("Failed to initialize or load on main thread:", err);
-            setError("Failed to load core simulation components. This could be due to a network issue, a corrupt save file, or an unsupported browser. Please refresh the page to try again.");
-            // Clear potentially corrupt state
-            localStorage.removeItem(META_SAVE_KEY);
-            await db.savedFlowers.clear();
-            await db.savedInsects.clear();
-            setIsLoading(false);
+        };
+
+        initAndLoad();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isWorkerInitialized]);
+
+    // Effect to sync the main-thread flower service with params, needed for 3D viewer.
+    useEffect(() => {
+        if (isServiceInitialized) {
+            flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
+        }
+    }, [params.flowerDetailRadius, isServiceInitialized]);
+
+    const handleFrameRendered = useCallback(
+        (renderTimeMs: number) => {
+            if (latestSummaryRef.current) {
+                useAnalyticsStore.getState().addDataPoint({
+                    summary: latestSummaryRef.current,
+                    renderTimeMs,
+                });
+                // Consume the summary to prevent processing it multiple times if renders happen faster than ticks
+                latestSummaryRef.current = null;
+            }
+        },
+        [latestSummaryRef]
+    );
+
+    const handleParamsChange = (newParams: SimulationParams, shouldReset = true) => {
+        setParams(newParams); // Always update main state
+
+        if (shouldReset) {
+            setLoadingMessage('Resetting simulation...');
+            setIsLoading(true);
+            setIsRunning(false);
+            resetWithNewParams(newParams);
+            setSelectedActor(null);
+            setActorsInSelectedCell([]);
+            setIsControlsOpen(false);
+            useAnalyticsStore.getState().reset();
+            useEventLogStore.getState().reset();
+        } else {
+            // Just update worker params live without resetting
+            updateLiveParams(newParams);
         }
     };
 
-    initAndLoad();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWorkerInitialized]);
+    const handleActorSelection = useCallback(
+        (actor: CellContent | null) => {
+            if (trackedActorId) return; // Ignore selection changes while tracking
+            setSelectedActor(actor);
+            setActorsInSelectedCell([]); // Clear the list view once a final selection is made
 
-  // Effect to sync the main-thread flower service with params, needed for 3D viewer.
-  useEffect(() => {
-      if (isServiceInitialized) {
-        flowerService.setParams({ radius: params.flowerDetailRadius, numLayers: 2, P: 6.0, bias: 1.0 });
-      }
-  }, [params.flowerDetailRadius, isServiceInitialized]);
-
-  const handleFrameRendered = useCallback((renderTimeMs: number) => {
-      if (latestSummaryRef.current) {
-          useAnalyticsStore.getState().addDataPoint({
-              summary: latestSummaryRef.current,
-              renderTimeMs,
-          });
-          // Consume the summary to prevent processing it multiple times if renders happen faster than ticks
-          latestSummaryRef.current = null;
-      }
-  }, [latestSummaryRef]);
-
-  const handleParamsChange = (newParams: SimulationParams, shouldReset = true) => {
-    setParams(newParams); // Always update main state
-
-    if (shouldReset) {
-        setLoadingMessage('Resetting simulation...');
-        setIsLoading(true);
-        setIsRunning(false);
-        resetWithNewParams(newParams);
-        setSelectedActor(null);
-        setActorsInSelectedCell([]);
-        setIsControlsOpen(false);
-        useAnalyticsStore.getState().reset();
-        useEventLogStore.getState().reset();
-    } else {
-        // Just update worker params live without resetting
-        updateLiveParams(newParams);
-    }
-  };
-
-  const handleActorSelection = useCallback((actor: CellContent | null) => {
-      if (trackedActorId) return; // Ignore selection changes while tracking
-      setSelectedActor(actor);
-      setActorsInSelectedCell([]); // Clear the list view once a final selection is made
-      
-      if (actor) {
-          wasRunningBeforeSelectionRef.current = isRunning;
-          setIsRunning(false);
-      } else {
-          if (wasRunningBeforeSelectionRef.current) {
-              setIsRunning(true);
-          }
-      }
-  }, [isRunning, setIsRunning, trackedActorId]);
-  
-  const handleHighlightActorById = useCallback((id: string | null) => {
-    if (trackedActorId) return; 
-    if (id === null) {
-        if (actorsInSelectedCell.length === 0) {
-            setSelectedActor(null);
-        }
-        return;
-    }
-    const actor = actors.get(id);
-    setSelectedActor(actor || null);
-}, [actors, trackedActorId, actorsInSelectedCell.length]);
-
-
-  const handleCellClick = useCallback((actorsInCell: CellContent[]) => {
-      if (trackedActorId) return; // If tracking, ignore cell clicks
-
-      if (actorsInCell.length === 0) {
-          handleActorSelection(null);
-      } else if (actorsInCell.length === 1) {
-          handleActorSelection(actorsInCell[0]);
-      } else {
-          // Multiple actors, show selection panel
-          wasRunningBeforeSelectionRef.current = isRunning;
-          setIsRunning(false);
-          setActorsInSelectedCell(actorsInCell);
-          setSelectedActor(null);
-      }
-  }, [handleActorSelection, isRunning, setIsRunning, trackedActorId]);
-
-  // Clicking outside of the details panel closes it (not while tracking, nor from the grid, the controls or the tools).
-  // A modal opened from the panel, like the 3D view of a flower, is not outside it.
-  useDismissOnOutsideClick(
-    !trackedActorId && (Boolean(selectedActor) || actorsInSelectedCell.length > 0),
-    [detailsPanelRef, controlsButtonRef, controlsPanelRef, toolsButtonRef, toolsPanelRef, simulationViewRef],
-    () => handleActorSelection(null),
-  );
-
-  const handleSaveSimulation = useCallback(async () => {
-    if (!workerRef.current || isSaving) return;
-    
-    setIsSaving(true);
-    setIsRunning(false); // Pause simulation to get a stable state
-
-    try {
-        const stateFromWorker = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error("Timeout getting state from worker")), 5000);
-            
-            const messageHandler = (e: MessageEvent) => {
-                if (e.data.type === 'state-response') {
-                    workerRef.current?.removeEventListener('message', messageHandler);
-                    clearTimeout(timeout);
-                    resolve(e.data.payload);
+            if (actor) {
+                wasRunningBeforeSelectionRef.current = isRunning;
+                setIsRunning(false);
+            } else {
+                if (wasRunningBeforeSelectionRef.current) {
+                    setIsRunning(true);
                 }
+            }
+        },
+        [isRunning, setIsRunning, trackedActorId]
+    );
+
+    const handleHighlightActorById = useCallback(
+        (id: string | null) => {
+            if (trackedActorId) return;
+            if (id === null) {
+                if (actorsInSelectedCell.length === 0) {
+                    setSelectedActor(null);
+                }
+                return;
+            }
+            const actor = actors.get(id);
+            setSelectedActor(actor || null);
+        },
+        [actors, trackedActorId, actorsInSelectedCell.length]
+    );
+
+    const handleCellClick = useCallback(
+        (actorsInCell: CellContent[]) => {
+            if (trackedActorId) return; // If tracking, ignore cell clicks
+
+            if (actorsInCell.length === 0) {
+                handleActorSelection(null);
+            } else if (actorsInCell.length === 1) {
+                handleActorSelection(actorsInCell[0]);
+            } else {
+                // Multiple actors, show selection panel
+                wasRunningBeforeSelectionRef.current = isRunning;
+                setIsRunning(false);
+                setActorsInSelectedCell(actorsInCell);
+                setSelectedActor(null);
+            }
+        },
+        [handleActorSelection, isRunning, setIsRunning, trackedActorId]
+    );
+
+    // Clicking outside of the details panel closes it (not while tracking, nor from the grid, the controls or the tools).
+    // A modal opened from the panel, like the 3D view of a flower, is not outside it.
+    useDismissOnOutsideClick(
+        !trackedActorId && (Boolean(selectedActor) || actorsInSelectedCell.length > 0),
+        [detailsPanelRef, controlsButtonRef, controlsPanelRef, toolsButtonRef, toolsPanelRef, simulationViewRef],
+        () => handleActorSelection(null)
+    );
+
+    const handleSaveSimulation = useCallback(async () => {
+        if (!workerRef.current || isSaving) return;
+
+        setIsSaving(true);
+        setIsRunning(false); // Pause simulation to get a stable state
+
+        try {
+            const stateFromWorker = await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('Timeout getting state from worker')), 5000);
+
+                const messageHandler = (e: MessageEvent) => {
+                    if (e.data.type === 'state-response') {
+                        workerRef.current?.removeEventListener('message', messageHandler);
+                        clearTimeout(timeout);
+                        resolve(e.data.payload);
+                    }
+                };
+
+                workerRef.current!.addEventListener('message', messageHandler);
+                workerRef.current!.postMessage({ type: 'get-state' });
+            });
+
+            if (!stateFromWorker) throw new Error('Did not receive state from worker.');
+
+            const fullState = stateFromWorker as { params: SimulationParams; grid: Grid; tick: number; totalInsectsEaten: number };
+            const flowersToSave: Flower[] = [];
+            const insectsToSave: (Insect | Cockroach)[] = [];
+
+            // Create a "skeleton" grid with placeholders for flowers and insects
+            const skeletonGrid = fullState.grid.map(row =>
+                row.map(cell =>
+                    cell.map(actor => {
+                        if (actor.type === 'flower') {
+                            flowersToSave.push(actor as Flower);
+                            return { id: actor.id, type: 'flower', x: actor.x, y: actor.y };
+                        }
+                        if (actor.type === 'insect' || actor.type === 'cockroach') {
+                            insectsToSave.push(actor as Insect | Cockroach);
+                            return { id: actor.id, type: actor.type, x: actor.x, y: actor.y };
+                        }
+                        return actor;
+                    })
+                )
+            );
+
+            const metadataToSave = {
+                ...fullState,
+                grid: skeletonGrid,
             };
-            
-            workerRef.current!.addEventListener('message', messageHandler);
-            workerRef.current!.postMessage({ type: 'get-state' });
-        });
 
-        if (!stateFromWorker) throw new Error("Did not receive state from worker.");
+            // Transactionally write to DB and localStorage
+            await db.transaction('rw', db.savedFlowers, db.savedInsects, async () => {
+                await db.savedFlowers.clear();
+                await db.savedInsects.clear();
+                await db.savedFlowers.bulkAdd(flowersToSave);
+                await db.savedInsects.bulkAdd(insectsToSave as any); // Cast because Dexie types are strict
+            });
 
-        const fullState = stateFromWorker as { params: SimulationParams, grid: Grid, tick: number, totalInsectsEaten: number };
-        const flowersToSave: Flower[] = [];
-        const insectsToSave: (Insect | Cockroach)[] = [];
+            localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
 
-        // Create a "skeleton" grid with placeholders for flowers and insects
-        const skeletonGrid = fullState.grid.map(row => 
-            row.map(cell => 
-                cell.map(actor => {
-                    if (actor.type === 'flower') {
-                        flowersToSave.push(actor as Flower);
-                        return { id: actor.id, type: 'flower', x: actor.x, y: actor.y };
-                    }
-                    if (actor.type === 'insect' || actor.type === 'cockroach') {
-                        insectsToSave.push(actor as (Insect | Cockroach));
-                        return { id: actor.id, type: actor.type, x: actor.x, y: actor.y };
-                    }
-                    return actor;
-                })
-            )
-        );
+            setHasSavedState(true);
+            eventService.dispatch({ message: 'Garden state saved!', type: 'success', importance: 'high' });
+        } catch (err) {
+            console.error('Save failed:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            eventService.dispatch({ message: `Save failed: ${errorMessage}`, type: 'error', importance: 'high' });
+        } finally {
+            setIsSaving(false);
+        }
+    }, [workerRef, isSaving, setIsRunning]);
 
-        const metadataToSave = {
-            ...fullState,
-            grid: skeletonGrid,
-        };
+    const handleLoadSimulation = useCallback(async () => {
+        const metadataJSON = localStorage.getItem(META_SAVE_KEY);
+        if (!metadataJSON || !workerRef.current) {
+            eventService.dispatch({ message: 'No saved state found.', type: 'error', importance: 'high' });
+            return;
+        }
 
-        // Transactionally write to DB and localStorage
-        await db.transaction('rw', db.savedFlowers, db.savedInsects, async () => {
+        setLoadingMessage('Loading saved garden...');
+        setIsLoading(true);
+
+        try {
+            const metadata = JSON.parse(metadataJSON);
+            const rehydratedGrid = await rehydrateGrid(metadata);
+
+            const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
+            workerRef.current.postMessage({ type: 'load-state', payload: fullStateToLoad });
+
+            const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
+            setParams(loadedParams);
+            setIsRunning(false);
+            setSelectedActor(null);
+            setIsControlsOpen(false);
+            eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
+        } catch (err) {
+            console.error('Load failed:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            eventService.dispatch({ message: `Load failed: ${errorMessage}`, type: 'error', importance: 'high' });
+            setIsLoading(false);
+            localStorage.removeItem(META_SAVE_KEY);
             await db.savedFlowers.clear();
             await db.savedInsects.clear();
-            await db.savedFlowers.bulkAdd(flowersToSave);
-            await db.savedInsects.bulkAdd(insectsToSave as any); // Cast because Dexie types are strict
-        });
+            setHasSavedState(false);
+        }
+    }, [workerRef, setIsRunning]);
 
-        localStorage.setItem(META_SAVE_KEY, JSON.stringify(metadataToSave));
-        
-        setHasSavedState(true);
-        eventService.dispatch({ message: 'Garden state saved!', type: 'success', importance: 'high' });
-    } catch (err) {
-        console.error("Save failed:", err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        eventService.dispatch({ message: `Save failed: ${errorMessage}`, type: 'error', importance: 'high' });
-    } finally {
-        setIsSaving(false);
-    }
-  }, [workerRef, isSaving, setIsRunning]);
-
-  const handleLoadSimulation = useCallback(async () => {
-    const metadataJSON = localStorage.getItem(META_SAVE_KEY);
-    if (!metadataJSON || !workerRef.current) {
-        eventService.dispatch({ message: 'No saved state found.', type: 'error', importance: 'high' });
-        return;
-    }
-    
-    setLoadingMessage('Loading saved garden...');
-    setIsLoading(true);
-
-    try {
-        const metadata = JSON.parse(metadataJSON);
-        const rehydratedGrid = await rehydrateGrid(metadata);
-
-        const fullStateToLoad = { ...metadata, grid: rehydratedGrid };
-        workerRef.current.postMessage({ type: 'load-state', payload: fullStateToLoad });
-
-        const loadedParams = { ...DEFAULT_SIM_PARAMS, ...fullStateToLoad.params };
-        setParams(loadedParams);
+    const handleOpenFullLog = useCallback(() => {
+        wasRunningBeforeLogRef.current = isRunning;
         setIsRunning(false);
-        setSelectedActor(null);
-        setIsControlsOpen(false);
-        eventService.dispatch({ message: 'Loaded last saved garden!', type: 'info', importance: 'high' });
-    } catch (err) {
-        console.error("Load failed:", err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        eventService.dispatch({ message: `Load failed: ${errorMessage}`, type: 'error', importance: 'high' });
-        setIsLoading(false);
-        localStorage.removeItem(META_SAVE_KEY);
-        await db.savedFlowers.clear();
-        await db.savedInsects.clear();
-        setHasSavedState(false);
+        setIsFullLogOpen(true);
+    }, [isRunning, setIsRunning]);
+
+    const handleCloseFullLog = useCallback(() => {
+        setIsFullLogOpen(false);
+        setIsRunning(wasRunningBeforeLogRef.current);
+    }, [setIsRunning]);
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-background text-accent-red flex items-center justify-center p-4 text-center">
+                <h1 className="text-2xl">{error}</h1>
+            </div>
+        );
     }
-  }, [workerRef, setIsRunning]);
 
-  const handleOpenFullLog = useCallback(() => {
-    wasRunningBeforeLogRef.current = isRunning;
-    setIsRunning(false);
-    setIsFullLogOpen(true);
-  }, [isRunning, setIsRunning]);
-
-  const handleCloseFullLog = useCallback(() => {
-    setIsFullLogOpen(false);
-    setIsRunning(wasRunningBeforeLogRef.current);
-  }, [setIsRunning]);
-
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background text-accent-red flex items-center justify-center p-4 text-center">
-        <h1 className="text-2xl">{error}</h1>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background text-primary flex flex-col items-center justify-center">
-        <LoaderIcon className="w-16 h-16 text-tertiary animate-spin" />
-        <p className="mt-4 text-xl">{loadingMessage}</p>
-      </div>
-    );
-  }
-
-  const renderDetailsPanel = () => {
-    if (actorsInSelectedCell.length > 0 && !trackedActorId) {
-        return <ActorSelectionPanel actors={actorsInSelectedCell} onSelect={handleActorSelection} onClose={() => handleActorSelection(null)} />;
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-background text-primary flex flex-col items-center justify-center">
+                <LoaderIcon className="w-16 h-16 text-tertiary animate-spin" />
+                <p className="mt-4 text-xl">{loadingMessage}</p>
+            </div>
+        );
     }
-    if (selectedActor) {
-        switch(selectedActor.type) {
-            case 'flower':
-                return <FlowerDetailsPanel 
-                            flower={selectedActor} 
-                            isRunning={isRunning} 
-                            setIsRunning={setIsRunning} 
+
+    const renderDetailsPanel = () => {
+        if (actorsInSelectedCell.length > 0 && !trackedActorId) {
+            return <ActorSelectionPanel actors={actorsInSelectedCell} onSelect={handleActorSelection} onClose={() => handleActorSelection(null)} />;
+        }
+        if (selectedActor) {
+            switch (selectedActor.type) {
+                case 'flower':
+                    return (
+                        <FlowerDetailsPanel
+                            flower={selectedActor}
+                            isRunning={isRunning}
+                            setIsRunning={setIsRunning}
                             onClose={() => handleActorSelection(null)}
                             onTrackActor={handleTrackActor}
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
                             speciesSource={defaultSpeciesSource}
                             onViewInGuide={openGuide}
-                        />;
-            case 'insect':
-            case 'cockroach':
-                return <InsectDetailsPanel 
-                            insect={selectedActor as (Insect | Cockroach)} 
-                            onClose={() => handleActorSelection(null)} 
+                        />
+                    );
+                case 'insect':
+                case 'cockroach':
+                    return (
+                        <InsectDetailsPanel
+                            insect={selectedActor as Insect | Cockroach}
+                            onClose={() => handleActorSelection(null)}
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
                             onTrackActor={handleTrackActor}
-                        />;
-            case 'egg':
-                return <EggDetailsPanel 
-                            egg={selectedActor} 
+                        />
+                    );
+                case 'egg':
+                    return (
+                        <EggDetailsPanel
+                            egg={selectedActor}
                             onClose={() => handleActorSelection(null)}
                             onTrackActor={handleTrackActor}
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
-                        />;
-            case 'bird':
-            case 'eagle':
-            case 'nutrient':
-            case 'herbicidePlane':
-            case 'herbicideSmoke':
-            case 'flowerSeed':
-            case 'corpse':
-            case 'cocoon':
-            case 'hive':
-            case 'territoryMark':
-            case 'antColony':
-            case 'pheromoneTrail':
-            case 'spiderweb':
-            case 'slimeTrail':
-                return <GenericActorDetailsPanel 
-                            actor={selectedActor} 
+                        />
+                    );
+                case 'bird':
+                case 'eagle':
+                case 'nutrient':
+                case 'herbicidePlane':
+                case 'herbicideSmoke':
+                case 'flowerSeed':
+                case 'corpse':
+                case 'cocoon':
+                case 'hive':
+                case 'territoryMark':
+                case 'antColony':
+                case 'pheromoneTrail':
+                case 'spiderweb':
+                case 'slimeTrail':
+                    return (
+                        <GenericActorDetailsPanel
+                            actor={selectedActor}
                             onClose={() => handleActorSelection(null)}
                             onTrackActor={handleTrackActor}
                             onStopTracking={handleStopTracking}
                             trackedActorId={trackedActorId}
-                        />;
-            default: {
-                // Fallback for any unhandled type. We just won't render a panel.
-                // The user can click elsewhere to clear the selection.
-                // Calling a state setter here is a side-effect and can cause bugs.
-                console.warn(`No details panel configured for actor type: ${(selectedActor as any).type}`);
-                return null;
+                        />
+                    );
+                default: {
+                    // Fallback for any unhandled type. We just won't render a panel.
+                    // The user can click elsewhere to clear the selection.
+                    // Calling a state setter here is a side-effect and can cause bugs.
+                    console.warn(`No details panel configured for actor type: ${(selectedActor as any).type}`);
+                    return null;
+                }
             }
         }
-    }
-    return null;
-  };
-const detailsPanel = renderDetailsPanel();
+        return null;
+    };
+    const detailsPanel = renderDetailsPanel();
 
+    return (
+        <div className="min-h-screen bg-background text-primary flex flex-col font-sans relative overflow-hidden">
+            <header className="bg-background p-2 shadow-lg flex items-start justify-between z-10 gap-4">
+                <Logo />
 
-  return (
-    <div className="min-h-screen bg-background text-primary flex flex-col font-sans relative overflow-hidden">
-        <header className="bg-background p-2 shadow-lg flex items-start justify-between z-10 gap-4">
-            <Logo />
-            
-            <div className="flex-grow min-w-0 mx-4">
-                <StatusPanel 
-                    summary={latestSummary} 
-                    onLogClick={handleOpenFullLog}
-                    actors={actors}
-                    onTrackActor={handleTrackActor}
-                    onStopTracking={handleStopTracking}
-                    trackedActorId={trackedActorId}
-                    isRunning={isRunning}
-                    setIsRunning={setIsRunning}
-                    onHighlightActor={handleHighlightActorById}
-                />
-            </div>
+                <div className="flex-grow min-w-0 mx-4">
+                    <StatusPanel
+                        summary={latestSummary}
+                        onLogClick={handleOpenFullLog}
+                        actors={actors}
+                        onTrackActor={handleTrackActor}
+                        onStopTracking={handleStopTracking}
+                        trackedActorId={trackedActorId}
+                        isRunning={isRunning}
+                        setIsRunning={setIsRunning}
+                        onHighlightActor={handleHighlightActorById}
+                    />
+                </div>
 
-            <a 
-                href="https://github.com/cristianglezm/EvoGarden" 
-                target="_blank" 
-                rel="noopener"
-                className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center pt-2 m-auto"
-                aria-label="View on GitHub"
-                title="View on GitHub"
-            >
-                <GitHubIcon className="h-7 w-7" />
-            </a>
-        </header>
-      
-      <main className="grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">
-        {detailsPanel && (
-            <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
-                {detailsPanel}
-            </aside>
-        )}
-        
-        <div ref={simulationViewRef} className="grow flex flex-col h-full">
-          <SimulationView 
-            params={params}
-            actors={actors}
-            onCellClick={handleCellClick}
-            selectedActorId={selectedActor?.id ?? null}
-            onFrameRendered={handleFrameRendered}
-            plantingInfo={plantingInfo}
-            onPlantOnCell={handlePlantOnCell}
-            onCanvasesReady={handleCanvasesReady}
-          />
-        </div>
-      </main>
-
-        {plantingInfo && (
-            <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-accent-yellow/80 text-background font-bold px-4 py-2 rounded-lg shadow-lg z-20 flex items-center gap-4">
-                <span>Planting Mode: Click an empty cell to plant your champion.</span>
-                <button onClick={handleCancelPlanting} className="p-1 hover:bg-black/20 rounded-full">
-                    <XIcon className="w-5 h-5" />
-                </button>
-            </div>
-        )}
-       {/* UI Buttons */}
-      <div className="fixed top-24 right-4 z-20 flex flex-col space-y-2">
-            <button
-                ref={controlsButtonRef}
-                onClick={() => setIsControlsOpen(true)}
-                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
-                aria-label="Open controls panel"
-                title="Open Controls"
-            >
-                <SettingsIcon className="w-6 h-6" />
-            </button>
-            <button
-                ref={toolsButtonRef}
-                onClick={() => setIsToolsOpen(true)}
-                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
-                aria-label="Open intervention tools panel"
-                title="Open Intervention Tools"
-            >
-                <ToolboxIcon className="w-6 h-6" />
-            </button>
-            <button
-                onClick={() => setIsDataPanelOpen(true)}
-                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
-                aria-label="Open data panel"
-                title="Open Challenges & Analytics"
-            >
-                <TrophyIcon className="w-6 h-6" />
-            </button>
-            <button
-                onClick={() => openGuide(null)}
-                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
-                aria-label="Open field guide"
-                title="Open Field Guide"
-            >
-                <SeedlingIcon className="w-6 h-6" />
-            </button>
-            <button
-                onClick={() => setIsCommentaryOpen(!isCommentaryOpen)}
-                className={`p-3 ${isCommentaryOpen ? 'bg-tertiary text-surface' : 'bg-tertiary/80 text-surface'} hover:bg-tertiary rounded-md shadow-lg transition-colors duration-200 cursor-pointer`}
-                aria-label="Toggle Live Commentary"
-                title="Live Commentary"
-            >
-                <ChatBubbleIcon className="w-6 h-6" />
-            </button>
-      </div>
-      
-      <AIChatPanel 
-        isOpen={isCommentaryOpen} 
-        canvases={canvases} 
-        onClose={() => setIsCommentaryOpen(false)}
-      />
-
-      <DataPanel 
-        isOpen={isDataPanelOpen} 
-        onClose={() => setIsDataPanelOpen(false)}
-        isRunning={isRunning}
-        setIsRunning={setIsRunning}
-        onOpenGuide={openGuide}
-        onSeedBankCleared={reloadChampions}
-      />
-      <FieldGuideHost
-        isOpen={guide.isOpen}
-        cell={guide.cell}
-        onClose={closeGuide}
-        isRunning={isRunning}
-        setIsRunning={setIsRunning}
-        waiting={latestSummary?.workers?.species.waiting}
-        onPlant={(genome, sex) => {
-          setIsDataPanelOpen(false); // to be able to click the garden
-          handleEnterPlantingMode(genome, sex);
-        }}
-      />
-      <FullEventLogPanel isOpen={isFullLogOpen} onClose={handleCloseFullLog} />
-      <ToolsPanel
-        isOpen={isToolsOpen}
-        onClose={() => setIsToolsOpen(false)}
-        params={params}
-        triggerWeatherEvent={triggerWeatherEvent}
-        introduceSpecies={introduceSpecies}
-        introduceStationary={introduceStationary}
-        onEnterPlantingMode={handleEnterPlantingMode}
-      />
-
-      {/* Controls Panel Overlay */}
-      <div 
-        className={`fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ${isControlsOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setIsControlsOpen(false)}
-      ></div>
-      
-      {/* Controls Panel Content */}
-      <aside ref={controlsPanelRef} className={`fixed top-0 right-0 h-full bg-surface z-40 transition-transform duration-300 ease-in-out ${isControlsOpen ? 'translate-x-0' : 'translate-x-full'} w-full max-w-sm`}>
-         <div className="h-full flex flex-col">
-            <header className="flex items-center justify-between p-2 bg-background">
-                 <h2 className="text-xl font-bold text-primary-light ml-2">Controls</h2>
-                 <button 
-                    onClick={() => setIsControlsOpen(false)} 
-                    className="p-1 text-primary-light hover:bg-black/20 rounded-full"
-                    aria-label="Close controls panel"
+                <a
+                    href="https://github.com/cristianglezm/EvoGarden"
+                    target="_blank"
+                    rel="noopener"
+                    className="text-primary hover:text-tertiary transition-colors flex-shrink-0 flex items-center pt-2 m-auto"
+                    aria-label="View on GitHub"
+                    title="View on GitHub"
                 >
-                    <XIcon className="w-6 h-6" />
-                </button>
+                    <GitHubIcon className="h-7 w-7" />
+                </a>
             </header>
-            <div className="p-4 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
-                <Controls 
-                    params={params} 
-                    onParamsChange={handleParamsChange} 
-                    isRunning={isRunning}
-                    setIsRunning={setIsRunning}
-                    onSave={handleSaveSimulation}
-                    onStart={() => setIsControlsOpen(false)}
-                    onLoad={handleLoadSimulation}
-                    hasSavedState={hasSavedState}
-                    isSaving={isSaving}
-                    speciesSource={defaultSpeciesSource}
-                />
-            </div>
-         </div>
-      </aside>
 
-      <ToastContainer />
-    </div>
-  );
+            <main className="grow flex flex-col lg:flex-row p-4 gap-4 bg-surface">
+                {detailsPanel && (
+                    <aside ref={detailsPanelRef} className="w-full lg:w-96 shrink-0">
+                        {detailsPanel}
+                    </aside>
+                )}
+
+                <div ref={simulationViewRef} className="grow flex flex-col h-full">
+                    <SimulationView
+                        params={params}
+                        actors={actors}
+                        onCellClick={handleCellClick}
+                        selectedActorId={selectedActor?.id ?? null}
+                        onFrameRendered={handleFrameRendered}
+                        plantingInfo={plantingInfo}
+                        onPlantOnCell={handlePlantOnCell}
+                        onCanvasesReady={handleCanvasesReady}
+                    />
+                </div>
+            </main>
+
+            {plantingInfo && (
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-accent-yellow/80 text-background font-bold px-4 py-2 rounded-lg shadow-lg z-20 flex items-center gap-4">
+                    <span>Planting Mode: Click an empty cell to plant your champion.</span>
+                    <button onClick={handleCancelPlanting} className="p-1 hover:bg-black/20 rounded-full">
+                        <XIcon className="w-5 h-5" />
+                    </button>
+                </div>
+            )}
+            {/* UI Buttons */}
+            <div className="fixed top-24 right-4 z-20 flex flex-col space-y-2">
+                <button
+                    ref={controlsButtonRef}
+                    onClick={() => setIsControlsOpen(true)}
+                    className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
+                    aria-label="Open controls panel"
+                    title="Open Controls"
+                >
+                    <SettingsIcon className="w-6 h-6" />
+                </button>
+                <button
+                    ref={toolsButtonRef}
+                    onClick={() => setIsToolsOpen(true)}
+                    className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
+                    aria-label="Open intervention tools panel"
+                    title="Open Intervention Tools"
+                >
+                    <ToolboxIcon className="w-6 h-6" />
+                </button>
+                <button
+                    onClick={() => setIsDataPanelOpen(true)}
+                    className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
+                    aria-label="Open data panel"
+                    title="Open Challenges & Analytics"
+                >
+                    <TrophyIcon className="w-6 h-6" />
+                </button>
+                <button
+                    onClick={() => openGuide(null)}
+                    className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
+                    aria-label="Open field guide"
+                    title="Open Field Guide"
+                >
+                    <SeedlingIcon className="w-6 h-6" />
+                </button>
+                <button
+                    onClick={() => setIsCommentaryOpen(!isCommentaryOpen)}
+                    className={`p-3 ${isCommentaryOpen ? 'bg-tertiary text-surface' : 'bg-tertiary/80 text-surface'} hover:bg-tertiary rounded-md shadow-lg transition-colors duration-200 cursor-pointer`}
+                    aria-label="Toggle Live Commentary"
+                    title="Live Commentary"
+                >
+                    <ChatBubbleIcon className="w-6 h-6" />
+                </button>
+            </div>
+
+            <AIChatPanel isOpen={isCommentaryOpen} canvases={canvases} onClose={() => setIsCommentaryOpen(false)} />
+
+            <DataPanel
+                isOpen={isDataPanelOpen}
+                onClose={() => setIsDataPanelOpen(false)}
+                isRunning={isRunning}
+                setIsRunning={setIsRunning}
+                onOpenGuide={openGuide}
+                onSeedBankCleared={reloadChampions}
+            />
+            <FieldGuideHost
+                isOpen={guide.isOpen}
+                cell={guide.cell}
+                onClose={closeGuide}
+                isRunning={isRunning}
+                setIsRunning={setIsRunning}
+                waiting={latestSummary?.workers?.species.waiting}
+                onPlant={(genome, sex) => {
+                    setIsDataPanelOpen(false); // to be able to click the garden
+                    handleEnterPlantingMode(genome, sex);
+                }}
+            />
+            <FullEventLogPanel isOpen={isFullLogOpen} onClose={handleCloseFullLog} />
+            <ToolsPanel
+                isOpen={isToolsOpen}
+                onClose={() => setIsToolsOpen(false)}
+                params={params}
+                triggerWeatherEvent={triggerWeatherEvent}
+                introduceSpecies={introduceSpecies}
+                introduceStationary={introduceStationary}
+                onEnterPlantingMode={handleEnterPlantingMode}
+            />
+
+            {/* Controls Panel Overlay */}
+            <div
+                className={`fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ${isControlsOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={() => setIsControlsOpen(false)}
+            ></div>
+
+            {/* Controls Panel Content */}
+            <aside
+                ref={controlsPanelRef}
+                className={`fixed top-0 right-0 h-full bg-surface z-40 transition-transform duration-300 ease-in-out ${isControlsOpen ? 'translate-x-0' : 'translate-x-full'} w-full max-w-sm`}
+            >
+                <div className="h-full flex flex-col">
+                    <header className="flex items-center justify-between p-2 bg-background">
+                        <h2 className="text-xl font-bold text-primary-light ml-2">Controls</h2>
+                        <button
+                            onClick={() => setIsControlsOpen(false)}
+                            className="p-1 text-primary-light hover:bg-black/20 rounded-full"
+                            aria-label="Close controls panel"
+                        >
+                            <XIcon className="w-6 h-6" />
+                        </button>
+                    </header>
+                    <div className="p-4 overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
+                        <Controls
+                            params={params}
+                            onParamsChange={handleParamsChange}
+                            isRunning={isRunning}
+                            setIsRunning={setIsRunning}
+                            onSave={handleSaveSimulation}
+                            onStart={() => setIsControlsOpen(false)}
+                            onLoad={handleLoadSimulation}
+                            hasSavedState={hasSavedState}
+                            isSaving={isSaving}
+                            speciesSource={defaultSpeciesSource}
+                        />
+                    </div>
+                </div>
+            </aside>
+
+            <ToastContainer />
+        </div>
+    );
 }

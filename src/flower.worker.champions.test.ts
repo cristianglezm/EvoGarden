@@ -25,7 +25,9 @@ beforeAll(async () => {
     (globalThis as any).self = globalThis;
     await import('./flower.worker');
     const channel = new MessageChannel();
-    channel.port2.onmessage = (e: MessageEvent) => { messages.push(e.data); };
+    channel.port2.onmessage = (e: MessageEvent) => {
+        messages.push(e.data);
+    };
     await (globalThis as any).onmessage({ data: { type: 'init-ports', payload: { simWorkerPort: channel.port1 } } });
 }, 60_000);
 

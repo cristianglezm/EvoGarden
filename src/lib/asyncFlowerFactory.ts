@@ -71,7 +71,10 @@ export class AsyncFlowerFactory {
     private readonly inFlightPerWorker: number;
     private readonly speciesQueueLimit: number;
 
-    constructor(private readonly now: () => number = () => Date.now(), options: { inFlightPerWorker?: number; speciesQueueLimit?: number } = {}) {
+    constructor(
+        private readonly now: () => number = () => Date.now(),
+        options: { inFlightPerWorker?: number; speciesQueueLimit?: number } = {}
+    ) {
         this.statsSince = now();
         this.speciesQueueLimit = Math.max(1, Math.floor(options.speciesQueueLimit ?? SPECIES_QUEUE_LIMIT));
         this.inFlightPerWorker = Math.max(1, Math.floor(options.inFlightPerWorker ?? IN_FLIGHT_PER_WORKER));
@@ -89,7 +92,9 @@ export class AsyncFlowerFactory {
     public setWorkerPorts(specs: WorkerPortSpec[], params: SimulationParams) {
         const next = specs.map(spec => {
             const known = this.workers.find(w => w.port === spec.port);
-            return known ? Object.assign(known, { roles: spec.roles }) : { ...spec, inFlight: new Set<string>(), produced: 0, failed: 0, durations: [], speciesInFlight: 0 };
+            return known
+                ? Object.assign(known, { roles: spec.roles })
+                : { ...spec, inFlight: new Set<string>(), produced: 0, failed: 0, durations: [], speciesInFlight: 0 };
         });
         for (const gone of this.workers.filter(w => !next.includes(w))) {
             gone.port.onmessage = null;
@@ -151,7 +156,7 @@ export class AsyncFlowerFactory {
             if (worker.roles.includes('creation')) worker.port.postMessage({ type: 'update-params', payload: params });
         }
     }
-    
+
     public reset() {
         this.completedFlowersQueue = [];
         this.pendingRequests.clear();
@@ -224,7 +229,7 @@ export class AsyncFlowerFactory {
         while (this.producedAt.length > 0 && this.producedAt[0] <= now - RATE_WINDOW_MS) this.producedAt.shift();
     }
 
-    private handleMessage(data: { type: string, payload: any }, worker: WorkerState) {
+    private handleMessage(data: { type: string; payload: any }, worker: WorkerState) {
         const { type, payload } = data;
         if (type === 'flower-created' || type === 'flower-creation-failed') {
             this.countResult(worker, type === 'flower-created' && !!payload.flower, payload.durationMs);
@@ -249,7 +254,7 @@ export class AsyncFlowerFactory {
         getNextId: (type: string, x: number, y: number) => string
     ): FlowerSeed | null {
         if (!this.workers.some(w => w.roles.includes('creation')) || !this.stemImageData) {
-            console.error("AsyncFlowerFactory not ready to request a new flower.");
+            console.error('AsyncFlowerFactory not ready to request a new flower.');
             return null;
         }
 
@@ -261,15 +266,20 @@ export class AsyncFlowerFactory {
                 flowerCount++;
             }
         }
-        
+
         const avgHealth = flowerCount > 0 ? totalHealth / flowerCount : SEED_HEALTH;
         const seedHealth = Math.max(1, Math.round(avgHealth));
 
         const requestId = getNextId('seed', x, y);
         const flowerId = getNextId('flower', x, y);
-        
+
         const requestPayload: FlowerCreationRequest = {
-            requestId, flowerId, x, y, parentGenome1, parentGenome2
+            requestId,
+            flowerId,
+            x,
+            y,
+            parentGenome1,
+            parentGenome2,
         };
 
         this.pendingRequests.add(requestId);
@@ -278,7 +288,7 @@ export class AsyncFlowerFactory {
 
         return { id: requestId, type: 'flowerSeed', x, y, imageData: this.stemImageData, health: seedHealth, maxHealth: seedHealth, age: 0 };
     }
-    
+
     public cancelFlowerRequest(requestId: string) {
         // Counted and remembered even when the request has finished: its result may be on the way, and then the
         // flower is lost because the cancel came too late, which is not the same as a flower nobody cancelled.
@@ -298,7 +308,7 @@ export class AsyncFlowerFactory {
         // cancels without answering, so there is no message to wait for.
         this.requestOwner.get(requestId)?.port.postMessage({
             type: 'cancel-flower-request',
-            payload: { requestId }
+            payload: { requestId },
         });
         this.release(requestId);
         this.dispatch();
@@ -347,8 +357,7 @@ export class AsyncFlowerFactory {
     private nextSpeciesWorker(): { worker: WorkerState; size: number } | null {
         const dedicated = this.workers.find(w => w.roles.includes('species') && !w.roles.includes('creation') && w.speciesInFlight === 0);
         if (dedicated) return { worker: dedicated, size: SPECIES_BATCH_DEDICATED };
-        const helper = this.workers.find(w =>
-            w.roles.includes('species') && w.roles.includes('creation') && w.speciesInFlight === 0 && w.inFlight.size === 0);
+        const helper = this.workers.find(w => w.roles.includes('species') && w.roles.includes('creation') && w.speciesInFlight === 0 && w.inFlight.size === 0);
         return helper ? { worker: helper, size: SPECIES_BATCH_HELPER } : null;
     }
 
@@ -378,7 +387,7 @@ export class AsyncFlowerFactory {
         this.requestOwner.get(requestId)?.inFlight.delete(requestId);
         this.requestOwner.delete(requestId);
     }
-    
+
     public getCompletedFlowers(actorState: Map<string, CellContent>): CompletedFlowerResult {
         const result: CompletedFlowerResult = { flowersToAdd: [], seedsToRemove: [] };
         if (this.completedFlowersQueue.length === 0) {

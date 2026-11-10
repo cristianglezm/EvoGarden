@@ -23,11 +23,21 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-const request = (flowerId: string, genome: string, extra: Partial<SpeciesRequest> = {}): SpeciesRequest =>
-    ({ flowerId, genome, image: 'png', sex: 'female', age: 70, toxicity: 0.3, tick: 120, ...extra });
+const request = (flowerId: string, genome: string, extra: Partial<SpeciesRequest> = {}): SpeciesRequest => ({
+    flowerId,
+    genome,
+    image: 'png',
+    sex: 'female',
+    age: 70,
+    toxicity: 0.3,
+    tick: 120,
+    ...extra,
+});
 
 const answering = (match: SpeciesMatch | null): SpeciesClassifier => ({
-    get fingerprint() { return real.fingerprint; },
+    get fingerprint() {
+        return real.fingerprint;
+    },
     classifierJson: real.classifierJson,
     version: real.version,
     classify: async () => match,
@@ -163,8 +173,16 @@ describe('a flower that fails', () => {
     });
 });
 
-const death = (flowerId: string, genome: string, extra: Partial<SpeciesRecordRequest> = {}): SpeciesRecordRequest =>
-    ({ flowerId, genome, image: 'png', sex: 'female', tick: 900, age: 120, toxicity: 0.5, ...extra });
+const death = (flowerId: string, genome: string, extra: Partial<SpeciesRecordRequest> = {}): SpeciesRecordRequest => ({
+    flowerId,
+    genome,
+    image: 'png',
+    sex: 'female',
+    tick: 900,
+    age: 120,
+    toxicity: 0.5,
+    ...extra,
+});
 
 describe('a flower that died', () => {
     it('takes the records of its species, and is "recorded"', async () => {
@@ -264,12 +282,23 @@ describe('a flower that died', () => {
 });
 
 describe('the champions of the seed bank', () => {
-    const entry = (category: SeedBankEntry['category'], value: number, genome = genomes[0]): SeedBankEntry =>
-        ({ category, genome, value, imageData: 'champion-png', sex: 'male' });
+    const entry = (category: SeedBankEntry['category'], value: number, genome = genomes[0]): SeedBankEntry => ({
+        category,
+        genome,
+        value,
+        imageData: 'champion-png',
+        sex: 'male',
+    });
 
     it('are asked for as flowers that know one value and may take one record', () => {
         expect(championRequest(entry('longestLived', 321))).toEqual({
-            flowerId: 'champion-longestLived', genome: genomes[0], image: 'champion-png', sex: 'male', tick: 0, only: ['longestLived'], age: 321,
+            flowerId: 'champion-longestLived',
+            genome: genomes[0],
+            image: 'champion-png',
+            sex: 'male',
+            tick: 0,
+            only: ['longestLived'],
+            age: 321,
         });
         expect(championRequest(entry('mostToxic', 0.9))).toMatchObject({ toxicity: 0.9, only: ['mostToxic'] });
         expect(championRequest(entry('mostHealing', -0.4))).toMatchObject({ toxicity: -0.4, only: ['mostHealing'] });
@@ -408,7 +437,8 @@ describe('the limits the player chose', () => {
     it('let go the samples over a cap that was lowered, and not for one that was raised', async () => {
         const store = createMemorySpeciesStore();
         const repository = new SpeciesRepository(store, { cap: 5 });
-        for (const [i, genome] of [...genomes, 'x1', 'x2'].entries()) await repository.offer({ genome, match: { x: 1, y: 1, distance: i + 1 }, fp: real.fingerprint, sex: 'both' });
+        for (const [i, genome] of [...genomes, 'x1', 'x2'].entries())
+            await repository.offer({ genome, match: { x: 1, y: 1, distance: i + 1 }, fp: real.fingerprint, sex: 'both' });
         let chosen = { cap: 3 };
         const trim = vi.spyOn(repository, 'trim');
         const jobs = new SpeciesJobs(match(), repository, async () => chosen);
@@ -455,7 +485,9 @@ describe('the limits the player chose', () => {
 
     it('do not stop the work when they cannot be read', async () => {
         vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-        const jobs = new SpeciesJobs(match(), new SpeciesRepository(createMemorySpeciesStore()), async () => { throw new Error('disk'); });
+        const jobs = new SpeciesJobs(match(), new SpeciesRepository(createMemorySpeciesStore()), async () => {
+            throw new Error('disk');
+        });
         jobs.enqueue(request('a', genomes[0]));
         expect((await jobs.runNext())!.status).toBe('discovered');
     });
@@ -473,11 +505,19 @@ describe('classifying the waiting flowers in batches', () => {
         return { x: n % 12, y: n % 8, distance: n / 10 };
     };
     const byGenome = (calls: { single: string[]; batch: string[][] }): SpeciesClassifier => ({
-        get fingerprint() { return real.fingerprint; },
+        get fingerprint() {
+            return real.fingerprint;
+        },
         classifierJson: real.classifierJson,
         version: real.version,
-        classify: async genome => { calls.single.push(genome); return cellOf(genome); },
-        classifyBatch: async list => { calls.batch.push(list); return list.map(cellOf); },
+        classify: async genome => {
+            calls.single.push(genome);
+            return cellOf(genome);
+        },
+        classifyBatch: async list => {
+            calls.batch.push(list);
+            return list.map(cellOf);
+        },
     });
     const batched = (classifier: SpeciesClassifier, batchSize: number, now?: () => number) => {
         const repository = new SpeciesRepository(createMemorySpeciesStore());
@@ -553,11 +593,16 @@ describe('classifying the waiting flowers in batches', () => {
 
     it('finishes the job in hand when everything is cancelled while the batch is classified, and drops the rest', async () => {
         let open!: () => void;
-        const gate = new Promise<void>(resolve => { open = resolve; });
+        const gate = new Promise<void>(resolve => {
+            open = resolve;
+        });
         const calls = { single: [] as string[], batch: [] as string[][] };
         const classifier = byGenome(calls);
         const classifyBatch = classifier.classifyBatch.bind(classifier);
-        classifier.classifyBatch = async list => { await gate; return classifyBatch(list); };
+        classifier.classifyBatch = async list => {
+            await gate;
+            return classifyBatch(list);
+        };
         const { jobs } = batched(classifier, 8);
         many.slice(0, 3).forEach((g, i) => jobs.enqueue(request(`f${i}`, g)));
 
@@ -573,7 +618,9 @@ describe('classifying the waiting flowers in batches', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
         const calls = { single: [] as string[], batch: [] as string[][] };
         const classifier = byGenome(calls);
-        classifier.classifyBatch = async () => { throw new Error('wasm trap'); };
+        classifier.classifyBatch = async () => {
+            throw new Error('wasm trap');
+        };
         const { jobs } = batched(classifier, 4);
         many.slice(0, 3).forEach((g, i) => jobs.enqueue(request(`f${i}`, g)));
         const results = await runAll(jobs);
@@ -600,8 +647,14 @@ describe('classifying the waiting flowers in batches', () => {
             const classifier = byGenome(calls);
             const classify = classifier.classify.bind(classifier);
             const classifyBatch = classifier.classifyBatch.bind(classifier);
-            classifier.classify = async g => { clock += singleMs; return classify(g); };
-            classifier.classifyBatch = async l => { clock += batchMs; return classifyBatch(l); };
+            classifier.classify = async g => {
+                clock += singleMs;
+                return classify(g);
+            };
+            classifier.classifyBatch = async l => {
+                clock += batchMs;
+                return classifyBatch(l);
+            };
             return classifier;
         };
 
@@ -637,7 +690,9 @@ describe('classifying the waiting flowers in batches', () => {
             vi.spyOn(console, 'error').mockImplementation(() => undefined);
             const calls = { single: [] as string[], batch: [] as string[][] };
             const classifier = byGenome(calls);
-            classifier.classify = async () => { throw new Error('boom'); };
+            classifier.classify = async () => {
+                throw new Error('boom');
+            };
             const { jobs } = setup(classifier);
             jobs.enqueue(request('a', many[0]));
             const result = (await jobs.runNext())!;
@@ -667,16 +722,32 @@ describe('record jobs that carry the match of their flower', () => {
     const counting = () => {
         const calls = { single: [] as string[], batch: [] as string[][] };
         const classifier: SpeciesClassifier = {
-            get fingerprint() { return real.fingerprint; },
+            get fingerprint() {
+                return real.fingerprint;
+            },
             classifierJson: real.classifierJson,
             version: real.version,
-            classify: async genome => { calls.single.push(genome); return cell(9); },
-            classifyBatch: async list => { calls.batch.push(list); return list.map(() => cell(9)); },
+            classify: async genome => {
+                calls.single.push(genome);
+                return cell(9);
+            },
+            classifyBatch: async list => {
+                calls.batch.push(list);
+                return list.map(() => cell(9));
+            },
         };
         return { calls, classifier };
     };
-    const death = (flowerId: string, genome: string, extra: Partial<SpeciesRecordRequest> = {}): SpeciesRecordRequest =>
-        ({ flowerId, genome, image: 'png', sex: 'both', age: 400, toxicity: 0.1, tick: 50, ...extra });
+    const death = (flowerId: string, genome: string, extra: Partial<SpeciesRecordRequest> = {}): SpeciesRecordRequest => ({
+        flowerId,
+        genome,
+        image: 'png',
+        sex: 'both',
+        age: 400,
+        toxicity: 0.1,
+        tick: 50,
+        ...extra,
+    });
     const make = (classifier: SpeciesClassifier, batchSize = 1) => {
         const repository = new SpeciesRepository(createMemorySpeciesStore());
         return { jobs: new SpeciesJobs(classifier, repository, undefined, { batchSize }), repository };

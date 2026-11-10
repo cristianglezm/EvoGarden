@@ -23,7 +23,11 @@ const Harness: React.FC<HarnessProps> = ({ enabled = true, onOutside, modal = 'n
         <div>
             <div ref={panel} data-testid="panel">
                 panel
-                {modal === 'modal' && <Modal isOpen onClose={() => {}} title="3D"><button>spin</button></Modal>}
+                {modal === 'modal' && (
+                    <Modal isOpen onClose={() => {}} title="3D">
+                        <button>spin</button>
+                    </Modal>
+                )}
                 {modal === 'confirmation' && <ConfirmationModal title="Sure?" message="really" onConfirm={() => {}} onCancel={() => {}} />}
             </div>
             <button ref={other}>other button</button>

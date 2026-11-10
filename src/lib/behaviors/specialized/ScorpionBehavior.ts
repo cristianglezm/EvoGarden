@@ -1,6 +1,6 @@
 import type { Insect } from '../../../types';
-import { 
-    INSECT_DORMANCY_TEMP, 
+import {
+    INSECT_DORMANCY_TEMP,
     INSECT_STAMINA_REGEN_PER_TICK,
     INSECT_MOVE_COST,
     INSECT_ATTACK_COST,
@@ -21,7 +21,7 @@ export class ScorpionBehavior extends InsectBehavior {
     public update(insect: Insect, context: InsectBehaviorContext): void {
         if (this.handleHealthAndDeath(insect, context)) return;
         if (context.currentTemperature < INSECT_DORMANCY_TEMP) return;
-        
+
         // Reset target if it's gone
         if (insect.targetId && !context.nextActorState.has(insect.targetId)) {
             insect.targetId = undefined;
@@ -30,13 +30,13 @@ export class ScorpionBehavior extends InsectBehavior {
 
         const hasInteracted = this.handleInteraction(insect, context);
         if (hasInteracted) {
-             // After attacking, the scorpion pauses to recover a bit of stamina. It doesn't move this turn.
-             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
-             return;
+            // After attacking, the scorpion pauses to recover a bit of stamina. It doesn't move this turn.
+            insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
+            return;
         }
-        
+
         const hasMoved = this.handleMovement(insect, context);
-        
+
         // Regenerate stamina if idle
         if (!hasInteracted && !hasMoved) {
             insect.stamina = Math.min(insect.maxStamina, insect.stamina + INSECT_STAMINA_REGEN_PER_TICK);
@@ -59,10 +59,14 @@ export class ScorpionBehavior extends InsectBehavior {
                 const corpseId = context.getNextId('corpse', targetOnCell.x, targetOnCell.y);
                 const preyBaseStats = INSECT_DATA.get(targetOnCell.emoji);
                 const foodValue = preyBaseStats ? preyBaseStats.maxHealth : FOOD_VALUE_CORPSE;
-                context.newActorQueue.push({ 
-                    id: corpseId, type: 'corpse', x: targetOnCell.x, y: targetOnCell.y, 
-                    originalEmoji: targetOnCell.emoji, decayTimer: CORPSE_DECAY_TIME,
-                    foodValue: foodValue 
+                context.newActorQueue.push({
+                    id: corpseId,
+                    type: 'corpse',
+                    x: targetOnCell.x,
+                    y: targetOnCell.y,
+                    originalEmoji: targetOnCell.emoji,
+                    decayTimer: CORPSE_DECAY_TIME,
+                    foodValue: foodValue,
                 });
 
                 // Scorpion gets reward
@@ -72,7 +76,7 @@ export class ScorpionBehavior extends InsectBehavior {
                 // Scorpion disengages to find a new target
                 insect.targetId = undefined;
                 insect.isHunting = false;
-                
+
                 context.events.push({ message: `🦂 A scorpion killed a ${targetOnCell.emoji}!`, type: 'info', importance: 'low' });
             } else {
                 // Prey is damaged but not dead, scorpion stays engaged
@@ -93,7 +97,7 @@ export class ScorpionBehavior extends InsectBehavior {
                 insect.isHunting = true;
             }
         }
-        
+
         const target = insect.targetId ? context.nextActorState.get(insect.targetId) : null;
         if (target) {
             if (this.moveTowards(insect, target, context)) {
@@ -111,17 +115,21 @@ export class ScorpionBehavior extends InsectBehavior {
 
     private findPrey(insect: Insect, context: InsectBehaviorContext): Insect | null {
         const vision = new Rectangle(insect.x, insect.y, SCORPION_VISION_RANGE, SCORPION_VISION_RANGE);
-        const nearbyActors = context.qtree.query(vision)
+        const nearbyActors = context.qtree
+            .query(vision)
             .map(p => p.data)
             .filter(a => (a?.type === 'insect' || a?.type === 'cockroach') && context.nextActorState.has(a.id)) as Insect[];
 
         for (const preyType of PREY_PRIORITY) {
             const potentialTargets = nearbyActors.filter(a => a.emoji === preyType);
             if (potentialTargets.length > 0) {
-                return potentialTargets.reduce((closest, current) => {
-                    const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
-                    return dist < closest.dist ? { prey: current, dist } : closest;
-                }, { prey: null as Insect | null, dist: Infinity }).prey;
+                return potentialTargets.reduce(
+                    (closest, current) => {
+                        const dist = Math.hypot(insect.x - current.x, insect.y - current.y);
+                        return dist < closest.dist ? { prey: current, dist } : closest;
+                    },
+                    { prey: null as Insect | null, dist: Infinity }
+                ).prey;
             }
         }
 

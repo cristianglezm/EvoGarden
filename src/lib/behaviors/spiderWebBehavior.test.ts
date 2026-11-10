@@ -9,34 +9,40 @@ describe('SpiderWebBehavior', () => {
     let nextActorState: Map<string, CellContent>;
     let events: AppEvent[];
     let qtree: Quadtree<CellContent>;
-    const params: SimulationParams = { 
-        ...DEFAULT_SIM_PARAMS, 
+    const params: SimulationParams = {
+        ...DEFAULT_SIM_PARAMS,
         spiderWebStrength: 20,
         spiderWebTrapChance: 1.0, // Guaranteed trap for testing
         spiderEscapeChanceModifier: 0.5,
     };
-    
+
     beforeEach(() => {
         web = {
-            id: 'web1', type: 'spiderweb', x: 5, y: 5, ownerId: 'spider1', 
-            strength: params.spiderWebStrength, trappedActorId: null, lifespan: 100,
+            id: 'web1',
+            type: 'spiderweb',
+            x: 5,
+            y: 5,
+            ownerId: 'spider1',
+            strength: params.spiderWebStrength,
+            trappedActorId: null,
+            lifespan: 100,
         };
         nextActorState = new Map();
         nextActorState.set(web.id, web);
         events = [];
-        
+
         const boundary = new Rectangle(params.gridWidth / 2, params.gridHeight / 2, params.gridWidth / 2, params.gridHeight / 2);
         qtree = new Quadtree(boundary, 4);
         qtree.insert({ x: web.x, y: web.y, data: web });
     });
-    
+
     const setupContext = (): any => ({
         params,
         nextActorState,
         events,
         qtree,
     });
-    
+
     it('should decrement its lifespan', () => {
         processSpiderWebTick(web, setupContext());
         expect(web.lifespan).toBe(99);
@@ -52,27 +58,35 @@ describe('SpiderWebBehavior', () => {
     });
 
     it('should trap a valid, non-flying insect on its cell', () => {
-        const beetle: Insect = { 
-            id: 'beetle1', type: 'insect', x: 5, y: 5, emoji: '🪲',
+        const beetle: Insect = {
+            id: 'beetle1',
+            type: 'insect',
+            x: 5,
+            y: 5,
+            emoji: '🪲',
             isTrapped: false,
         } as Insect;
         nextActorState.set(beetle.id, beetle);
         qtree.insert({ x: beetle.x, y: beetle.y, data: beetle });
-        
+
         processSpiderWebTick(web, setupContext());
 
         expect(web.trappedActorId).toBe(beetle.id);
         expect(beetle.isTrapped).toBe(true);
         expect(events.some(e => e.message.includes('got trapped'))).toBe(true);
     });
-    
+
     it('should not trap a flying insect', () => {
-        const butterfly: Insect = { 
-            id: 'bfly1', type: 'insect', x: 5, y: 5, emoji: '🦋',
+        const butterfly: Insect = {
+            id: 'bfly1',
+            type: 'insect',
+            x: 5,
+            y: 5,
+            emoji: '🦋',
         } as Insect;
         nextActorState.set(butterfly.id, butterfly);
         qtree.insert({ x: butterfly.x, y: butterfly.y, data: butterfly });
-        
+
         processSpiderWebTick(web, setupContext());
 
         expect(web.trappedActorId).toBeNull();
@@ -80,19 +94,24 @@ describe('SpiderWebBehavior', () => {
 
     it('should allow a trapped insect to escape if it is strong enough', () => {
         const beetleData = INSECT_DATA.get('🪲')!;
-        const beetle: Insect = { 
-            id: 'beetle1', type: 'insect', x: 5, y: 5, emoji: '🪲',
-            stamina: beetleData.maxStamina, isTrapped: true
+        const beetle: Insect = {
+            id: 'beetle1',
+            type: 'insect',
+            x: 5,
+            y: 5,
+            emoji: '🪲',
+            stamina: beetleData.maxStamina,
+            isTrapped: true,
         } as Insect;
         web.trappedActorId = beetle.id;
         nextActorState.set(beetle.id, beetle);
-        
+
         // Mock Math.random to guarantee escape
         // Escape chance = (1 / 20) * 0.5 = 0.025. We need random < 0.025.
         vi.spyOn(Math, 'random').mockReturnValue(0.01);
 
         processSpiderWebTick(web, setupContext());
-        
+
         expect(web.trappedActorId).toBeNull();
         expect(beetle.isTrapped).toBe(false);
         expect(web.strength).toBe(params.spiderWebStrength - beetleData.attack);
@@ -100,12 +119,17 @@ describe('SpiderWebBehavior', () => {
 
         vi.spyOn(Math, 'random').mockRestore();
     });
-    
+
     it('should reduce stamina of a trapped insect that fails to escape', () => {
         const beetleData = INSECT_DATA.get('🪲')!;
-        const beetle: Insect = { 
-            id: 'beetle1', type: 'insect', x: 5, y: 5, emoji: '🪲',
-            stamina: beetleData.maxStamina, isTrapped: true
+        const beetle: Insect = {
+            id: 'beetle1',
+            type: 'insect',
+            x: 5,
+            y: 5,
+            emoji: '🪲',
+            stamina: beetleData.maxStamina,
+            isTrapped: true,
         } as Insect;
         web.trappedActorId = beetle.id;
         nextActorState.set(beetle.id, beetle);

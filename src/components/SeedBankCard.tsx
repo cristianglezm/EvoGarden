@@ -30,7 +30,7 @@ export const SeedBankCard: React.FC<SeedBankCardProps> = ({ entry, onDownload, o
             value = `${(entry.value * -100).toFixed(0)}% Healing`;
             break;
     }
-    
+
     return (
         <div className="bg-surface-hover/50 rounded-lg p-3 flex flex-col">
             <h4 className="font-semibold text-primary">{title}</h4>
@@ -53,18 +53,18 @@ export const SeedBankCard: React.FC<SeedBankCardProps> = ({ entry, onDownload, o
             )}
             {!species && <div className="mb-2" />}
             <div className="bg-black/50 rounded flex items-center justify-center p-2 aspect-square">
-                 <img src={entry.imageData} alt={`Champion flower for ${title}`} className="w-full h-full object-contain"/>
+                <img src={entry.imageData} alt={`Champion flower for ${title}`} className="w-full h-full object-contain" />
             </div>
             <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border/50">
-                <button 
-                    onClick={() => onDownload(entry.genome, entry.category)} 
+                <button
+                    onClick={() => onDownload(entry.genome, entry.category)}
                     className="flex items-center justify-center gap-2 text-sm p-2 bg-surface-hover rounded-md hover:bg-border/20 transition-colors"
                     title="Download genome as a JSON file"
                 >
                     <DownloadIcon className="w-4 h-4" />
                     Download
                 </button>
-                 <button 
+                <button
                     onClick={() => onView3D(entry.genome, entry.sex || 'both')} // Fallback for old saves
                     className="flex items-center justify-center gap-2 text-sm p-2 bg-surface-hover rounded-md hover:bg-border/20 transition-colors"
                     title="View 3D model"

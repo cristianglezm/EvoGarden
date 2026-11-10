@@ -11,7 +11,6 @@ import type { SimulationParams, FlowerCreationRequest, SpeciesRecordRequest, Spe
 let simWorkerPort: MessagePort | null = null;
 let currentParams: SimulationParams | null = null;
 
-
 // --- Queue System for Flower Creation ---
 let requestQueue: FlowerCreationRequest[] = [];
 let cancellationQueue: string[] = []; // New queue for cancellation IDs
@@ -39,7 +38,7 @@ const processQueue = async () => {
     if (isProcessing) {
         return;
     }
-    
+
     // Batch process cancellations before starting a new task
     if (cancellationQueue.length > 0) {
         const cancelledIds = new Set(cancellationQueue);
@@ -63,7 +62,7 @@ const processQueue = async () => {
         isProcessing = false;
         return;
     }
-    
+
     isProcessing = true;
 
     const request = requestQueue.shift();
@@ -73,12 +72,20 @@ const processQueue = async () => {
         setTimeout(processQueue, 0);
         return;
     }
-    
+
     // From taking the request to having the flower and its image: the wait in the queue is not the worker's time.
     const startedAt = performance.now();
-    const newFlower = await createNewFlower(flowerService, currentParams!, request.x, request.y, request.parentGenome1, request.parentGenome2, request.flowerId);
+    const newFlower = await createNewFlower(
+        flowerService,
+        currentParams!,
+        request.x,
+        request.y,
+        request.parentGenome1,
+        request.parentGenome2,
+        request.flowerId
+    );
     const durationMs = performance.now() - startedAt;
-    
+
     // After async work, check if the request was cancelled while processing.
     const wasCancelled = cancellationQueue.some(id => id === request.requestId);
 
@@ -86,22 +93,21 @@ const processQueue = async () => {
         if (newFlower) {
             simWorkerPort?.postMessage({
                 type: 'flower-created',
-                payload: { requestId: request.requestId, flower: newFlower, durationMs }
+                payload: { requestId: request.requestId, flower: newFlower, durationMs },
             });
         } else {
             simWorkerPort?.postMessage({
                 type: 'flower-creation-failed',
-                payload: { requestId: request.requestId }
+                payload: { requestId: request.requestId },
             });
         }
     }
-    
+
     speciesTurn = true;
     isProcessing = false;
     // After finishing, immediately try to process the next item.
     setTimeout(processQueue, 0);
 };
-
 
 // Main message handler for messages coming from the main thread (App.tsx)
 self.onmessage = async (e: MessageEvent) => {
@@ -137,7 +143,7 @@ self.onmessage = async (e: MessageEvent) => {
 const handleSimWorkerMessage = async (e: MessageEvent) => {
     if (!(await ready)) return;
     const { type, payload } = e.data;
-    
+
     switch (type) {
         case 'update-params':
             currentParams = payload;
@@ -146,23 +152,23 @@ const handleSimWorkerMessage = async (e: MessageEvent) => {
 
         case 'request-flower':
             if (!currentParams) {
-                console.error("Flower worker received request before params were set.");
+                console.error('Flower worker received request before params were set.');
                 return;
             }
-            
+
             requestQueue.push(payload);
             // Don't start processing immediately if already busy. The loop will pick it up.
             if (!isProcessing) {
                 processQueue();
             }
             break;
-            
+
         case 'cancel-flower-request': {
             // Add to cancellation queue instead of filtering immediately
             cancellationQueue.push(payload.requestId);
             break;
         }
-        
+
         case 'cancel-all-requests': {
             requestQueue = [];
             cancellationQueue = [];

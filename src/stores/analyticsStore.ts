@@ -69,9 +69,9 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                     healingFlowerCount: summary.healingFlowerCount,
                     toxicFlowerCount: summary.toxicFlowerCount,
                 };
-                
+
                 const newHistory = [...get().history, newPoint];
-                
+
                 // Keep the history array from growing indefinitely
                 if (newHistory.length > MAX_HISTORY_LENGTH) {
                     newHistory.shift();

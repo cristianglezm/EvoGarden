@@ -29,7 +29,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await Promise.all([db.speciesSamples.clear(), db.speciesGenomes.clear()]);
-    source = createSpeciesSource(db, () => classifier, async () => null);
+    source = createSpeciesSource(
+        db,
+        () => classifier,
+        async () => null
+    );
     repository = new SpeciesRepository(createDexieSpeciesStore(db));
 });
 
@@ -98,10 +102,26 @@ describe('collectSamples', () => {
     });
 
     it('says in the manifest what the collection knew of each flower', async () => {
-        await repository.record({ genome: flowers[0], match: { x: 3, y: 2, distance: 0.4 }, fp: classifier.fingerprint, sex: 'female', age: 120, toxicity: 0.3, tick: 777 });
+        await repository.record({
+            genome: flowers[0],
+            match: { x: 3, y: 2, distance: 0.4 },
+            fp: classifier.fingerprint,
+            sex: 'female',
+            age: 120,
+            toxicity: 0.3,
+            tick: 777,
+        });
         const { manifest } = await collectSamples(source, options);
         expect(JSON.parse(manifest).flowers[0]).toMatchObject({
-            index: 0, cell: '3,2', species: speciesName(3, 2, 12), distance: 0.4, kind: 'sample', sex: 'female', age: 120, toxicity: 0.3, tick: 777,
+            index: 0,
+            cell: '3,2',
+            species: speciesName(3, 2, 12),
+            distance: 0.4,
+            kind: 'sample',
+            sex: 'female',
+            age: 120,
+            toxicity: 0.3,
+            tick: 777,
         });
     });
 
@@ -111,9 +131,13 @@ describe('collectSamples', () => {
         const { manifest, counts, fileBase } = await collectSamples(source, options);
         const m = JSON.parse(manifest);
         expect(m).toMatchObject({
-            generatedAt: '2026-11-02T10:30:00.000Z', app: 'EvoGarden', appVersion: '9.9.9', feWasmVersion: service.getVersion(),
+            generatedAt: '2026-11-02T10:30:00.000Z',
+            app: 'EvoGarden',
+            appVersion: '9.9.9',
+            feWasmVersion: service.getVersion(),
             classifier: { fingerprint: classifier.fingerprint, width: 12, height: 8, inputDim: 267 },
-            environment: SPECIES_ENVIRONMENT, includesUnclassified: true,
+            environment: SPECIES_ENVIRONMENT,
+            includesUnclassified: true,
             counts: { flowers: 2, samples: 1, unclassified: 1, species: 1, skipped: 0, stale: 0, atypical: 0 },
         });
         expect(counts).toEqual(m.counts);
@@ -128,12 +152,26 @@ describe('collectSamples', () => {
         await at('{"Flower":{"n":3}}', 5, 3);
         await at('{"Flower":{"n":4}}', 11, 0);
         await repository.offer({ genome: '{"Flower":{"n":5}}', match: null, fp: classifier.fingerprint, sex: 'both' });
-        await db.speciesSamples.put({ ...(await db.speciesSamples.toArray())[0], id: 'atypical-1', cell: '1,1', x: 1, y: 1, d: 9, kind: 'atypical', founder: false });
+        await db.speciesSamples.put({
+            ...(await db.speciesSamples.toArray())[0],
+            id: 'atypical-1',
+            cell: '1,1',
+            x: 1,
+            y: 1,
+            d: 9,
+            kind: 'atypical',
+            founder: false,
+        });
         await db.speciesGenomes.put({ id: 'atypical-1', genome: '{"Flower":{"n":6}}' });
 
         const { manifest } = await collectSamples(source, options);
         expect(JSON.parse(manifest).flowers.map((d: { cell: string | null; kind: string }) => `${d.kind}:${d.cell}`)).toEqual([
-            'sample:0,0', 'sample:11,0', 'sample:5,3', 'sample:5,3', 'atypical:1,1', 'unclassified:null',
+            'sample:0,0',
+            'sample:11,0',
+            'sample:5,3',
+            'sample:5,3',
+            'atypical:1,1',
+            'unclassified:null',
         ]);
     });
 
@@ -170,8 +208,17 @@ describe('collectSamples', () => {
 
     it('reads the genomes a hundred at a time, so a big collection is not held in one read', async () => {
         const rows: SpeciesSample[] = Array.from({ length: 250 }, (_, i) => ({
-            id: `s${String(i).padStart(3, '0')}`, cell: `${i % 12},${Math.floor(i / 12) % 8}`, x: i % 12, y: Math.floor(i / 12) % 8, d: 1,
-            fp: classifier.fingerprint, kind: 'sample', founder: false, records: [], sex: 'both', createdAt: i,
+            id: `s${String(i).padStart(3, '0')}`,
+            cell: `${i % 12},${Math.floor(i / 12) % 8}`,
+            x: i % 12,
+            y: Math.floor(i / 12) % 8,
+            d: 1,
+            fp: classifier.fingerprint,
+            kind: 'sample',
+            founder: false,
+            records: [],
+            sex: 'both',
+            createdAt: i,
         }));
         await db.speciesSamples.bulkPut(rows);
         await db.speciesGenomes.bulkPut(rows.map(r => ({ id: r.id, genome: `{"Flower":{"n":${r.createdAt}}}` })));
@@ -192,21 +239,38 @@ describe('collectSamples', () => {
 
 describe('orderForExport', () => {
     const row = (id: string, extra: Partial<SpeciesSample>): SpeciesSample => ({
-        id, cell: '0,0', x: 0, y: 0, d: 1, fp: 'f', kind: 'sample', founder: false, records: [], sex: 'both', createdAt: 1, ...extra,
+        id,
+        cell: '0,0',
+        x: 0,
+        y: 0,
+        d: 1,
+        fp: 'f',
+        kind: 'sample',
+        founder: false,
+        records: [],
+        sex: 'both',
+        createdAt: 1,
+        ...extra,
     });
 
     it('goes by the position in the map, row by row, then by age, then by id', () => {
-        const ordered = orderForExport([
-            row('d', { x: 0, y: 1 }), row('c', { x: 2, y: 0, createdAt: 2 }), row('b', { x: 2, y: 0, createdAt: 1 }), row('a', { x: 2, y: 0, createdAt: 1 }),
-        ], 12);
+        const ordered = orderForExport(
+            [row('d', { x: 0, y: 1 }), row('c', { x: 2, y: 0, createdAt: 2 }), row('b', { x: 2, y: 0, createdAt: 1 }), row('a', { x: 2, y: 0, createdAt: 1 })],
+            12
+        );
         expect(ordered.map(r => r.id)).toEqual(['a', 'b', 'c', 'd']);
     });
 
     it('puts the atypical, the farthest first, after the samples, and the unclassified last', () => {
-        const ordered = orderForExport([
-            row('lost', { kind: 'unclassified', x: null, y: null, d: null }),
-            row('near', { kind: 'atypical', d: 3 }), row('far', { kind: 'atypical', d: 8 }), row('plain', { x: 9, y: 7 }),
-        ], 12);
+        const ordered = orderForExport(
+            [
+                row('lost', { kind: 'unclassified', x: null, y: null, d: null }),
+                row('near', { kind: 'atypical', d: 3 }),
+                row('far', { kind: 'atypical', d: 8 }),
+                row('plain', { x: 9, y: 7 }),
+            ],
+            12
+        );
         expect(ordered.map(r => r.id)).toEqual(['plain', 'far', 'near', 'lost']);
     });
 

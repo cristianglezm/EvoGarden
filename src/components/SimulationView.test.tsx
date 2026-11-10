@@ -22,13 +22,19 @@ describe('SimulationView: clicking the grid', () => {
     const onCellClick = vi.fn();
     const planting = { genome: 'champion', sex: 'both' as const };
 
-    const click = (cellX: number, cellY: number) =>
-        fireEvent.click(screen.getByRole('grid'), { clientX: cellX * CELL + 10, clientY: cellY * CELL + 10 });
-    const view = (actors: CellContent[], plantingInfo: typeof planting | null = planting) => render(
-        <SimulationView params={DEFAULT_SIM_PARAMS} onCellClick={onCellClick} selectedActorId={null}
-            actors={new Map(actors.map(a => [a.id, a]))} onFrameRendered={() => {}} plantingInfo={plantingInfo}
-            onPlantOnCell={onPlantOnCell} />,
-    );
+    const click = (cellX: number, cellY: number) => fireEvent.click(screen.getByRole('grid'), { clientX: cellX * CELL + 10, clientY: cellY * CELL + 10 });
+    const view = (actors: CellContent[], plantingInfo: typeof planting | null = planting) =>
+        render(
+            <SimulationView
+                params={DEFAULT_SIM_PARAMS}
+                onCellClick={onCellClick}
+                selectedActorId={null}
+                actors={new Map(actors.map(a => [a.id, a]))}
+                onFrameRendered={() => {}}
+                plantingInfo={plantingInfo}
+                onPlantOnCell={onPlantOnCell}
+            />
+        );
 
     beforeEach(() => {
         onPlantOnCell.mockClear();
@@ -55,7 +61,9 @@ describe('SimulationView: clicking the grid', () => {
         view([actor('insect', 4, 5), actor(type, 4, 5)]);
         click(4, 5);
         expect(onPlantOnCell).not.toHaveBeenCalled();
-        expect(eventService.dispatch).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringMatching(/a flower or a seed is already in that cell/i), type: 'error' }));
+        expect(eventService.dispatch).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringMatching(/a flower or a seed is already in that cell/i), type: 'error' })
+        );
         expect(onCellClick).not.toHaveBeenCalled();
     });
 

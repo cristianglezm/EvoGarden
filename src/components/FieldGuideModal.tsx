@@ -38,9 +38,12 @@ const CATEGORY_TITLES: Record<SeedBankCategory, string> = {
 
 function holderValue(holder: Holder): string {
     switch (holder.category) {
-        case 'longestLived': return `${holder.age ?? '?'} ticks`;
-        case 'mostToxic': return holder.toxicity === undefined ? '?' : `${(holder.toxicity * 100).toFixed(0)}% toxicity`;
-        case 'mostHealing': return holder.toxicity === undefined ? '?' : `${(holder.toxicity * -100).toFixed(0)}% healing`;
+        case 'longestLived':
+            return `${holder.age ?? '?'} ticks`;
+        case 'mostToxic':
+            return holder.toxicity === undefined ? '?' : `${(holder.toxicity * 100).toFixed(0)}% toxicity`;
+        case 'mostHealing':
+            return holder.toxicity === undefined ? '?' : `${(holder.toxicity * -100).toFixed(0)}% healing`;
     }
 }
 
@@ -50,8 +53,18 @@ function cellLabel(cell: CellSummary): string {
 }
 
 export const FieldGuideModal: React.FC<FieldGuideModalProps> = ({
-    isOpen, onClose, source, champions, initialCell = null, onDownload, onView3D, onPlant, intervalMs,
-    onSave = downloadBlob, appVersion = import.meta.env.VITE_APP_VERSION, waiting,
+    isOpen,
+    onClose,
+    source,
+    champions,
+    initialCell = null,
+    onDownload,
+    onView3D,
+    onPlant,
+    intervalMs,
+    onSave = downloadBlob,
+    appVersion = import.meta.env.VITE_APP_VERSION,
+    waiting,
 }) => {
     const { collection, wantImages } = useSpeciesCollection(source, champions, isOpen, intervalMs);
     const [selectedKey, setSelectedKey] = useState<string | null>(initialCell);
@@ -60,7 +73,7 @@ export const FieldGuideModal: React.FC<FieldGuideModalProps> = ({
         if (isOpen) setSelectedKey(initialCell);
     }, [isOpen, initialCell]);
 
-    const selected = collection.status === 'ready' ? collection.summary.cells.find(c => c.key === selectedKey) ?? null : null;
+    const selected = collection.status === 'ready' ? (collection.summary.cells.find(c => c.key === selectedKey) ?? null) : null;
     const holderIds = useMemo(() => selected?.holders.map(h => h.id) ?? [], [selected]);
     useEffect(() => {
         if (holderIds.length > 0) wantImages(holderIds);
@@ -80,13 +93,7 @@ export const FieldGuideModal: React.FC<FieldGuideModalProps> = ({
                 {collection.status === 'ready' && (
                     <>
                         <Header summary={collection.summary} cap={collection.limits.cap} waiting={waiting} />
-                        <CollectionControls
-                            source={source}
-                            summary={collection.summary}
-                            storage={collection.storage}
-                            onSave={onSave}
-                            appVersion={appVersion}
-                        />
+                        <CollectionControls source={source} summary={collection.summary} storage={collection.storage} onSave={onSave} appVersion={appVersion} />
                         <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:gap-4">
                             <div className="overflow-x-auto">
                                 <div
@@ -131,7 +138,11 @@ export const FieldGuideModal: React.FC<FieldGuideModalProps> = ({
     );
 };
 
-const Header: React.FC<{ summary: { discovered: number; total: number; samples: number; atypical: number; unclassified: number; stale: number }; cap: number; waiting?: number }> = ({ summary, cap, waiting }) => (
+const Header: React.FC<{
+    summary: { discovered: number; total: number; samples: number; atypical: number; unclassified: number; stale: number };
+    cap: number;
+    waiting?: number;
+}> = ({ summary, cap, waiting }) => (
     <div className="space-y-1">
         <p className="text-lg font-semibold text-primary">
             {summary.discovered} / {summary.total} species discovered
@@ -213,8 +224,16 @@ const CollectionControls: React.FC<{
                 </label>
             </div>
             {summary.stale > 0 && <p className="text-xs text-secondary">Samples can be collected when the collection has been updated.</p>}
-            {result && <p role="status" className={`text-sm ${result.failed ? 'text-accent-red' : 'text-secondary'}`}>{result.text}</p>}
-            {storage && <p className="text-xs text-secondary">Storage used by this site: {formatBytes(storage.usage)} of {formatBytes(storage.quota)}</p>}
+            {result && (
+                <p role="status" className={`text-sm ${result.failed ? 'text-accent-red' : 'text-secondary'}`}>
+                    {result.text}
+                </p>
+            )}
+            {storage && (
+                <p className="text-xs text-secondary">
+                    Storage used by this site: {formatBytes(storage.usage)} of {formatBytes(storage.quota)}
+                </p>
+            )}
         </div>
     );
 };
@@ -236,9 +255,11 @@ const SpeciesCell: React.FC<{
             title={cell.discovered ? cell.name : 'Not discovered yet'}
             className={`relative aspect-square rounded border-2 p-0.5 flex items-center justify-center ${selected ? 'border-accent-yellow' : 'border-border/40'} ${cell.discovered ? 'bg-black/50' : 'bg-black/20'}`}
         >
-            {cell.discovered && image
-                ? <img src={image} alt="" className="w-full h-full object-contain" />
-                : <PrototypeCanvas pixels={pixels} size={grid.n} className={`w-full h-full ${cell.discovered ? 'opacity-80' : 'opacity-25'}`} />}
+            {cell.discovered && image ? (
+                <img src={image} alt="" className="w-full h-full object-contain" />
+            ) : (
+                <PrototypeCanvas pixels={pixels} size={grid.n} className={`w-full h-full ${cell.discovered ? 'opacity-80' : 'opacity-25'}`} />
+            )}
             {cell.champions.length > 0 && <TrophyIcon className="absolute top-0.5 right-0.5 w-3.5 h-3.5 text-accent-yellow" />}
         </button>
     );
@@ -286,9 +307,15 @@ const SpeciesDetail: React.FC<{
                             <h5 className="font-semibold text-primary">{CATEGORY_TITLES[holder.category]}</h5>
                             <p className="text-sm text-accent-yellow font-bold mb-2">{holderValue(holder)}</p>
                             <div className="bg-black/50 rounded flex items-center justify-center p-2 aspect-square">
-                                {images[holder.id]
-                                    ? <img src={images[holder.id]} alt={`${cell.name}: ${CATEGORY_TITLES[holder.category].toLowerCase()}`} className="w-full h-full object-contain" />
-                                    : <LoaderIcon className="w-6 h-6 animate-spin text-tertiary" />}
+                                {images[holder.id] ? (
+                                    <img
+                                        src={images[holder.id]}
+                                        alt={`${cell.name}: ${CATEGORY_TITLES[holder.category].toLowerCase()}`}
+                                        className="w-full h-full object-contain"
+                                    />
+                                ) : (
+                                    <LoaderIcon className="w-6 h-6 animate-spin text-tertiary" />
+                                )}
                             </div>
                             <div className="grid grid-cols-1 gap-2 mt-3 pt-3 border-t border-border/50">
                                 <button

@@ -13,8 +13,15 @@ describe('herbicidePlaneBehavior', () => {
     beforeEach(() => {
         // Horizontal sweep from top-left
         plane = {
-            id: 'plane1', type: 'herbicidePlane', x: 0, y: 0,
-            dx: 1, dy: 0, turnDx: 0, turnDy: 3, stride: 3,
+            id: 'plane1',
+            type: 'herbicidePlane',
+            x: 0,
+            y: 0,
+            dx: 1,
+            dy: 0,
+            turnDx: 0,
+            turnDy: 3,
+            stride: 3,
         };
         grid = Array.from({ length: params.gridHeight }, () => Array.from({ length: params.gridWidth }, () => []));
         nextActorState = new Map();
@@ -62,7 +69,7 @@ describe('herbicidePlaneBehavior', () => {
         plane.y = 4; // At the bottom-left, after a few sweeps
         plane.dx = -1; // Moving left
         plane.turnDy = 3; // Turn will take it off-grid
-        
+
         processHerbicidePlaneTick(plane, setupContext());
 
         // The next position (x=-1) is out of bounds, triggering a turn.

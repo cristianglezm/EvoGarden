@@ -129,7 +129,7 @@ describe('the species of a flower, stored or not', () => {
         expect(species).toMatchObject({ name: speciesName(x, y, 12), stored: false });
     });
 
-    it('does not write what it classified: the collection is the flower worker\'s', async () => {
+    it("does not write what it classified: the collection is the flower worker's", async () => {
         vi.spyOn(classifier, 'classify').mockResolvedValue({ x: 4, y: 2, distance: 1 });
         await source.speciesFor('nobody kept this');
         expect(await db.speciesSamples.count()).toBe(0);
@@ -140,7 +140,9 @@ describe('the species of a flower, stored or not', () => {
     });
 
     it('is nothing while the classifier is not ready, or when classifying fails, and never throws', async () => {
-        const notReady = createSpeciesSource(db, () => { throw new Error('not initialised'); });
+        const notReady = createSpeciesSource(db, () => {
+            throw new Error('not initialised');
+        });
         expect(await notReady.speciesFor('g')).toBeNull();
         vi.spyOn(classifier, 'classify').mockRejectedValue(new Error('boom'));
         expect(await source.speciesFor('g')).toBeNull();
@@ -219,6 +221,12 @@ describe('the species source, for collecting', () => {
     });
 
     it('uses the way to know the storage it is given', async () => {
-        expect(await createSpeciesSource(db, () => classifier, async () => ({ usage: 1, quota: 2 })).storage()).toEqual({ usage: 1, quota: 2 });
+        expect(
+            await createSpeciesSource(
+                db,
+                () => classifier,
+                async () => ({ usage: 1, quota: 2 })
+            ).storage()
+        ).toEqual({ usage: 1, quota: 2 });
     });
 });

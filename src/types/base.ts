@@ -89,8 +89,8 @@ export interface Coord {
     y: number;
 }
 
-export type Grid = (CellContent[])[][];
-export type SavedGrid = (SavedCellActor[])[][];
+export type Grid = CellContent[][][];
+export type SavedGrid = SavedCellActor[][][];
 
 // Represents the data structure stored in localStorage (metadata).
 // The full actor data for flowers and insects is in IndexedDB.

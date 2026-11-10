@@ -9,17 +9,12 @@ interface EventLogState {
 
 const MAX_LOG_ENTRIES = 100;
 
-export const useEventLogStore = create<EventLogState>((set) => ({
+export const useEventLogStore = create<EventLogState>(set => ({
     entries: [],
-    addEntry: (entry) => {
-        set((state) => {
+    addEntry: entry => {
+        set(state => {
             const latestEntry = state.entries[0];
-            if (
-                latestEntry &&
-                latestEntry.tick === entry.tick &&
-                latestEntry.message === entry.message &&
-                latestEntry.type === entry.type
-            ) {
+            if (latestEntry && latestEntry.tick === entry.tick && latestEntry.message === entry.message && latestEntry.type === entry.type) {
                 // It's a duplicate in the same tick, update the latest one.
                 const updatedEntries = [...state.entries];
                 updatedEntries[0] = {

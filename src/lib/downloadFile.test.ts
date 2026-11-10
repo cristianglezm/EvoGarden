@@ -14,7 +14,9 @@ describe('downloadBlob', () => {
         const revokeObjectURL = vi.fn();
         vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
         const clicked: HTMLAnchorElement[] = [];
-        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { clicked.push(this); });
+        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+            clicked.push(this);
+        });
 
         const blob = new Blob(['{}'], { type: 'application/json' });
         downloadBlob(blob, 'samples.json');

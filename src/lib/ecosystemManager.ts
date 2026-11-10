@@ -9,7 +9,10 @@ export const processNutrientHealing = (nextActorState: Map<string, CellContent>,
         if (!nextActorState.has(nutrient.id)) continue;
 
         const healArea = new Rectangle(nutrient.x, nutrient.y, 1.5, 1.5);
-        const flowersToHeal = qtree.query(healArea).map(p => p.data).filter(a => a.type === 'flower' && nextActorState.has(a.id)) as Flower[];
+        const flowersToHeal = qtree
+            .query(healArea)
+            .map(p => p.data)
+            .filter(a => a.type === 'flower' && nextActorState.has(a.id)) as Flower[];
 
         if (flowersToHeal.length > 0) {
             for (const flowerPoint of flowersToHeal) {
@@ -53,7 +56,7 @@ export const propagateSignal = (startMark: TerritoryMark, qtree: Quadtree<CellCo
                             const newSignalTTL = ttl - 1;
                             const existingSignal = neighborMark.signal;
                             const newSignalType = startMark.signal!.type;
-                            
+
                             let shouldPropagate = false;
 
                             if (!existingSignal) {
@@ -69,7 +72,8 @@ export const propagateSignal = (startMark: TerritoryMark, qtree: Quadtree<CellCo
                                     if (newSignalTTL > existingSignal.ttl) {
                                         shouldPropagate = true;
                                     }
-                                } else { // e.g. HIGH_VALUE_FLOWER_FOUND
+                                } else {
+                                    // e.g. HIGH_VALUE_FLOWER_FOUND
                                     // Only overwrite if fresher or different type
                                     if (newSignalType !== existingSignal.type || newSignalTTL > existingSignal.ttl) {
                                         shouldPropagate = true;
@@ -89,7 +93,6 @@ export const propagateSignal = (startMark: TerritoryMark, qtree: Quadtree<CellCo
     }
 };
 
-
 const createOffspringGenome = (genome1: number[], genome2: number[]): number[] => {
     const newGenome = genome1.map((gene, i) => {
         return Math.random() < 0.5 ? gene : genome2[i];
@@ -98,7 +101,7 @@ const createOffspringGenome = (genome1: number[], genome2: number[]): number[] =
     // Mutation
     for (let i = 0; i < newGenome.length; i++) {
         if (Math.random() < MUTATION_CHANCE) {
-            newGenome[i] *= 1 + (Math.random() * MUTATION_AMOUNT * 2) - MUTATION_AMOUNT;
+            newGenome[i] *= 1 + Math.random() * MUTATION_AMOUNT * 2 - MUTATION_AMOUNT;
         }
     }
     return newGenome;
@@ -108,7 +111,7 @@ export const handleInsectReproduction = (
     nextActorState: Map<string, CellContent>,
     params: SimulationParams,
     events: AppEvent[],
-    getNextId: (type: string, x: number, y: number) => string,
+    getNextId: (type: string, x: number, y: number) => string
 ): number => {
     let eggsLaidThisTick = 0;
     const { gridWidth, gridHeight } = params;
@@ -123,7 +126,7 @@ export const handleInsectReproduction = (
     const boundary = new Rectangle(gridWidth / 2, gridHeight / 2, gridWidth / 2, gridHeight / 2);
     const insectQtree = new Quadtree<CellContent>(boundary, 4);
     const allInsects: Insect[] = [];
-    
+
     for (const actor of nextActorState.values()) {
         if (actor.type === 'insect') {
             const insect = actor as Insect;
@@ -133,7 +136,7 @@ export const handleInsectReproduction = (
             allInsects.push(insect);
         }
     }
-    
+
     const reproducedInsects = new Set<string>();
     for (const insect of allInsects) {
         if (reproducedInsects.has(insect.id) || insect.reproductionCooldown) continue;
@@ -143,26 +146,32 @@ export const handleInsectReproduction = (
 
         // Check for partners on the same cell
         const range = new Rectangle(insect.x, insect.y, 0.5, 0.5);
-        const partners = insectQtree.query(range).map(p => p.data as Insect).filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id) && !other.reproductionCooldown);
+        const partners = insectQtree
+            .query(range)
+            .map(p => p.data as Insect)
+            .filter(other => other.id !== insect.id && other.emoji === insect.emoji && !reproducedInsects.has(other.id) && !other.reproductionCooldown);
 
         if (partners.length > 0 && insect.stamina >= baseStats.reproductionCost) {
             const partner = partners[0];
             const spot = findCellForStationaryActor(currentTickGrid, params, 'egg', { x: insect.x, y: insect.y });
-            
+
             if (spot) {
                 // Determine what the egg will hatch into
                 const offspringEmoji = insect.emoji === '🦋' ? '🐛' : insect.emoji;
 
                 const eggId = getNextId('egg', spot.x, spot.y);
                 const offspringGenome = createOffspringGenome(insect.genome, partner.genome);
-                const newEgg: Egg = { 
-                    id: eggId, type: 'egg', x: spot.x, y: spot.y, 
-                    hatchTimer: baseStats.eggHatchTime, 
-                    insectEmoji: offspringEmoji, 
-                    genome: offspringGenome 
+                const newEgg: Egg = {
+                    id: eggId,
+                    type: 'egg',
+                    x: spot.x,
+                    y: spot.y,
+                    hatchTimer: baseStats.eggHatchTime,
+                    insectEmoji: offspringEmoji,
+                    genome: offspringGenome,
                 };
                 nextActorState.set(eggId, newEgg);
-                
+
                 insect.stamina -= baseStats.reproductionCost;
                 insect.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;
                 partner.reproductionCooldown = INSECT_REPRODUCTION_COOLDOWN;

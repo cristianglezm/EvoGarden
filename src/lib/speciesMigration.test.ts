@@ -8,8 +8,18 @@ const limits = (overrides: Partial<SpeciesLimits> = {}): SpeciesLimits => ({ ...
 function row(id: string, cell: string, d: number | null, extra: Partial<SpeciesSample> = {}): SpeciesSample {
     const [x, y] = cell === 'none' ? [null, null] : cell.split(',').map(Number);
     return {
-        id, cell, x, y, d, fp: 'new', kind: cell === 'none' ? 'unclassified' : 'sample',
-        founder: false, records: [], sex: 'both', createdAt: 1, ...extra,
+        id,
+        cell,
+        x,
+        y,
+        d,
+        fp: 'new',
+        kind: cell === 'none' ? 'unclassified' : 'sample',
+        founder: false,
+        records: [],
+        sex: 'both',
+        createdAt: 1,
+        ...extra,
     };
 }
 
@@ -70,10 +80,7 @@ describe('normalizeSamples', () => {
         });
 
         it('are not taken by a sample that never held one', () => {
-            const out = apply([
-                row('holder', '1,1', 1, { records: ['longestLived'], age: 10 }),
-                row('plain', '1,1', 1, { age: 500 }),
-            ]);
+            const out = apply([row('holder', '1,1', 1, { records: ['longestLived'], age: 10 }), row('plain', '1,1', 1, { age: 500 })]);
             expect(get(out, 'holder').records).toEqual(['longestLived']);
             expect(get(out, 'plain').records).toEqual([]);
         });
@@ -120,21 +127,24 @@ describe('normalizeSamples', () => {
 
     describe('the caps', () => {
         it('let go the most typical samples of a species that has too many, never a founder or a holder', () => {
-            const out = apply([
-                row('founder', '1,1', 0.1, { createdAt: 1 }),
-                row('holder', '1,1', 0.2, { createdAt: 2, records: ['longestLived'], age: 9 }),
-                row('near', '1,1', 0.5, { createdAt: 3 }),
-                row('mid', '1,1', 2, { createdAt: 4 }),
-                row('far', '1,1', 3, { createdAt: 5 }),
-            ], limits({ cap: 3 }));
+            const out = apply(
+                [
+                    row('founder', '1,1', 0.1, { createdAt: 1 }),
+                    row('holder', '1,1', 0.2, { createdAt: 2, records: ['longestLived'], age: 9 }),
+                    row('near', '1,1', 0.5, { createdAt: 3 }),
+                    row('mid', '1,1', 2, { createdAt: 4 }),
+                    row('far', '1,1', 3, { createdAt: 5 }),
+                ],
+                limits({ cap: 3 })
+            );
             expect(out.map(s => s.id).sort()).toEqual(['far', 'founder', 'holder']);
         });
 
         it('may leave a species over a small cap when everything in it is protected', () => {
-            const out = apply([
-                row('a', '1,1', 1, { createdAt: 1 }),
-                row('b', '1,1', 1, { createdAt: 2, records: ['mostToxic'], toxicity: 1 }),
-            ], limits({ cap: 1 }));
+            const out = apply(
+                [row('a', '1,1', 1, { createdAt: 1 }), row('b', '1,1', 1, { createdAt: 2, records: ['mostToxic'], toxicity: 1 })],
+                limits({ cap: 1 })
+            );
             expect(out).toHaveLength(2);
         });
 
@@ -142,14 +152,20 @@ describe('normalizeSamples', () => {
             const crowd = Array.from({ length: 40 }, (_, i) => row(`c${i}`, `${i},0`, 1, { createdAt: 100 + i }));
             const odd = [4, 5, 6].map((d, i) => row(`odd${i}`, '0,0', d * 10, { createdAt: 900 + i }));
             const out = apply([...crowd, ...odd], limits({ atypicalCap: 2 }));
-            expect(out.filter(s => s.kind === 'atypical').map(s => s.id).sort()).toEqual(['odd1', 'odd2']);
+            expect(
+                out
+                    .filter(s => s.kind === 'atypical')
+                    .map(s => s.id)
+                    .sort()
+            ).toEqual(['odd1', 'odd2']);
             expect(out.some(s => s.id === 'odd0')).toBe(false);
         });
 
         it('let go the oldest of the samples without a species that are too many', () => {
-            const out = apply([
-                row('l1', 'none', null, { createdAt: 1 }), row('l2', 'none', null, { createdAt: 2 }), row('l3', 'none', null, { createdAt: 3 }),
-            ], limits({ unclassifiedCap: 2 }));
+            const out = apply(
+                [row('l1', 'none', null, { createdAt: 1 }), row('l2', 'none', null, { createdAt: 2 }), row('l3', 'none', null, { createdAt: 3 })],
+                limits({ unclassifiedCap: 2 })
+            );
             expect(out.map(s => s.id).sort()).toEqual(['l2', 'l3']);
         });
     });
@@ -174,7 +190,8 @@ describe('normalizeSamples', () => {
 
         it('is the same when it is done twice', () => {
             const once = apply([
-                row('a', '1,1', 1, { createdAt: 5 }), row('b', '1,1', 1, { createdAt: 1, founder: true, records: ['mostToxic'], toxicity: 0.4 }),
+                row('a', '1,1', 1, { createdAt: 5 }),
+                row('b', '1,1', 1, { createdAt: 1, founder: true, records: ['mostToxic'], toxicity: 0.4 }),
                 row('c', '1,1', 3, { createdAt: 3, records: ['mostToxic'], toxicity: 0.9 }),
             ]);
             expect(normalizeSamples(once, limits())).toEqual({ changed: [], removed: [] });
