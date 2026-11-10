@@ -11,11 +11,13 @@ interface DataPanelProps {
     setIsRunning: (running: boolean) => void;
     /** Opens the field guide (above the panels), at a species ("x,y") or at none. */
     onOpenGuide?: (cell: string | null) => void;
+    /** The player cleared the seed bank. */
+    onSeedBankCleared?: () => void;
 }
 
 type ActiveTab = 'challenges' | 'analytics' | 'seedBank';
 
-export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose, isRunning, setIsRunning, onOpenGuide }) => {
+export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose, isRunning, setIsRunning, onOpenGuide, onSeedBankCleared }) => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('challenges');
 
     return (
@@ -73,7 +75,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({ isOpen, onClose, isRunning
                     <div className="grow overflow-y-auto shadow-[inset_0_1px_1px_0_#000]">
                         {activeTab === 'challenges' && <ChallengesPanel />}
                         {activeTab === 'analytics' && <ChartsPanel />}
-                        {activeTab === 'seedBank' && <SeedBankPanel isRunning={isRunning} setIsRunning={setIsRunning} onOpenGuide={onOpenGuide} />}
+                        {activeTab === 'seedBank' && <SeedBankPanel isRunning={isRunning} setIsRunning={setIsRunning} onOpenGuide={onOpenGuide} onCleared={onSeedBankCleared} />}
                     </div>
                 </div>
             </aside>

@@ -110,7 +110,7 @@ export default function App(): React.ReactNode {
   }, [params]);
 
 
-  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed } = useSimulation({ setIsLoading });
+  const { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed, reloadChampions } = useSimulation({ setIsLoading });
   // the challenges about the species collection, which the simulation does not count
   useSpeciesChallenges(latestSummary);
   const { trackedActorId, handleTrackActor, handleStopTracking } = useActorTracker({ actors, isRunning, setIsRunning, setSelectedActor, selectedActor });
@@ -613,6 +613,7 @@ const detailsPanel = renderDetailsPanel();
         isRunning={isRunning}
         setIsRunning={setIsRunning}
         onOpenGuide={openGuide}
+        onSeedBankCleared={reloadChampions}
       />
       <FieldGuideHost
         isOpen={guide.isOpen}

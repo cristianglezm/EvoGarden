@@ -96,4 +96,25 @@ describe('SeedBankPanel', () => {
         expect(await screen.findByText('The Seed Bank is empty.')).toBeInTheDocument();
         expect(await db.speciesSamples.count()).toBe(1);
     });
+
+    it('says the seed bank was cleared, once the champions are gone', async () => {
+        await db.seedBank.put(champion('longestLived', 'genome-of-the-champion', 300));
+        const onCleared = vi.fn(async () => expect(await db.seedBank.count()).toBe(0));
+        panel({ onCleared });
+        fireEvent.click(await screen.findByRole('button', { name: 'Clear' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Confirm & Clear' }));
+        await waitFor(() => expect(onCleared).toHaveBeenCalledTimes(1));
+        await onCleared.mock.results[0].value;
+        expect(await screen.findByText('The Seed Bank is empty.')).toBeInTheDocument();
+    });
+
+    it('does not say it when the player cancels', async () => {
+        await db.seedBank.put(champion('longestLived', 'genome-of-the-champion', 300));
+        const onCleared = vi.fn();
+        panel({ onCleared });
+        fireEvent.click(await screen.findByRole('button', { name: 'Clear' }));
+        fireEvent.click(await screen.findByRole('button', { name: /Cancel/ }));
+        expect(onCleared).not.toHaveBeenCalled();
+        expect(await db.seedBank.count()).toBe(1);
+    });
 });

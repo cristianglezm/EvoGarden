@@ -109,6 +109,15 @@ describe('useSimulation hook', () => {
         });
     });
 
+    describe('the seed bank', () => {
+        it('tells the simulation to read its champions again', () => {
+            const { result } = renderHook(() => useSimulation({ setIsLoading: mockSetIsLoading }));
+            const [sim] = mockWorkerInstances;
+            result.current.reloadChampions();
+            expect(sim.postMessage).toHaveBeenCalledWith({ type: 'reload-champions' });
+        });
+    });
+
     describe('with more than one worker that makes flowers', () => {
         it('starts as many as the address asks, each with a channel of its own to the simulation', () => {
             cores(8);

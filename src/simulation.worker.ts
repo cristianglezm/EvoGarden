@@ -206,6 +206,12 @@ self.onmessage = async (e: MessageEvent) => {
                 engine.introduceStationary(payload.actorType, payload.count);
             }
             break;
+        case 'reload-champions':
+            // The player cleared the seed bank (from the page): the records to beat start again
+            if (engine) {
+                await engine.reloadChampions();
+            }
+            break;
         case 'plant-champion-seed':
             if (engine) {
                 engine.plantChampionSeed(payload.genome, payload.sex, payload.position);

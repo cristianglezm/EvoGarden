@@ -184,5 +184,9 @@ export const useSimulation = ({ setIsLoading }: UseSimulationProps) => {
         workerRef.current?.postMessage({ type: 'plant-champion-seed', payload: { genome, sex, position } });
     }, []);
 
-    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed };
+    const reloadChampions = useCallback(() => {
+        workerRef.current?.postMessage({ type: 'reload-champions' });
+    }, []);
+
+    return { actors, isRunning, setIsRunning, workerRef, resetWithNewParams, updateLiveParams, isWorkerInitialized, latestSummaryRef, workerError, latestSummary, triggerWeatherEvent, introduceSpecies, introduceStationary, plantChampionSeed, reloadChampions };
 };
