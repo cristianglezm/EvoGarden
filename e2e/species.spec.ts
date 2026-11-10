@@ -20,9 +20,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Species field guide', () => {
-  test('should open from the Seed Bank, show the whole map of species, and close', async ({ page }) => {
+  test('should open from the main menu, show the whole map of species, and close', async ({ page }) => {
     const guide = new FieldGuideController(page);
-    await guide.openFromSeedBank();
+    await guide.open();
     await expect(guide.getMap()).toBeVisible();
     // a species is one button of the map: the map of the embedded classifier has 12 x 8 of them
     await expect(guide.getSpeciesButtons()).toHaveCount(96);
@@ -31,7 +31,7 @@ test.describe('Species field guide', () => {
 
   test('should select a species of the map, and let go of it by selecting it again', async ({ page }) => {
     const guide = new FieldGuideController(page);
-    await guide.openFromSeedBank();
+    await guide.open();
     const first = guide.getSpeciesButtons().first();
     await first.click();
     await expect(guide.getSelectedSpecies()).toHaveCount(1);
@@ -41,7 +41,7 @@ test.describe('Species field guide', () => {
 
   test('should not offer to collect samples while the collection is empty', async ({ page }) => {
     const guide = new FieldGuideController(page);
-    await guide.openFromSeedBank();
+    await guide.open();
     await expect(guide.getCollectButton()).toBeDisabled();
   });
 });

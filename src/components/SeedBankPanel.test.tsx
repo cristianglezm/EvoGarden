@@ -51,11 +51,10 @@ describe('SeedBankPanel', () => {
         expect(screen.getByRole('button', { name: 'View in field guide' })).toBeInTheDocument();
     });
 
-    it('opens the field guide from its button, at no species', async () => {
-        const onOpenGuide = vi.fn();
-        panel({ onOpenGuide });
-        fireEvent.click(await screen.findByRole('button', { name: /Field Guide/ }));
-        expect(onOpenGuide).toHaveBeenCalledExactlyOnceWith(null);
+    it('has no field guide button of its own: the guide is in the main menu', async () => {
+        panel({ onOpenGuide: vi.fn() });
+        await screen.findByText(/Champions are saved here/);
+        expect(screen.queryByRole('button', { name: /^Field Guide/ })).not.toBeInTheDocument();
     });
 
     it('opens the field guide at the species of a champion', async () => {

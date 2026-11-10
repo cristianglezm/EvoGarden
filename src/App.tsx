@@ -4,7 +4,7 @@ import { Controls } from './components/Controls';
 import { FlowerDetailsPanel } from './components/FlowerDetailsPanel';
 import type { CellContent, Flower, SimulationParams, Grid, Insect, Cockroach, Coord } from './types';
 import { DEFAULT_SIM_PARAMS } from './constants';
-import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon, ChatBubbleIcon } from './components/icons';
+import { SettingsIcon, XIcon, LoaderIcon, TrophyIcon, GitHubIcon, ToolboxIcon, ChatBubbleIcon, SeedlingIcon } from './components/icons';
 import { useSimulation } from './hooks/useSimulation';
 import { useDismissOnOutsideClick } from './hooks/useDismissOnOutsideClick';
 import { useSpeciesChallenges } from './hooks/useSpeciesChallenges';
@@ -582,6 +582,14 @@ const detailsPanel = renderDetailsPanel();
                 title="Open Challenges & Analytics"
             >
                 <TrophyIcon className="w-6 h-6" />
+            </button>
+            <button
+                onClick={() => openGuide(null)}
+                className="p-3 bg-tertiary/80 hover:bg-tertiary text-surface rounded-md shadow-lg transition-colors duration-200 cursor-pointer"
+                aria-label="Open field guide"
+                title="Open Field Guide"
+            >
+                <SeedlingIcon className="w-6 h-6" />
             </button>
             <button
                 onClick={() => setIsCommentaryOpen(!isCommentaryOpen)}

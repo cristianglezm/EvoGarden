@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { DataPanelController } from './DataPanelController';
 
 export class FieldGuideController {
   readonly page: Page;
@@ -11,12 +10,9 @@ export class FieldGuideController {
     this.dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Field Guide' }) });
   }
 
-  /** From the Seed Bank tab of the Data panel, the way a player finds it. */
-  async openFromSeedBank() {
-    const data = new DataPanelController(this.page);
-    await data.open();
-    await data.goToSeedBankTab();
-    await data.panel.getByRole('button', { name: /Field Guide/ }).click();
+  /** From the main menu, the way a player finds it. */
+  async open() {
+    await this.page.getByRole('button', { name: 'Open field guide' }).click();
     await expect(this.dialog).toBeVisible();
   }
 
