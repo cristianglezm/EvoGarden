@@ -209,6 +209,7 @@ describe('Controls component', () => {
         const source = () => ({
             limits: vi.fn().mockResolvedValue(DEFAULT_SPECIES_LIMITS),
             setCap: vi.fn().mockResolvedValue(undefined),
+            clear: vi.fn().mockResolvedValue(undefined),
         } as unknown as SpeciesSource);
 
         it('has no such section when the app gives no collection', () => {
@@ -217,6 +218,16 @@ describe('Controls component', () => {
         });
 
         const open = () => fireEvent.click(screen.getByRole('button', { name: /Species collection/i }));
+
+        it('lets the player clear the collection from the section, after asking', async () => {
+            const s = source();
+            render(<Controls {...defaultProps} speciesSource={s} />);
+            open();
+            fireEvent.click(await screen.findByRole('button', { name: 'Clear species collection' }));
+            expect(s.clear).not.toHaveBeenCalled();
+            fireEvent.click(await screen.findByRole('button', { name: 'Clear species' }));
+            await waitFor(() => expect(s.clear).toHaveBeenCalledTimes(1));
+        });
 
         it('has the section, closed like the other advanced ones, with the cap on Medium', async () => {
             render(<Controls {...defaultProps} speciesSource={source()} />);

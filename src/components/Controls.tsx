@@ -6,6 +6,7 @@ import { INSECT_DATA } from '../constants';
 import { ACTOR_NAMES } from '../utils';
 import type { SpeciesSource } from '../services/speciesSource';
 import { SpeciesCapSetting } from './SpeciesCapSetting';
+import { SpeciesClearSetting } from './SpeciesClearSetting';
 import { WorkersSetting } from './WorkersSetting';
 
 interface ControlsProps {
@@ -396,7 +397,10 @@ export const Controls: React.FC<ControlsProps> = ({ params, onParamsChange, isRu
 
                 {speciesSource && (
                     <CollapsibleSection title="Species collection" defaultOpen={false}>
-                        <SpeciesCapSetting source={speciesSource} />
+                        <div className="space-y-4">
+                            <SpeciesCapSetting source={speciesSource} />
+                            <SpeciesClearSetting source={speciesSource} />
+                        </div>
                     </CollapsibleSection>
                 )}
             </div>
