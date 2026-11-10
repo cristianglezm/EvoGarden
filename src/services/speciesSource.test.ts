@@ -181,6 +181,31 @@ describe('the species source, for collecting', () => {
         expect(await source.limits()).toEqual(DEFAULT_SPECIES_LIMITS);
     });
 
+    it('clears the collection, the samples and their genomes, and keeps the cap the player chose', async () => {
+        await offer('genome-a', 3, 2, { image: 'png' });
+        await offer('genome-b', 4, 4);
+        await source.setCap(100);
+        await source.clear();
+        expect(await db.speciesSamples.count()).toBe(0);
+        expect(await db.speciesGenomes.count()).toBe(0);
+        expect((await source.limits()).cap).toBe(100);
+        expect(await source.samples()).toEqual([]);
+    });
+
+    it('does not touch the seed bank when it clears the collection', async () => {
+        await db.seedBank.put({ category: 'longestLived', genome: 'g', value: 3, imageData: 'png', sex: 'both' } as SeedBankEntry);
+        await offer('genome-a', 3, 2);
+        await source.clear();
+        expect(await db.seedBank.count()).toBe(1);
+    });
+
+    it('can be cleared when it is already empty, and filled again after', async () => {
+        await source.clear();
+        await offer('genome-a', 3, 2);
+        expect(await db.speciesSamples.count()).toBe(1);
+        expect(await db.speciesGenomes.count()).toBe(1);
+    });
+
     it('says what the site stores and what the browser lets it, when the browser says', async () => {
         vi.stubGlobal('navigator', { storage: { estimate: async () => ({ usage: 1234, quota: 99999 }) } });
         expect(await createSpeciesSource(db, () => classifier).storage()).toEqual({ usage: 1234, quota: 99999 });

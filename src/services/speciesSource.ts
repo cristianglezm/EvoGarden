@@ -32,6 +32,8 @@ export interface SpeciesSource {
     limits(): Promise<SpeciesLimits>;
     /** Chooses how many samples a species keeps; the flower worker applies it. */
     setCap(cap: number): Promise<void>;
+    /** Lets go of every sample and genome. The cap the player chose and the Seed Bank stay. */
+    clear(): Promise<void>;
     /** What this site stores and what the browser lets it, if the browser says. */
     storage(): Promise<{ usage: number; quota: number } | null>;
 }
@@ -92,6 +94,13 @@ export function createSpeciesSource(
         async setCap(cap) {
             validateLimits({ ...DEFAULT_SPECIES_LIMITS, cap });
             await settings.write({ ...(await settings.read()), cap });
+        },
+        async clear() {
+            // One transaction: a reader never sees samples without their genomes
+            await database.transaction('rw', database.speciesSamples, database.speciesGenomes, async () => {
+                await database.speciesSamples.clear();
+                await database.speciesGenomes.clear();
+            });
         },
         storage,
         speciesOf,
