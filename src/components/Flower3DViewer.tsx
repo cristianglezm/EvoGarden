@@ -77,7 +77,7 @@ const AnimatedModel: React.FC<ModelProps> = ({ gltfString }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gltfString, camera]);
 
-    useFrame((_) => {
+    useFrame(() => {
         if (!model || !clockRef.current || !controls) return;
         
         const { cameraDone, startPos, endPos, center } = animationStateRef.current;

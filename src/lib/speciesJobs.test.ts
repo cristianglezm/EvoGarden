@@ -135,7 +135,7 @@ describe('a flower that is run', () => {
     it('is "unclassified" when it has no species, and the answer has none', async () => {
         const { jobs } = setup();
         jobs.enqueue(request('a', '{"Flower":{}}'));
-        const { durationMs, tick, ...answer } = (await jobs.runNext())!;
+        const { durationMs, tick: _tick, ...answer } = (await jobs.runNext())!;
         expect(answer).toEqual({ flowerId: 'a', status: 'unclassified' });
         expect(durationMs).toBeGreaterThanOrEqual(0);
     });

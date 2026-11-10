@@ -352,3 +352,5 @@ A species is a cell of the 12×8 SOM embedded in the genetics module (`FEService
         -   `types/`: Directory containing all TypeScript type definitions.
         -   `constants.ts`: Global simulation constants.
         -   `utils.ts`: Shared utility functions.
+
+**Lint:** `npm run lint` (oxlint, `.oxlintrc.json`). A formatter (oxfmt) was measured and not adopted: with its defaults it would rewrite 231 of 232 files and the code mixes 2 and 4 spaces, so it needs a decided style and its own formatting-only commit.

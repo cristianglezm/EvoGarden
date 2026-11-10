@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "oxc"],
+  "categories": { "correctness": "error" },
+  "env": { "browser": true, "es2022": true, "worker": true, "node": true },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/set-state-in-effect": "warn",
+    "react/refs": "warn",
+    "react/globals": "warn"
+  },
+  "ignorePatterns": ["dist", "node_modules", "playwright-report", "test-results", "e2e/**/*-snapshots"]
+}

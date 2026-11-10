@@ -83,7 +83,7 @@ const renderChunks = (id: string) => {
   if (id.includes('node_modules')) {
     for (const lib of vendorLibs) {
       // Use a regex to ensure we match the package name correctly
-      if (id.match(new RegExp(`\/node_modules\/${lib}\/`))) {
+      if (id.match(new RegExp(`/node_modules/${lib}/`))) {
         return 'vendor';
       }
     }

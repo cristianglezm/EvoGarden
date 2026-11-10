@@ -287,6 +287,10 @@ npm run test:e2e
 
 The specs are in `e2e/` (`app.spec.ts` for the game, `species.spec.ts` for the field guide, the species of a flower, the workers and the species challenges), with one controller per panel in `e2e/controllers/`. Note that `test:e2e` runs with `--update-snapshots`.
 
+## 🔎 Linting
+
+[oxlint](https://oxc.rs/docs/guide/usage/linter) checks the code (`npm run lint`, config in `.oxlintrc.json`): the *correctness* rules and the rules of hooks are errors. The React Compiler rules (`set-state-in-effect`, `refs`, `globals`) and `exhaustive-deps` are warnings, to be cleaned up one by one. Warnings do not fail the command.
+
 ## 📦 Building for Production
 
 To create a production-ready build of the application, run:
